@@ -1,8 +1,8 @@
 /**
  * ==========================================================================
  * UNIPROMET IT ADMIN - MONITORING: ZASEBAN PROZOR
- * /monitor?tab=<id>  - jedan tab preko celog prozora
- * /monitor?tour=1    - rotacija tabova po korisnikovim podešavanjima
+ * /monitor?tab=<id>  - jedan tab preko celog prozora (rotacija se može pokrenuti dugmetom)
+ * /monitor?tour=1    - rotacija tabova po korisnikovim podešavanjima, odmah pokrenuta
  * Bez menija platforme; traka sa alatima se pojavljuje pri pomeranju miša.
  * ==========================================================================
  */
@@ -28,8 +28,13 @@
     bannerTimer: null
   };
 
-  async function api(url) {
-    const res = await fetch(url, { headers: { Accept: 'application/json' }, cache: 'no-store' });
+  async function api(url, method, body) {
+    const opts = { method: method || 'GET', headers: { Accept: 'application/json' }, cache: 'no-store' };
+    if (body) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    const res = await fetch(url, opts);
     let data = null;
     try { data = await res.json(); } catch (e) { /* nije JSON */ }
     if (res.status === 401) throw new Error('Sesija je istekla. Prijavite se ponovo na platformu pa otvorite prozor iznova.');
@@ -65,10 +70,16 @@
     S.activeId = id;
     document.title = `${tab.name} | Monitoring`;
     $('mw-title').textContent = tab.name;
-    const n = C.countStreams(tab.cameras, S.camById);
-    $('mw-sub').textContent = `${n} ${C.cameraWord(n)} uživo${S.rotating ? ` · rotacija na svakih ${S.rotation.intervalSec} s` : ''}`;
+    updateSub();
     S.player.render(tab, S.camById);
     banner(tab.name);
+  }
+
+  function updateSub() {
+    const tab = tabById(S.activeId);
+    if (!tab) return;
+    const n = C.countStreams(tab.cameras, S.camById);
+    $('mw-sub').textContent = `${n} ${C.cameraWord(n)} uživo${S.rotating ? ` · rotacija na svakih ${S.rotation.intervalSec} s` : ''}`;
   }
 
   function banner(text) {
@@ -94,7 +105,7 @@
   }
 
   function next() {
-    if (S.player.isMaximized()) return schedule();
+    if (S.player.isMaximized() || modalOpen()) return schedule();
     const ids = rotationIds();
     if (ids.length < 1) return;
     const i = ids.indexOf(S.activeId);
@@ -106,12 +117,72 @@
     S.rotating = on && rotationIds().length >= 2;
     const btn = $('mw-btn-rotation');
     btn.classList.toggle('is-on', S.rotating);
-    btn.innerHTML = S.rotating ? '<i data-lucide="pause"></i><span>Pauza</span>' : '<i data-lucide="play"></i><span>Nastavi rotaciju</span>';
+    btn.innerHTML = S.rotating ? '<i data-lucide="pause"></i><span>Pauza</span>' : '<i data-lucide="repeat"></i><span>Rotacija</span>';
+    btn.title = S.rotating ? `Zaustavi rotaciju (na svakih ${S.rotation.intervalSec} s)` : 'Pokreni rotaciju tabova (razmak)';
     C.icons(btn);
     if (S.rotating) schedule();
     else {
       clearTimeout(S.rotTimer);
       $('mw-rotation-bar').classList.remove('is-on');
+    }
+    updateSub();
+  }
+
+  /** Dugme rotacije ima smisla tek kad korisnik ima bar 2 taba */
+  function applyRotationSettings(settings) {
+    if (settings && settings.rotation) S.rotation = settings.rotation;
+    const canRotate = S.tabs.length >= 2;
+    $('mw-rotation-group').style.display = canRotate ? '' : 'none';
+    if (S.rotating && rotationIds().length < 2) setRotating(false);
+  }
+
+  /* ---------- Podešavanja rotacije ---------- */
+  function modalOpen() {
+    return $('mw-modal-rotation').style.display === 'flex';
+  }
+
+  function openSettings() {
+    const sel = $('mw-rot-interval');
+    sel.value = String(S.rotation.intervalSec || 30);
+    if (!sel.value) sel.value = '30';
+    const chosen = new Set(S.rotation.tabIds || []);
+    $('mw-rot-list').innerHTML = S.tabs.map(t => `
+      <label class="mon-rot-item">
+        <input type="checkbox" value="${C.esc(t.id)}" ${chosen.has(t.id) ? 'checked' : ''}>
+        <span>${C.esc(t.name)}</span>
+        <span>${t.layout.cells.length} ${C.fieldWord(t.layout.cells.length)}</span>
+      </label>`).join('');
+    const m = $('mw-modal-rotation');
+    m.classList.remove('modal-closing');
+    m.style.display = 'flex';
+    C.icons(m);
+  }
+
+  function closeSettings() {
+    const m = $('mw-modal-rotation');
+    if (!modalOpen() || m.classList.contains('modal-closing')) return;
+    m.classList.add('modal-closing');
+    setTimeout(() => {
+      m.style.display = 'none';
+      m.classList.remove('modal-closing');
+    }, 190);
+  }
+
+  async function saveSettings() {
+    const intervalSec = Number($('mw-rot-interval').value) || 30;
+    const tabIds = Array.from($('mw-rot-list').querySelectorAll('input:checked')).map(i => i.value);
+    const btn = $('mw-btn-rot-save');
+    btn.disabled = true;
+    try {
+      const data = await api('/api/monitoring/settings', 'PUT', { rotation: { intervalSec, tabIds } });
+      S.rotation = (data.settings && data.settings.rotation) || { intervalSec, tabIds };
+      closeSettings();
+      setRotating(true);
+      if (!S.rotating) banner('Za rotaciju su potrebna bar 2 taba');
+    } catch (err) {
+      banner(err.message);
+    } finally {
+      btn.disabled = false;
     }
   }
 
@@ -122,12 +193,11 @@
         const data = await api('/api/monitoring/state');
         S.tabs = data.tabs || [];
         S.camById = new Map((data.cameras || []).map(c => [c.id, c]));
-        S.rotation = (data.settings && data.settings.rotation) || S.rotation;
         if (data.settings && data.settings.fit) S.player.setFit(data.settings.fit);
         if (!S.tabs.length) return showError('Nema tabova', 'Napravite bar jedan monitoring tab na platformi.');
+        applyRotationSettings(data.settings);
         const ids = rotationIds();
         const first = tabById(S.activeId) ? S.activeId : ids[0];
-        $('mw-btn-rotation').style.display = ids.length >= 2 ? '' : 'none';
         $('mw-loading').style.display = 'none';
         show(first);
         if (S.rotating) setRotating(true);
@@ -146,6 +216,7 @@
         S.camById = new Map((data.cameras || []).map(c => [c.id, c]));
         $('mw-loading').style.display = 'none';
         if (!S.tabs.length) return showError('Nema tabova', 'Napravite bar jedan monitoring tab na platformi.');
+        applyRotationSettings(data.settings);
         show(tabById(S.activeId) ? S.activeId : (tabById(tabParam) ? tabParam : S.tabs[0].id));
       }
     } catch (err) {
@@ -159,6 +230,7 @@
     document.body.style.cursor = '';
     clearTimeout(S.barTimer);
     S.barTimer = setTimeout(() => {
+      if (modalOpen()) return;
       $('mw-bar').classList.remove('is-visible');
       document.body.style.cursor = 'none';
     }, 3000);
@@ -171,10 +243,19 @@
     $('mw-btn-fullscreen').addEventListener('click', () => C.toggleFullscreen(document.documentElement));
     $('mw-btn-close').addEventListener('click', () => window.close());
     $('mw-btn-rotation').addEventListener('click', () => setRotating(!S.rotating));
+    $('mw-btn-rotation-settings').addEventListener('click', openSettings);
+    $('mw-btn-rot-save').addEventListener('click', saveSettings);
+    const modal = $('mw-modal-rotation');
+    modal.querySelectorAll('.modal-close-icon, .btn-modal-cancel').forEach(b => b.addEventListener('click', closeSettings));
+    modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
     document.addEventListener('mousemove', revealBar);
     document.addEventListener('keydown', (e) => {
+      if (modalOpen()) {
+        if (e.key === 'Escape') closeSettings();
+        return;
+      }
       if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) C.toggleFullscreen(document.documentElement);
-      if (e.key === ' ' && tourMode) {
+      if (e.key === ' ' && S.tabs.length > 1) {
         e.preventDefault();
         setRotating(!S.rotating);
       }
