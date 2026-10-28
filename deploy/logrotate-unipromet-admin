@@ -1,0 +1,12 @@
+# Rotacija logova aplikacije (instalira se kao /etc/logrotate.d/unipromet-admin).
+# copytruncate: systemd i aplikacija nastavljaju da pisu u isti fajl bez restarta.
+/opt/unipromet-admin/data/logs/*.log {
+    su uniadmin uniadmin
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

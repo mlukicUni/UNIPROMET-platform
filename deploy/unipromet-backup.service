@@ -1,0 +1,14 @@
+# Dnevni backup baze (deploy/backup-db.js). Pokrece ga unipromet-backup.timer.
+
+[Unit]
+Description=UNIPROMET Admin - backup baze
+
+[Service]
+Type=oneshot
+User=uniadmin
+Group=uniadmin
+WorkingDirectory=/opt/unipromet-admin
+Environment=TZ=Europe/Belgrade
+ExecStart=/usr/bin/node deploy/backup-db.js
+StandardOutput=append:/opt/unipromet-admin/data/logs/backup.log
+StandardError=append:/opt/unipromet-admin/data/logs/backup.log

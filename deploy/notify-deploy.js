@@ -1,0 +1,28 @@
+// Mejl o rezultatu automatskog azuriranja i backup-a (pozivaju ga deploy/update.sh i deploy/backup-db.js).
+// Primalac: DEPLOY_NOTIFY_TO u .env (prazno = bez mejla). Upotreba: node notify-deploy.js ok|fail "poruka" ["naslov"]
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+require(path.join(root, 'node_modules', 'dotenv')).config({ path: path.join(root, '.env'), quiet: true });
+const nodemailer = require(path.join(root, 'node_modules', 'nodemailer'));
+
+const to = (process.env.DEPLOY_NOTIFY_TO || '').trim();
+const [status, message, subject] = process.argv.slice(2);
+if (!to || !message) process.exit(0);
+
+const transport = nodemailer.createTransport({
+  host: process.env.SMTP_HOST || '192.168.121.1',
+  port: parseInt(process.env.SMTP_PORT || '25', 10),
+  secure: false,
+  connectionTimeout: 5000,
+  tls: { rejectUnauthorized: false }
+});
+
+transport.sendMail({
+  from: '"UNIPROMET IT Služba" <it@unipromet.co.rs>',
+  to,
+  subject: subject || (status === 'ok' ? '[UNIPROMET Admin] Server ažuriran' : '[UNIPROMET Admin] Ažuriranje NIJE uspelo'),
+  text: `${message}\n\nServer: ${process.env.PUBLIC_URL || ''}\n`
+}).then(() => process.exit(0)).catch((err) => {
+  console.error('[notify-deploy] mejl nije poslat:', err.message);
+  process.exit(0);
+});

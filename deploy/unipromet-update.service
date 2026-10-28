@@ -1,0 +1,12 @@
+# Automatsko azuriranje sa GitHub-a (main). Pokrece ga unipromet-update.timer.
+# Skripta je root-ova kopija deploy/update.sh (instalira deploy/install-services.sh).
+
+[Unit]
+Description=UNIPROMET Admin - azuriranje sa GitHub-a
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/unipromet-update
+TimeoutStartSec=20min

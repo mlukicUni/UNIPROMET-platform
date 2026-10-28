@@ -1,0 +1,12 @@
+# Backup baze svake noci u 02:30 po beogradskom vremenu (server radi u UTC).
+# Persistent: ako je server bio ugasen u 02:30, backup se uradi cim se upali.
+
+[Unit]
+Description=UNIPROMET Admin - dnevni backup baze
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 Europe/Belgrade
+Persistent=true
+
+[Install]
+WantedBy=timers.target

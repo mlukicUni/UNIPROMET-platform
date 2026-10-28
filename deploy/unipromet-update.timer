@@ -1,0 +1,13 @@
+# Provera GitHub-a na 2 minuta; ako na main ima novog commit-a, server se azurira.
+# Iskljucivanje automatike: sudo systemctl disable --now unipromet-update.timer
+
+[Unit]
+Description=UNIPROMET Admin - provera novih verzija na GitHub-u
+
+[Timer]
+OnBootSec=3min
+OnActiveSec=1min
+OnUnitInactiveSec=2min
+
+[Install]
+WantedBy=timers.target

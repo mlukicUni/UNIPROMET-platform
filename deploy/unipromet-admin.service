@@ -1,9 +1,7 @@
 # UNIPROMET Admin - systemd servis za Linux server (192.168.121.26)
 #
-# Instalacija (kada se projekat prebaci u /opt/unipromet-admin):
-#   sudo cp deploy/unipromet-admin.service /etc/systemd/system/
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable --now unipromet-admin
+# Instalacija: sudo bash deploy/install-services.sh (zajedno sa tajmerima za azuriranje i backup),
+# a pri prelasku na produkciju: sudo systemctl enable --now unipromet-admin
 #
 # TZ važi samo za aplikaciju (scheduler radi po lokalnom vremenu), sistemsko vreme servera ostaje UTC.
 # KillMode=control-group gasi i go2rtc koji aplikacija pokreće kao podproces.
