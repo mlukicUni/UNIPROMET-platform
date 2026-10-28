@@ -15,6 +15,7 @@
 # Log: /opt/unipromet-admin/data/logs/deploy.log
 {
 set -uo pipefail
+export TZ=Europe/Belgrade
 
 LIVE=/opt/unipromet-admin
 BUILD=/opt/unipromet-admin-build

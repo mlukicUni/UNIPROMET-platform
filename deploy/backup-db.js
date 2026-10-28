@@ -1,6 +1,7 @@
 // Dnevni backup SQLite baze (poziva ga unipromet-backup.timer).
 // Pravi konzistentnu kopiju dok aplikacija radi, proverava integritet i brise kopije starije od BACKUP_KEEP_DAYS (podrazumevano 14).
 // Kopije: data/backups/daily/unipromet_YYYY-MM-DD_HHMM.db
+process.env.TZ = process.env.TZ || 'Europe/Belgrade'; // ime fajla po lokalnom vremenu i kad se pokrene rucno
 const path = require('path');
 const fs = require('fs');
 const root = path.resolve(__dirname, '..');
