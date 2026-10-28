@@ -22,7 +22,9 @@ async function main() {
   await db.backup(out);
   db.close();
 
-  const check = new Database(out, { readonly: true });
+  // Kopija nasledjuje WAL rezim; prebacujemo je u jedan samostalan fajl (bez -wal/-shm pored)
+  const check = new Database(out);
+  check.pragma('journal_mode = DELETE');
   const integrity = check.pragma('integrity_check', { simple: true });
   check.close();
   if (integrity !== 'ok') throw new Error(`integrity_check: ${integrity}`);
