@@ -25,7 +25,10 @@
       <div class="mon-window-sub" id="mw-sub"></div>
     </div>
     <div class="mon-window-tools">
-      <button type="button" class="mon-tool-btn" id="mw-btn-rotation" style="display: none;"><i data-lucide="pause"></i><span>Rotacija</span></button>
+      <div class="mon-tool-group" id="mw-rotation-group" style="display: none;">
+        <button type="button" class="mon-tool-btn" id="mw-btn-rotation" title="Pokreni / zaustavi rotaciju tabova (razmak)"><i data-lucide="repeat"></i><span>Rotacija</span></button>
+        <button type="button" class="mon-tool-btn mon-tool-icon" id="mw-btn-rotation-settings" title="Podešavanja rotacije"><i data-lucide="settings-2"></i></button>
+      </div>
       <button type="button" class="mon-tool-btn" id="mw-btn-fullscreen" title="Ceo ekran (F)"><i data-lucide="maximize"></i><span>Ceo ekran</span></button>
       <button type="button" class="mon-tool-btn mon-tool-icon" id="mw-btn-close" title="Zatvori prozor"><i data-lucide="x"></i></button>
     </div>
@@ -38,6 +41,49 @@
     <div class="telemetry-loading-state" id="mw-loading">
       <div class="spinner-circle"></div>
       <h5>Učitavanje monitoringa...</h5>
+    </div>
+  </div>
+
+  <!-- Podešavanja rotacije (isti izgled kao na platformi) -->
+  <div class="modal-overlay" id="mw-modal-rotation" style="display: none;">
+    <div class="modal-window modal-glass eq-modal-window" style="max-width: 520px; width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="repeat"></i></div>
+          <div>
+            <h3 class="modal-title">Rotacija tabova</h3>
+            <p class="modal-subtitle">Tabovi se automatski smenjuju — za zidne i nadzorne monitore</p>
+          </div>
+        </div>
+        <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 16px;">
+        <div class="form-group">
+          <label for="mw-rot-interval"><i data-lucide="timer" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Smena na svakih</label>
+          <div class="modal-input-wrap">
+            <i data-lucide="timer" class="modal-input-icon"></i>
+            <select id="mw-rot-interval" class="glass-select has-icon">
+              <option value="10">10 sekundi</option>
+              <option value="15">15 sekundi</option>
+              <option value="30">30 sekundi</option>
+              <option value="45">45 sekundi</option>
+              <option value="60">1 minut</option>
+              <option value="120">2 minuta</option>
+              <option value="300">5 minuta</option>
+              <option value="600">10 minuta</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label><i data-lucide="list-checks" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Tabovi u rotaciji</label>
+          <div class="mon-rot-list" id="mw-rot-list"></div>
+          <span class="mon-gallery-note">Ako nijedan nije označen, rotiraju se svi tabovi.</span>
+        </div>
+      </div>
+      <div class="modal-bottom-actions mon-modal-footer">
+        <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
+        <button type="button" class="btn-yellow-solid-sm" id="mw-btn-rot-save"><i data-lucide="check"></i><span>Sačuvaj i pokreni</span></button>
+      </div>
     </div>
   </div>
 
