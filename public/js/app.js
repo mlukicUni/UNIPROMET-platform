@@ -1237,6 +1237,10 @@ async function fetchStatus() {
       document.getElementById('sys-cpu-model').textContent = data.system.cpuModel || 'x86_64';
       document.getElementById('sys-cores').textContent = `${data.system.cpus} jezgra`;
       document.getElementById('sys-node-version').textContent = `Node ${data.system.nodeVersion} + TS 5`;
+      if (data.system.appVersion) {
+        document.getElementById('sys-app-version').textContent = `v${data.system.appVersion}`;
+        document.getElementById('sidebar-app-version').textContent = `Verzija ${data.system.appVersion}`;
+      }
       document.getElementById('sys-platform-tag').textContent = `${data.system.platform} (${data.system.arch})`;
     }
 

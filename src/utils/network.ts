@@ -1,4 +1,15 @@
 import os from 'os';
+import fs from 'fs';
+import path from 'path';
+
+/** Verzija platforme iz package.json (menja se pri svakom puštanju na produkciju) */
+const APP_VERSION: string = (() => {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')).version || '';
+  } catch {
+    return '';
+  }
+})();
 
 export interface NetworkAddressInfo {
   interfaceName: string;
@@ -47,6 +58,7 @@ export function getSystemInfo() {
       freeMB: Math.round(freeMem / (1024 * 1024)),
       usagePercent: memoryUsagePercent
     },
-    nodeVersion: process.version
+    nodeVersion: process.version,
+    appVersion: APP_VERSION
   };
 }

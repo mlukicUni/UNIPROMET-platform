@@ -9,6 +9,9 @@ const to = (process.env.DEPLOY_NOTIFY_TO || '').trim();
 const [status, message, subject] = process.argv.slice(2);
 if (!to || !message) process.exit(0);
 
+let version = '';
+try { version = require(path.join(root, 'package.json')).version || ''; } catch (e) { /* bez verzije */ }
+
 const transport = nodemailer.createTransport({
   host: process.env.SMTP_HOST || '192.168.121.1',
   port: parseInt(process.env.SMTP_PORT || '25', 10),
@@ -21,7 +24,7 @@ transport.sendMail({
   from: '"UNIPROMET IT Služba" <it@unipromet.co.rs>',
   to,
   subject: subject || (status === 'ok' ? '[UNIPROMET Admin] Server ažuriran' : '[UNIPROMET Admin] Ažuriranje NIJE uspelo'),
-  text: `${message}\n\nServer: ${process.env.PUBLIC_URL || ''}\n`
+  text: `${message}\n\n${version ? `Verzija platforme na serveru: ${version}\n` : ''}Server: ${process.env.PUBLIC_URL || ''}\n`
 }).then(() => process.exit(0)).catch((err) => {
   console.error('[notify-deploy] mejl nije poslat:', err.message);
   process.exit(0);
