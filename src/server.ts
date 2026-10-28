@@ -66,6 +66,11 @@ app.use('/auth', authRouter);
 // Dedicated Login Page
 const publicPath = path.join(process.cwd(), 'public');
 
+// Browser tab icon for pages without <link rel="icon"> (PDF, JSON, downloads)
+app.get('/favicon.ico', (req, res) => {
+  res.sendFile(path.join(publicPath, 'assets', 'favicon.png'));
+});
+
 app.get('/login', (req, res) => {
   const user = getCurrentUser(req);
   if (user) {
