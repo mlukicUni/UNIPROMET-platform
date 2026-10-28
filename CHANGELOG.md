@@ -11,8 +11,6 @@ Verzija se vodi u `package.json`, a svaka puštena verzija ima git tag `vX.Y.Z` 
 Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o sistemu) i u mejlu „Server ažuriran“.
 
 ## [Neobjavljeno]
-- Prikaz verzije platforme u bočnoj traci i na Kontrolnoj tabli
-- Mejl o ažuriranju servera sadrži verziju platforme
 
 ## [1.0.0] - 2026-10-28
 Prva zvanična verzija, puštena na produkcijski Linux server (192.168.121.26).
@@ -24,3 +22,4 @@ Prva zvanična verzija, puštena na produkcijski Linux server (192.168.121.26).
 - Prijava preko Microsoft naloga (Entra ID), prava po ulogama
 - Automatsko ažuriranje servera sa GitHub grane `main`, dnevni backup baze, rotacija logova
 - UNIPROMET ikonica na svim tabovima pretraživača
+- Prikaz verzije platforme u bočnoj traci i na Kontrolnoj tabli; verzija u mejlu o ažuriranju servera
