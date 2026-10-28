@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitoring | UNIPROMET IT ADMIN</title>
+  <meta name="theme-color" content="#090b0f">
+  <link rel="icon" type="image/png" href="/assets/unipromet_logo.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/components/monitoring.css">
+</head>
+<body class="unipromet-theme mon-window">
+
+  <!-- Traka koja se pojavljuje pri pomeranju miša -->
+  <div class="mon-window-bar" id="mw-bar">
+    <img src="/assets/unipromet_logo.png" alt="UNIPROMET" class="mon-window-logo">
+    <div style="min-width: 0;">
+      <div class="mon-window-title" id="mw-title">Monitoring</div>
+      <div class="mon-window-sub" id="mw-sub"></div>
+    </div>
+    <div class="mon-window-tools">
+      <button type="button" class="mon-tool-btn" id="mw-btn-rotation" style="display: none;"><i data-lucide="pause"></i><span>Rotacija</span></button>
+      <button type="button" class="mon-tool-btn" id="mw-btn-fullscreen" title="Ceo ekran (F)"><i data-lucide="maximize"></i><span>Ceo ekran</span></button>
+      <button type="button" class="mon-tool-btn mon-tool-icon" id="mw-btn-close" title="Zatvori prozor"><i data-lucide="x"></i></button>
+    </div>
+  </div>
+
+  <div class="mon-stage" id="mw-stage">
+    <div class="mon-stage-grid" id="mw-grid"></div>
+    <div class="mon-stage-banner" id="mw-banner"></div>
+    <div class="mon-rotation-bar" id="mw-rotation-bar"><span></span></div>
+    <div class="telemetry-loading-state" id="mw-loading">
+      <div class="spinner-circle"></div>
+      <h5>Učitavanje monitoringa...</h5>
+    </div>
+  </div>
+
+  <script type="module" src="/js/core/video-stream.js"></script>
+  <script src="/js/monitoringCore.js"></script>
+  <script src="/js/monitorWindow.js"></script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIPROMET | Pristup Odbijen (403)</title>
+  <meta name="description" content="Pristup Centralnom Admin Panelu nije dozvoljen za ovaj nalog.">
+  <meta name="theme-color" content="#090b0f">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/assets/unipromet_logo.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Auth Pages CSS -->
+  <link rel="stylesheet" href="/css/components/auth-pages.css">
+</head>
+<body class="auth-page-body">
+
+  <!-- Ambient background canvas -->
+  <canvas id="ambient-particles" class="auth-ambient-canvas"></canvas>
+
+  <div class="auth-card-container">
+    <div class="auth-card denied">
+      
+      <!-- Brand Logo -->
+      <div class="auth-brand-wrap">
+        <img src="/assets/unipromet_logo.png" alt="UNIPROMET Logo" class="auth-brand-logo">
+      </div>
+
+      <!-- Icon & Title -->
+      <div style="display:flex; justify-content:center; margin-bottom:12px;">
+        <div style="width:52px; height:52px; border-radius:50%; background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.4); display:flex; align-items:center; justify-content:center; color:#ef4444; box-shadow:0 0 20px rgba(239,68,68,0.25);">
+          <i data-lucide="shield-alert" style="width:28px; height:28px;"></i>
+        </div>
+      </div>
+
+      <h1 class="auth-title" style="color:#f87171;">Pristup Nije Dozvoljen</h1>
+      <p class="auth-subtitle">Vaš Microsoft nalog je uspešno verifikovan, ali <strong>nema odgovarajuću dozvolu</strong> za ulazak u Centralni Admin Panel.</p>
+
+      <!-- Security Badge -->
+      <div class="auth-badge denied">
+        <i data-lucide="lock" style="width:13px;height:13px;"></i>
+        <span>Potrebne bezbednosne privilegije</span>
+      </div>
+
+      <!-- User Info & Groups Box -->
+      <div class="user-info-panel">
+        <div class="user-info-row">
+          <span class="user-info-label">Prijavljeni korisnik:</span>
+          <span class="user-info-val" id="user-name-text">Učitavanje...</span>
+        </div>
+        <div class="user-info-row">
+          <span class="user-info-label">Poslovni e-mail:</span>
+          <span class="user-info-val" id="user-email-text">-</span>
+        </div>
+        <div class="user-info-row">
+          <span class="user-info-label">Status autorizacije:</span>
+          <span class="user-info-val highlight">Nedodeljena uloga</span>
+        </div>
+        <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+          <span class="user-info-label" style="font-size:0.75rem; display:block; margin-bottom:6px;">
+            Vaše detektovane grupe u Microsoft sistemu:
+          </span>
+          <div class="user-groups-chips-wrap" id="user-groups-container">
+            <span class="user-grp-chip">Učitavanje grupa...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notice Box -->
+      <div class="auth-notice-box warning">
+        Ovaj sistem sadrži osetljivu kontrolu fabričke mrežne infrastrukture, video nadzora i servera. Pristup je rezervisan isključivo za ovlašćena lica sa definisanim bezbednosnim ulogama kompanije UNIPROMET.
+      </div>
+
+      <!-- Actions Group -->
+      <div class="auth-actions-group">
+        <a href="/auth/logout" class="btn-auth-primary">
+          <i data-lucide="log-out" style="width:16px;height:16px;"></i>
+          <span>Prijavite se drugim nalogom</span>
+        </a>
+
+        <a href="mailto:it@unipromet.co.rs?subject=Zahtev%20za%20pristup%20Admin%20Panelu" class="btn-auth-secondary">
+          <i data-lucide="mail" style="width:16px;height:16px;"></i>
+          <span>Kontaktirajte IT Službu</span>
+        </a>
+      </div>
+
+      <!-- Footer Slogan -->
+      <div class="auth-footer-slogan">
+        UNIPROMET DOO ČAČAK &bull; NA SVETLOJ STRANI PUTA
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide && window.lucide.createIcons) {
+      window.lucide.createIcons();
+    }
+
+    // Load current user profile details
+    async function loadDeniedUserDetails() {
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+
+        if (data.user) {
+          document.getElementById('user-name-text').textContent = data.user.name || 'Korisnik';
+          document.getElementById('user-email-text').textContent = data.user.email || 'Nije naveden';
+
+          const groups = Array.isArray(data.user.groups) ? data.user.groups : [];
+          const container = document.getElementById('user-groups-container');
+
+          if (groups.length > 0) {
+            container.innerHTML = groups.map(g => `
+              <span class="user-grp-chip">${escapeText(g.name)}</span>
+            `).join('');
+          } else {
+            container.innerHTML = `<span class="user-grp-chip" style="color:#94a3b8; font-style:italic;">Nijedna bezbednosna grupa nije dodeljena</span>`;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not load user profile', e);
+      }
+    }
+
+    function escapeText(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    loadDeniedUserDetails();
+
+    // Ambient floating subtle red/amber particles
+    (function() {
+      const canvas = document.getElementById('ambient-particles');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const particles = [];
+      for (let i = 0; i < 35; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.5 + 0.8,
+          dx: (Math.random() - 0.5) * 0.35,
+          dy: (Math.random() - 0.5) * 0.35,
+          color: Math.random() > 0.5 ? 'rgba(239, 68, 68, 0.4)' : 'rgba(255, 184, 0, 0.3)'
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+          p.x += p.dx;
+          p.y += p.dy;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+  </script>
+</body>
+</html>

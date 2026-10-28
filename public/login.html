@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIPROMET | Prijava na Centralni Admin Panel</title>
+  <meta name="description" content="Centralni kontrolni i admin panel za lokalnu mrežu - UNIPROMET Čačak.">
+  <meta name="theme-color" content="#090b0f">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="/assets/unipromet_logo.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Auth Pages CSS -->
+  <link rel="stylesheet" href="/css/components/auth-pages.css">
+</head>
+<body class="auth-page-body">
+
+  <!-- Ambient background canvas -->
+  <canvas id="ambient-particles" class="auth-ambient-canvas"></canvas>
+
+  <div class="auth-card-container">
+    <div class="auth-card">
+      
+      <!-- Brand Logo -->
+      <div class="auth-brand-wrap">
+        <img src="/assets/unipromet_logo.png" alt="UNIPROMET Logo" class="auth-brand-logo">
+      </div>
+
+      <!-- Title & Subtitle -->
+      <h1 class="auth-title">Centralni Admin Panel</h1>
+      <p class="auth-subtitle">Nadzor i upravljanje lokalnom infrastrukturom, CCTV kamerama, serverima i štampačima kompanije UNIPROMET.</p>
+
+      <!-- Security Badge -->
+      <div class="auth-badge">
+        <i data-lucide="shield-check" style="width:14px;height:14px;"></i>
+        <span>Zaštićeni sistem • Autorizovan pristup</span>
+      </div>
+
+      <!-- Large Microsoft 365 Login Button -->
+      <a href="/auth/login" class="btn-m365-large" id="btn-login-m365">
+        <div class="m365-logo-grid">
+          <div class="m365-sq red"></div>
+          <div class="m365-sq green"></div>
+          <div class="m365-sq blue"></div>
+          <div class="m365-sq yellow"></div>
+        </div>
+        <span>Prijava sa Microsoft 365 nalogom</span>
+      </a>
+
+      <!-- Notice Box -->
+      <div class="auth-notice-box">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <i data-lucide="info" style="width:14px;height:14px; color:#ffb800;"></i>
+          <strong>Napomena o pristupu:</strong>
+        </div>
+        Pristup ovom sistemu je dozvoljen isključivo autorizovanim nalozima sa domenom <strong>@unipromet.co.rs</strong> sa dodeljenim bezbednosnim rolama u Microsoft Entra ID imeniku.
+      </div>
+
+      <!-- Footer Slogan -->
+      <div class="auth-footer-slogan">
+        UNIPROMET DOO ČAČAK &bull; NA SVETLOJ STRANI PUTA
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide && window.lucide.createIcons) {
+      window.lucide.createIcons();
+    }
+
+    // Ambient floating gold particles
+    (function() {
+      const canvas = document.getElementById('ambient-particles');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const particles = [];
+      for (let i = 0; i < 40; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.5 + 0.8,
+          dx: (Math.random() - 0.5) * 0.4,
+          dy: (Math.random() - 0.5) * 0.4,
+          alpha: Math.random() * 0.5 + 0.2
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+          p.x += p.dx;
+          p.y += p.dy;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 184, 0, ' + p.alpha + ')';
+          ctx.fill();
+        });
+        requestAnimationFrame(draw);
+      }
+      draw();
+    })();
+  </script>
+</body>
+</html>

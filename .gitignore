@@ -1,0 +1,24 @@
+# Zavisnosti i build
+node_modules/
+dist/
+
+# Tajne i podesavanja po masini (primer za server: deploy/env.production.example)
+.env
+.env.*
+
+# Podaci koji nastaju u radu: baza, logovi, izvestaji, backup-i i snimci
+data/
+*.log
+
+# Generise se u radu
+config/ssl/
+config/go2rtc.yaml
+src/db/cameras_cache.json
+src/db/lan_devices_cache.json
+
+# go2rtc binarni fajlovi: u git ide samo Linux verzija (produkcija), ostale se prenose rucno
+bin/*
+!bin/go2rtc_linux_amd64
+
+# Lokalno
+scratch/

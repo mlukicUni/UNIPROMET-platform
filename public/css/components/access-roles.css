@@ -1,0 +1,826 @@
+/**
+ * ==========================================================================
+ * UNIPROMET IT ADMIN - KORISNICI I ROLE (stilovi)
+ * Koristi postojeći dizajn sistem (panel-box, eq-pill-btn, inv-camera-table,
+ * glass-input, modal-glass...). Ovde su samo dodatne komponente.
+ * ==========================================================================
+ */
+
+/* ---- Zaglavlje editora role ---- */
+.ar-editor-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.ar-editor-title h5 {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ar-editor-sub {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.ar-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: rgba(56, 189, 248, 0.07);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: #bae6fd;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.ar-hint i {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--status-info);
+}
+
+.ar-hint b {
+  color: #ffffff;
+}
+
+.ar-savebar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ar-dirty-note {
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--yellow-primary);
+}
+
+/* ---- Lista rola ---- */
+.ar-role-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.ar-role-name:hover {
+  color: var(--yellow-primary);
+}
+
+.ar-role-name i {
+  width: 15px;
+  height: 15px;
+  color: var(--yellow-primary);
+  flex-shrink: 0;
+}
+
+.ar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: rgba(255, 184, 0, 0.12);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  color: var(--yellow-primary);
+}
+
+.ar-num-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.ar-num-badge.is-on {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.28);
+  color: #34d399;
+}
+
+.ar-num-badge.is-all {
+  background: rgba(255, 184, 0, 0.12);
+  border-color: rgba(255, 184, 0, 0.3);
+  color: var(--yellow-primary);
+}
+
+/* ---- Matrica dozvola ---- */
+.ar-sec {
+  margin-top: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.ar-sec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 16px;
+  background: rgba(255, 184, 0, 0.06);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ar-sec-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-heading);
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #ffffff;
+}
+
+.ar-sec-title i {
+  width: 16px;
+  height: 16px;
+  color: var(--yellow-primary);
+}
+
+.ar-sec-note {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.ar-item {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto minmax(0, 1.3fr);
+  align-items: center;
+  gap: 14px;
+  padding: 9px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.ar-item:last-child {
+  border-bottom: none;
+}
+
+.ar-item-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ar-inh {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.66rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+.ar-seg {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ar-seg-btn {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  padding: 5px 13px;
+  border-radius: 6px;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ar-seg-btn:hover {
+  color: #ffffff;
+}
+
+.ar-seg-btn.active.lvl-none {
+  background: rgba(148, 163, 184, 0.18);
+  color: #e2e8f0;
+}
+
+.ar-seg-btn.active.lvl-view {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+}
+
+.ar-seg-btn.active.lvl-edit {
+  background: rgba(255, 184, 0, 0.2);
+  color: var(--yellow-primary);
+}
+
+.ar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ar-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ar-chip i {
+  width: 12px;
+  height: 12px;
+}
+
+.ar-chip:hover {
+  border-color: rgba(255, 184, 0, 0.45);
+  color: #ffffff;
+}
+
+.ar-chip.on {
+  background: rgba(16, 185, 129, 0.14);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.ar-chip.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ---- Pristup kamerama (stablo) ---- */
+.ar-cam-summary {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.ar-cam-summary b {
+  color: #ffffff;
+}
+
+.ar-tree {
+  margin-top: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+  max-height: 560px;
+  overflow-y: auto;
+}
+
+.ar-tree-modal {
+  max-height: 380px;
+  margin-top: 0;
+}
+
+.ar-tree-title {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 8px 16px;
+  font-family: var(--font-heading);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--yellow-primary);
+  background: #141923;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ar-row:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.ar-row.is-head {
+  background: rgba(255, 184, 0, 0.05);
+}
+
+.ar-row-main {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  font-size: 0.83rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.ar-row-main i {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--yellow-primary);
+}
+
+.ar-row-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ar-expander {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.18s ease;
+}
+
+.ar-expander.open {
+  transform: rotate(90deg);
+  color: var(--yellow-primary);
+}
+
+.ar-expander i {
+  width: 15px;
+  height: 15px;
+  color: inherit;
+}
+
+.ar-cam-row {
+  padding-left: 46px;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.ar-cam-row .ar-row-main {
+  font-weight: 500;
+  font-size: 0.8rem;
+}
+
+.ar-cam-row .ar-row-main i {
+  color: #64748b;
+  width: 13px;
+  height: 13px;
+}
+
+.ar-togs {
+  display: inline-flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ar-tog {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+  color: #94a3b8;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.ar-tog i {
+  width: 12px;
+  height: 12px;
+}
+
+.ar-tog:hover {
+  border-color: rgba(255, 184, 0, 0.45);
+  color: #ffffff;
+}
+
+.ar-tog.on {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.38);
+  color: #34d399;
+}
+
+.ar-tog.inh {
+  background: rgba(16, 185, 129, 0.06);
+  border-color: rgba(16, 185, 129, 0.2);
+  color: rgba(52, 211, 153, 0.7);
+  cursor: default;
+}
+
+.ar-tog.inh:hover {
+  color: rgba(52, 211, 153, 0.7);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.ar-check {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--yellow-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.ar-tree-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* ---- Osnovno ---- */
+.ar-basic-form {
+  max-width: 620px;
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ar-basic-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+}
+
+/* ---- Birač korisnika / grupa ---- */
+.ar-pick-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ar-pick-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ar-pick-status {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-dim);
+}
+
+.ar-pick-list {
+  max-height: 190px;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ar-pick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: transparent;
+  color: #e2e8f0;
+  text-align: left;
+  font-family: var(--font-body);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.ar-pick-item:last-child {
+  border-bottom: none;
+}
+
+.ar-pick-item:hover {
+  background: rgba(255, 184, 0, 0.08);
+}
+
+.ar-pick-item[disabled] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ar-pick-name {
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.ar-pick-meta {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 460px;
+}
+
+.ar-pick-empty {
+  padding: 14px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.ar-manual-row {
+  display: flex;
+  gap: 10px;
+}
+
+.ar-manual-row .glass-input {
+  flex: 1;
+}
+
+/* ---- Automatske grupe ---- */
+.ar-auto-groups {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-md);
+}
+
+.ar-auto-groups-title {
+  margin-bottom: 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ar-auto-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ar-auto-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.22);
+  color: #7dd3fc;
+}
+
+.ar-auto-chip span {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ---- Proveri korisnika ---- */
+.ar-card {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ar-card h6 {
+  margin: 0 0 10px;
+  font-family: var(--font-heading);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--yellow-primary);
+}
+
+.ar-card-user {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ar-card-user .ar-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: #111;
+  background: var(--yellow-primary);
+}
+
+.ar-card-user .ar-user-name {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.ar-card-user .ar-user-meta {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+}
+
+.ar-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ar-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+.ar-pill.is-role {
+  background: rgba(255, 184, 0, 0.1);
+  border-color: rgba(255, 184, 0, 0.3);
+  color: var(--yellow-light);
+}
+
+.ar-lvl {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ar-lvl.lvl-none {
+  background: rgba(148, 163, 184, 0.1);
+  color: #64748b;
+}
+
+.ar-lvl.lvl-view {
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.ar-lvl.lvl-edit {
+  background: rgba(255, 184, 0, 0.14);
+  border: 1px solid rgba(255, 184, 0, 0.32);
+  color: var(--yellow-primary);
+}
+
+.ar-rights {
+  display: inline-flex;
+  gap: 5px;
+}
+
+.ar-right-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 8px;
+  border-radius: 5px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.ar-right-badge.on {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: #34d399;
+}
+
+.ar-right-badge.off {
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+}
+
+.ar-scroll-box {
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+/* ---- Evidencija ---- */
+.ar-event {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+}
+
+.ar-event.ev-camera {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.ar-event.ev-role {
+  background: rgba(255, 184, 0, 0.12);
+  border-color: rgba(255, 184, 0, 0.3);
+  color: var(--yellow-primary);
+}
+
+.ar-event.ev-auth {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.ar-event.ev-denied {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.32);
+  color: #f87171;
+}
+
+@media (max-width: 860px) {
+  .ar-item {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .ar-actions {
+    justify-content: flex-start;
+  }
+
+  .ar-cam-row {
+    padding-left: 18px;
+  }
+
+  .ar-row {
+    flex-wrap: wrap;
+  }
+}

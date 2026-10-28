@@ -1,0 +1,76 @@
+/**
+ * ==========================================================================
+ * UNIPROMET IT ADMIN - PRIKAZ PRAVA (ROLE)
+ * Sakrivanje sekcija/dugmadi koje rola ne dozvoljava.
+ * Merodavna provera je uvek na serveru.
+ * ==========================================================================
+ */
+
+.access-hidden {
+  display: none !important;
+}
+
+/* Dok se prava ne učitaju, meni se ne prikazuje (sprečava kratko treperenje) */
+body:not(.access-ready) .sidebar-nav,
+body:not(.access-ready) .mobile-bottom-nav {
+  visibility: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   NIVO "PREGLED": sakrij dodavanje, izmenu, brisanje i operativne akcije
+   -------------------------------------------------------------------------- */
+.tab-view[data-readonly="true"] [id^="btn-add-"],
+.tab-view[data-readonly="true"] [id^="btn-open-add-"],
+.tab-view[data-readonly="true"] #btn-check-all-recorders,
+.tab-view[data-readonly="true"] #btn-ping-all-rf-readers,
+.tab-view[data-readonly="true"] .btn-inv-action.btn-danger,
+.tab-view[data-readonly="true"] .btn-inv-action.btn-del,
+.tab-view[data-readonly="true"] .btn-inv-action[class*="delete"],
+.tab-view[data-readonly="true"] .btn-inv-action[class*="edit"],
+.tab-view[data-readonly="true"] .btn-inv-action[title*="Izmeni"],
+.tab-view[data-readonly="true"] .btn-inv-action[title*="Uredi"],
+.tab-view[data-readonly="true"] .btn-inv-action[title*="Obriši"],
+.tab-view[data-readonly="true"] .btn-inv-action[title*="napomenu"],
+.tab-view[data-readonly="true"] .btn-printer-action[title*="Uredi"],
+.tab-view[data-readonly="true"] .btn-wake-action,
+.tab-view[data-readonly="true"] .btn-danger-action,
+.tab-view[data-readonly="true"] .btn-restore-action,
+.tab-view[data-readonly="true"] [onclick*="openEdit"],
+.tab-view[data-readonly="true"] [onclick*="openDelete"],
+.tab-view[data-readonly="true"] [onclick*="openAddCameraModal"],
+.tab-view[data-readonly="true"] [onclick*="quickAddService"],
+.tab-view[data-readonly="true"] [onclick*="removeService"],
+.tab-view[data-readonly="true"] [onclick*="toggleScheduledService"],
+.tab-view[data-readonly="true"] [onclick*="triggerRunScheduledService"],
+.tab-view[data-readonly="true"] [onclick*="pingSingleRfReader"],
+.tab-view[data-readonly="true"] [onclick*="checkSingleRecorderById"],
+.tab-view[data-readonly="true"] [onclick*="wakeSinglePrinter"],
+.tab-view[data-readonly="true"] [onclick*="decommissionPrinter"],
+.tab-view[data-readonly="true"] [onclick*="restorePrinter"],
+body[data-ro-tab="true"] .btn-card-delete-note,
+body[data-ro-tab="true"] .btn-remove-soft-row,
+body[data-ro-tab="true"] .btn-remove-hist-row,
+body[data-ro-tab="true"] #btn-add-eq-software-row,
+body[data-ro-tab="true"] #btn-add-eq-history-row {
+  display: none !important;
+}
+
+/* Oznaka nivoa "samo pregled" u zaglavlju stranice */
+.access-readonly-note {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+body[data-ro-tab="true"] .access-readonly-note {
+  display: inline-flex;
+}

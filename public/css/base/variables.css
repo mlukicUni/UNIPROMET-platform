@@ -1,0 +1,54 @@
+/* ==========================================================================
+   UNIPROMET ČAČAK - OFFICIAL ADMIN DESIGN SYSTEM VARIABLES
+   Theme: Carbon Black, Pure White, and Safety Golden-Yellow
+   "Na svetloj strani puta"
+   ========================================================================== */
+
+:root {
+  /* Color Palette */
+  --bg-pitch: #090b0f;
+  --bg-surface: #10141d;
+  --bg-surface-elevated: #161b26;
+  --bg-card: #141923;
+  --bg-card-hover: #1c2230;
+  --bg-glass: rgba(16, 20, 29, 0.88);
+
+  --border-subtle: #232a3b;
+  --border-medium: #303a52;
+  --border-yellow-glow: rgba(255, 199, 44, 0.4);
+
+  --yellow-primary: #FFB800;
+  --yellow-bright: #FFC700;
+  --yellow-light: #FFE082;
+  --yellow-glow: rgba(255, 184, 0, 0.35);
+  --yellow-subtle-bg: rgba(255, 184, 0, 0.12);
+
+  --white-pure: #ffffff;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+
+  --status-success: #10b981;
+  --status-warning: #f59e0b;
+  --status-error: #ef4444;
+  --status-info: #38bdf8;
+
+  /* Typography */
+  --font-heading: 'Outfit', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+
+  /* Radius & Shadows */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 4px 20px rgba(0, 0, 0, 0.5);
+  --shadow-yellow: 0 0 25px rgba(255, 184, 0, 0.25);
+  --shadow-yellow-lg: 0 0 40px rgba(255, 184, 0, 0.4);
+
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}

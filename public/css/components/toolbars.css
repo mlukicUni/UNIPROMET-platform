@@ -1,0 +1,142 @@
+/* ==========================================================================
+   UNIPROMET - TOOLBARS, SEARCH & FILTER CONTROLS COMPONENT
+   ========================================================================== */
+
+.printer-search-input {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 14px 8px 36px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  width: 240px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.printer-search-input:focus {
+  border-color: var(--yellow-primary);
+  background: rgba(255, 184, 0, 0.04);
+  box-shadow: 0 0 0 3px rgba(255, 184, 0, 0.15);
+  width: 280px;
+}
+
+.btn-clear-search {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  padding: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.btn-clear-search:hover {
+  color: #ef4444;
+}
+
+.model-filter-dropdown-wrap,
+.network-filter-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.model-filter-icon,
+.network-filter-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--yellow-primary);
+  opacity: 0.85;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  transition: opacity 0.2s ease;
+}
+
+.model-filter-dropdown-wrap:hover .model-filter-icon,
+.network-filter-select-wrap:hover .network-filter-icon {
+  opacity: 1;
+}
+
+.model-filter-select,
+.network-filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 8px 36px 8px 36px;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  outline: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%23FFB800' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: calc(100% - 10px) center;
+  backdrop-filter: blur(10px);
+}
+
+.model-filter-select:hover,
+.network-filter-select:hover {
+  border-color: rgba(255, 184, 0, 0.45);
+  background-color: rgba(255, 255, 255, 0.07);
+}
+
+.model-filter-select:focus,
+.network-filter-select:focus {
+  border-color: var(--yellow-primary);
+  background-color: rgba(255, 184, 0, 0.05);
+  box-shadow: 0 0 0 3px rgba(255, 184, 0, 0.18);
+}
+
+.model-filter-select option,
+.network-filter-select option {
+  background-color: #0f131a;
+  color: #f1f5f9;
+  padding: 10px 14px;
+  font-size: 0.85rem;
+}
+
+.view-switch-btns {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.btn-view-switch {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-view-switch:hover {
+  color: #ffffff;
+}
+
+.btn-view-switch.active {
+  background: rgba(255, 184, 0, 0.15);
+  color: var(--yellow-primary);
+}

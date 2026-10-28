@@ -1,0 +1,657 @@
+/* ==========================================================================
+   UNIPROMET - AUTOMATED SERVICES (SCHEDULER) STYLES
+   ========================================================================== */
+
+.scheduled-services-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(480px, 1fr));
+  gap: 22px;
+}
+
+@media (max-width: 768px) {
+  .scheduled-services-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.sched-service-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  position: relative;
+}
+
+.sched-service-card:hover {
+  border-color: rgba(255, 184, 0, 0.4);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  transform: translateY(-2px);
+}
+
+.sched-service-card.service-paused {
+  opacity: 0.65;
+  filter: grayscale(0.2);
+}
+
+.sched-card-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%);
+}
+
+.sched-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.sched-avatar-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sched-avatar-printers {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+.sched-avatar-cameras {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.sched-avatar-custom {
+  background: rgba(255, 184, 0, 0.12);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  color: var(--primary-yellow);
+}
+
+.sched-avatar-rf {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.sched-avatar-wifi {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #06b6d4;
+}
+
+.sched-avatar-recorders {
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #a855f7;
+}
+
+.sched-avatar-urgent {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
+}
+
+.sched-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+  line-height: 1.3;
+}
+
+.sched-target-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.sched-target-printers {
+  background: rgba(59, 130, 246, 0.15);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #60a5fa;
+}
+
+.sched-target-cameras {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #ef4444;
+}
+
+.sched-target-rf {
+  background: rgba(16, 185, 129, 0.15);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #10b981;
+}
+
+.sched-target-wifi {
+  background: rgba(6, 182, 212, 0.15);
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  color: #06b6d4;
+}
+
+.sched-target-recorders {
+  background: rgba(168, 85, 247, 0.15);
+  border: 1px solid rgba(168, 85, 247, 0.35);
+  color: #c084fc;
+}
+
+.sched-target-urgent {
+  background: rgba(245, 158, 11, 0.15);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+  font-weight: 800;
+}
+
+.sched-target-custom {
+  background: rgba(255, 184, 0, 0.15);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  color: var(--primary-yellow);
+}
+
+.btn-sched-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  line-height: 1;
+}
+
+.btn-sched-action i,
+.btn-sched-action svg {
+  width: 14px;
+  height: 14px;
+}
+
+.btn-sched-edit {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+}
+.btn-sched-edit:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.btn-sched-delete {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #f87171;
+}
+.btn-sched-delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+}
+
+.btn-sched-run {
+  background: rgba(255, 184, 0, 0.15);
+  border-color: rgba(255, 184, 0, 0.4);
+  color: var(--primary-yellow);
+}
+.btn-sched-run:hover {
+  background: var(--primary-yellow);
+  color: #000000;
+  box-shadow: 0 0 15px rgba(255, 184, 0, 0.35);
+}
+
+.sched-desc {
+  padding: 16px 24px 12px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.sched-section {
+  padding: 12px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sched-section-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Time Chips & Quick Add */
+.sched-times-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.time-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-weight: 800;
+  transition: all 0.2s ease;
+}
+
+.time-chip i {
+  color: var(--primary-yellow);
+  width: 14px;
+  height: 14px;
+}
+
+.btn-remove-time {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.btn-remove-time:hover {
+  color: #ef4444;
+}
+
+.time-add-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 2px 6px;
+  transition: border-color 0.2s ease;
+}
+
+.time-add-wrap:focus-within {
+  border-color: var(--primary-yellow);
+  border-style: solid;
+}
+
+.input-quick-time {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  font-weight: 700;
+  width: 58px;
+  outline: none;
+  padding: 2px 0;
+}
+
+.btn-quick-add-time {
+  background: var(--primary-yellow);
+  color: #000000;
+  border: none;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 0.9rem;
+  transition: transform 0.15s ease;
+}
+
+.btn-quick-add-time:hover {
+  transform: scale(1.1);
+}
+
+/* Days & Recipients */
+.sched-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.sched-day-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.sched-recipient-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+  font-size: 0.76rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.sched-recipient-chip i,
+.sched-recipient-chip svg {
+  color: #60a5fa;
+  width: 13px;
+  height: 13px;
+}
+
+.btn-remove-recipient {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.btn-remove-recipient:hover {
+  color: #ef4444;
+}
+
+.recipient-add-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 2px 6px;
+  transition: border-color 0.2s ease;
+}
+
+.recipient-add-wrap:focus-within {
+  border-color: #60a5fa;
+  border-style: solid;
+}
+
+.input-quick-recipient {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  width: 180px;
+  outline: none;
+  padding: 2px 0;
+}
+
+.input-quick-recipient::placeholder {
+  color: #64748b;
+  font-size: 0.74rem;
+}
+
+.btn-quick-add-recipient {
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 0.9rem;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.btn-quick-add-recipient:hover {
+  transform: scale(1.1);
+  background: #2563eb;
+}
+
+/* Last run info */
+.sched-last-run {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sched-last-run-status {
+  font-weight: 800;
+  font-family: var(--font-mono);
+}
+
+/* Card Action Footer */
+.sched-card-footer {
+  margin-top: auto;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.sched-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sched-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ==========================================================================
+   UNIPROMET SCHEDULER STATUS PILL & TOGGLE SWITCH
+   ========================================================================== */
+.sched-status-pill-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  background: rgba(0, 0, 0, 0.4);
+  line-height: 1;
+}
+
+/* Active State: Glowing Emerald */
+.sched-status-pill-toggle.pill-active {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.35);
+  color: #34d399;
+}
+
+.sched-status-pill-toggle.pill-active:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.6);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+  color: #6ee7b7;
+}
+
+.sched-status-pill-toggle.pill-active .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  display: inline-block;
+  animation: pulseSchedDot 2s infinite ease-in-out;
+}
+
+/* Paused State: Muted / Amber Dim */
+.sched-status-pill-toggle.pill-paused {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+}
+
+.sched-status-pill-toggle.pill-paused:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 184, 0, 0.4);
+  color: #f1f5f9;
+  box-shadow: 0 0 12px rgba(255, 184, 0, 0.15);
+}
+
+.sched-status-pill-toggle.pill-paused .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #64748b;
+  box-shadow: none;
+  display: inline-block;
+}
+
+/* Integrated Mini Rail & Knob */
+.status-switch-rail {
+  position: relative;
+  width: 26px;
+  height: 15px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.status-switch-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #64748b;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.sched-status-pill-toggle.pill-active .status-switch-rail {
+  background: rgba(16, 185, 129, 0.25);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.sched-status-pill-toggle.pill-active .status-switch-knob {
+  transform: translateX(11px);
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.sched-status-pill-toggle.pill-paused .status-switch-knob {
+  transform: translateX(0);
+}
+
+@keyframes pulseSchedDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(1.2);
+  }
+}
+
+/* Header Action Buttons in Scheduled Services */
+#tab-scheduled_services .header-action-group .btn-dark-sm,
+#tab-scheduled_services .btn-refresh-glass {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  font-family: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--radius-md, 8px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.2;
+}
+
+#tab-scheduled_services .header-action-group .btn-dark-sm i,
+#tab-scheduled_services .header-action-group .btn-dark-sm svg,
+#tab-scheduled_services .btn-refresh-glass i,
+#tab-scheduled_services .btn-refresh-glass svg {
+  width: 14px;
+  height: 14px;
+  color: var(--primary-yellow, #ffb800);
+}
+
+#tab-scheduled_services .header-action-group .btn-dark-sm:hover,
+#tab-scheduled_services .btn-refresh-glass:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 184, 0, 0.45);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.2);
+}
+
+#tab-scheduled_services .header-action-group .btn-dark-sm:active,
+#tab-scheduled_services .btn-refresh-glass:active {
+  transform: translateY(1px);
+}

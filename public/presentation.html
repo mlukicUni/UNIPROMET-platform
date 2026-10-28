@@ -1,0 +1,1657 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UNIPROMET | Centralni Unipromet Panel - Prezentacija Sistema</title>
+  <meta name="description" content="Interaktivna prezentacija sistema za centralizovani nadzor i automatizaciju IT infrastrukture kompanije UNIPROMET DOO Čačak.">
+  <link rel="icon" type="image/png" href="/assets/unipromet_logo.png">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    /* -------------------------------------------------------------
+       CSS DESIGN TOKENS & RESET
+       ------------------------------------------------------------- */
+    :root {
+      --bg-dark: #080b11;
+      --bg-card: rgba(16, 23, 38, 0.85);
+      --bg-card-hover: rgba(22, 32, 54, 0.95);
+      --bg-glass: rgba(255, 255, 255, 0.03);
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-accent: rgba(245, 158, 11, 0.35);
+
+      --gold-primary: #f59e0b;
+      --gold-light: #fbbf24;
+      --gold-glow: rgba(245, 158, 11, 0.25);
+      --gold-dark: #b45309;
+
+      --cyan-neon: #06b6d4;
+      --emerald-neon: #10b981;
+      --rose-neon: #f43f5e;
+      --indigo-neon: #818cf8;
+
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+
+      --font-display: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+
+      --transition-smooth: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      user-select: none;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Ambient animated particles */
+    #ambient-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    /* Top progress bar */
+    .progress-bar-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.05);
+      z-index: 100;
+    }
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--gold-dark), var(--gold-primary), var(--gold-light));
+      box-shadow: 0 0 12px var(--gold-glow);
+      transition: width 0.35s ease;
+    }
+
+    /* Top Bar Header */
+    .top-header {
+      position: fixed;
+      top: 12px;
+      left: 28px;
+      right: 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 50;
+      pointer-events: none;
+    }
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    .brand-logo {
+      height: 38px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));
+    }
+    .brand-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(245, 158, 11, 0.12);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-family: var(--font-display);
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--gold-light);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      pointer-events: auto;
+    }
+    .btn-header-action {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      padding: 7px 14px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-decoration: none;
+      transition: var(--transition-smooth);
+    }
+    .btn-header-action:hover {
+      color: #fff;
+      border-color: var(--border-accent);
+      background: var(--bg-card-hover);
+      box-shadow: 0 0 15px var(--gold-glow);
+    }
+
+    /* -------------------------------------------------------------
+       SLIDE DECK STYLES
+       ------------------------------------------------------------- */
+    .deck-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      padding: 70px 40px 85px 40px;
+    }
+
+    .slide {
+      position: absolute;
+      width: 90%;
+      max-width: 1380px;
+      height: 82vh;
+      max-height: 820px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+      transform: scale(0.96) translateX(40px);
+      transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.4s;
+      pointer-events: none;
+    }
+
+    .slide.active {
+      opacity: 1;
+      visibility: visible;
+      transform: scale(1) translateX(0);
+      pointer-events: auto;
+    }
+
+    .slide.prev {
+      transform: scale(0.96) translateX(-40px);
+    }
+
+    /* -------------------------------------------------------------
+       SLIDE TYPOGRAPHY & COMPONENTS
+       ------------------------------------------------------------- */
+    .slide-header {
+      margin-bottom: 24px;
+    }
+    .slide-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--font-display);
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--gold-primary);
+      margin-bottom: 6px;
+    }
+    .slide-title {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .slide-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-muted);
+      margin-top: 6px;
+      max-width: 850px;
+      line-height: 1.5;
+    }
+
+    .slide-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    /* Grid layouts */
+    .grid-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+    .grid-3col {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+    .grid-4col {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 18px;
+      align-items: stretch;
+    }
+
+    /* Glass Cards */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(16px);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: var(--transition-smooth);
+      position: relative;
+      overflow: hidden;
+    }
+    .card:hover {
+      border-color: var(--border-accent);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 35px rgba(245, 158, 11, 0.12);
+    }
+    .card.highlight {
+      border-color: var(--border-accent);
+      background: linear-gradient(145deg, rgba(245, 158, 11, 0.08) 0%, rgba(16, 23, 38, 0.95) 100%);
+    }
+
+    .card-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      font-size: 1.2rem;
+    }
+    .card-icon.gold {
+      background: rgba(245, 158, 11, 0.15);
+      color: var(--gold-light);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+    }
+    .card-icon.cyan {
+      background: rgba(6, 182, 212, 0.15);
+      color: var(--cyan-neon);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+    }
+    .card-icon.emerald {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--emerald-neon);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .card-icon.indigo {
+      background: rgba(129, 140, 248, 0.15);
+      color: var(--indigo-neon);
+      border: 1px solid rgba(129, 140, 248, 0.3);
+    }
+    .card-icon.rose {
+      background: rgba(244, 63, 94, 0.15);
+      color: var(--rose-neon);
+      border: 1px solid rgba(244, 63, 94, 0.3);
+    }
+
+    .card-title {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 8px;
+    }
+    .card-desc {
+      font-size: 0.92rem;
+      color: var(--text-muted);
+      line-height: 1.55;
+    }
+
+    /* Feature list inside cards */
+    .feature-list {
+      list-style: none;
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.88rem;
+      color: #e2e8f0;
+      line-height: 1.45;
+    }
+    .feature-item i {
+      color: var(--gold-primary);
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    /* Badges & Tags */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+    }
+    .tag.gold { background: rgba(245, 158, 11, 0.15); color: var(--gold-light); border: 1px solid rgba(245, 158, 11, 0.3); }
+    .tag.cyan { background: rgba(6, 182, 212, 0.15); color: var(--cyan-neon); border: 1px solid rgba(6, 182, 212, 0.3); }
+    .tag.emerald { background: rgba(16, 185, 129, 0.15); color: var(--emerald-neon); border: 1px solid rgba(16, 185, 129, 0.3); }
+
+    /* Key Metric Big Number */
+    .stat-number {
+      font-family: var(--font-display);
+      font-size: 2.8rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-number.gold {
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .stat-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    /* -------------------------------------------------------------
+       INTERACTIVE LIVE DEMO GAUGES (FOR PRESENTATION)
+       ------------------------------------------------------------- */
+    .gauge-bar-wrapper {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .gauge-label-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+    .gauge-bar-bg {
+      height: 7px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .gauge-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease-out;
+    }
+    .gauge-fill.black { background: #94a3b8; }
+    .gauge-fill.cyan { background: #06b6d4; }
+    .gauge-fill.magenta { background: #ec4899; }
+    .gauge-fill.yellow { background: #eab308; }
+    .gauge-fill.emerald { background: #10b981; }
+
+    /* Interactive Timeline Pill */
+    .time-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: #fff;
+    }
+    .time-chip.active {
+      background: rgba(245, 158, 11, 0.18);
+      border-color: var(--gold-primary);
+      color: var(--gold-light);
+    }
+
+    /* Architecture Layers Flow */
+    .arch-flow {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .arch-layer {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      transition: var(--transition-smooth);
+    }
+    .arch-layer:hover {
+      border-color: var(--border-accent);
+      background: var(--bg-card-hover);
+    }
+    .arch-layer-num {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--gold-primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(245, 158, 11, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .arch-layer-title {
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #fff;
+      width: 210px;
+      flex-shrink: 0;
+    }
+    .arch-layer-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      flex: 1;
+    }
+    .arch-layer-tags {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* -------------------------------------------------------------
+       SLIDE 1: SPECIAL HERO STYLING
+       ------------------------------------------------------------- */
+    .hero-slide-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      justify-content: center;
+      height: 100%;
+    }
+    .hero-logo-wrap {
+      margin-bottom: 24px;
+      position: relative;
+    }
+    .hero-logo-img {
+      height: 70px;
+      filter: drop-shadow(0 0 30px rgba(245, 158, 11, 0.35));
+    }
+    .hero-pre-title {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--gold-primary);
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 4rem;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+      margin-bottom: 18px;
+      background: linear-gradient(135deg, #ffffff 30%, #fbbf24 85%, #f59e0b 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      max-width: 950px;
+    }
+    .hero-subtitle {
+      font-size: 1.25rem;
+      color: var(--text-muted);
+      max-width: 780px;
+      line-height: 1.6;
+      margin-bottom: 34px;
+    }
+    .hero-stats-strip {
+      display: flex;
+      gap: 32px;
+      background: rgba(16, 23, 38, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: 20px;
+      padding: 16px 36px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    }
+    .hero-stat-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .hero-presenter-badge {
+      margin-top: 36px;
+      font-size: 0.95rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .hero-presenter-badge strong {
+      color: #fff;
+    }
+
+    /* -------------------------------------------------------------
+       BOTTOM FLOATING NAVIGATION DOCK
+       ------------------------------------------------------------- */
+    .bottom-dock {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(16, 23, 38, 0.9);
+      border: 1px solid var(--border-subtle);
+      border-radius: 40px;
+      padding: 8px 18px;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+      z-index: 50;
+    }
+    .dock-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+    }
+    .dock-btn:hover {
+      color: #fff;
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.08);
+    }
+    .dock-btn:active {
+      transform: scale(0.95);
+    }
+    .dock-btn.primary {
+      background: var(--gold-primary);
+      color: #000;
+    }
+    .dock-btn.primary:hover {
+      background: var(--gold-light);
+      box-shadow: 0 0 16px var(--gold-glow);
+    }
+    .slide-counter {
+      font-family: var(--font-display);
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #fff;
+      padding: 0 8px;
+      min-width: 75px;
+      text-align: center;
+      letter-spacing: 0.05em;
+    }
+    .dock-divider {
+      width: 1px;
+      height: 20px;
+      background: var(--border-subtle);
+    }
+    .keyboard-hint {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 0 4px;
+    }
+    .kbd-key {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: #fff;
+    }
+
+    /* -------------------------------------------------------------
+       OVERVIEW MODAL (GRID OF ALL SLIDES)
+       ------------------------------------------------------------- */
+    .overview-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(8, 11, 17, 0.95);
+      backdrop-filter: blur(25px);
+      z-index: 1000;
+      display: none;
+      flex-direction: column;
+      padding: 40px;
+      overflow-y: auto;
+    }
+    .overview-overlay.open {
+      display: flex;
+    }
+    .overview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      max-width: 1300px;
+      width: 100%;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 1300px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .thumb-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: var(--transition-smooth);
+      position: relative;
+    }
+    .thumb-card:hover {
+      border-color: var(--gold-primary);
+      transform: translateY(-4px);
+      box-shadow: 0 8px 25px var(--gold-glow);
+    }
+    .thumb-card.active-thumb {
+      border-color: var(--gold-primary);
+      background: rgba(245, 158, 11, 0.08);
+    }
+    .thumb-number {
+      font-family: var(--font-display);
+      font-size: 0.8rem;
+      font-weight: 800;
+      color: var(--gold-primary);
+      margin-bottom: 6px;
+    }
+    .thumb-title {
+      font-family: var(--font-display);
+      font-size: 0.98rem;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1024px) {
+      .hero-title { font-size: 2.8rem; }
+      .grid-3col, .grid-4col { grid-template-columns: 1fr 1fr; }
+      .overview-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Progress Bar -->
+  <div class="progress-bar-container">
+    <div class="progress-bar" id="presentation-progress"></div>
+  </div>
+
+  <!-- Ambient Particle Canvas -->
+  <canvas id="ambient-canvas"></canvas>
+
+  <!-- Top Header Bar -->
+  <header class="top-header">
+    <div class="brand-group">
+      <img src="/assets/unipromet_logo.png" alt="UNIPROMET Logo" class="brand-logo">
+      <div class="brand-badge">
+        <i data-lucide="shield-check" style="width:13px;height:13px;"></i>
+        <span>Centralni Unipromet Panel &bull; v1.0</span>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn-header-action" id="btn-toggle-overview" title="Pregled svih slajdova (O ili Esc)">
+        <i data-lucide="grid" style="width:14px;height:14px;"></i>
+        <span>Pregled</span>
+      </button>
+      <a href="/" class="btn-header-action" title="Otvori Centralni Portal">
+        <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+        <span>Otvori Portal</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- =============================================================
+       DECK OF 12 SLIDES
+       ============================================================= -->
+  <main class="deck-container">
+
+    <!-- SLIDE 1: TITLE HERO -->
+    <section class="slide active" data-slide="1">
+      <div class="hero-slide-wrap">
+        <div class="hero-logo-wrap">
+          <img src="/assets/unipromet_logo.png" alt="UNIPROMET Logo" class="hero-logo-img">
+        </div>
+        <div class="hero-pre-title">KOMPANIJA UNIPROMET &bull; IT SEKTOR &bull; INTERNI PROJEKAT</div>
+        <h1 class="hero-title">CENTRALNI UNIPROMET PANEL</h1>
+        <p class="hero-subtitle">
+          Sveobuhvatna platforma za centralizovani nadzor, dijagnostiku, telemetriju i automatizovano uzbunjivanje kompletne IT infrastrukture.
+        </p>
+
+        <div class="hero-stats-strip">
+          <div class="hero-stat-item">
+            <span class="stat-number gold">160+</span>
+            <span class="stat-label">CCTV Kamera</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="stat-number gold">48</span>
+            <span class="stat-label">Štampača & Tonera</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="stat-number gold">34</span>
+            <span class="stat-label">Aruba WiFi AP</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="stat-number gold">9</span>
+            <span class="stat-label">RF Čitača Radnika</span>
+          </div>
+          <div class="hero-stat-item">
+            <span class="stat-number gold">24/7</span>
+            <span class="stat-label">Automatski Nadzor</span>
+          </div>
+        </div>
+
+        <div class="hero-presenter-badge">
+          <i data-lucide="user-check" style="width:16px;height:16px; color:var(--gold-primary);"></i>
+          <span>Autor & Predavač: <strong>Marko Lukić</strong> &bull; IT Administrator</span>
+          <span style="opacity:0.4;">|</span>
+          <span>"Na svetloj strani puta"</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 2: THE PROBLEM & MOTIVATION -->
+    <section class="slide" data-slide="2">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="target" style="width:14px;height:14px;"></i> Izazov i Vizija</div>
+        <h2 class="slide-title">Zašto smo razvili ovaj sistem?</h2>
+        <p class="slide-subtitle">Prelazak sa reaktivnog na proaktivni model održavanja IT infrastrukture u celoj kompaniji.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2col">
+          
+          <!-- Stara Praksa -->
+          <div class="card" style="border-color: rgba(244, 63, 94, 0.25); background: linear-gradient(145deg, rgba(244,63,94,0.05), rgba(16,23,38,0.9));">
+            <div class="card-icon rose"><i data-lucide="alert-triangle"></i></div>
+            <h3 class="card-title" style="color:#fda4af;">Dosadašnji izazovi (Reaktivan rad)</h3>
+            <p class="card-desc">Kako je funkcionisao nadzor pre centralizacije:</p>
+            <ul class="feature-list">
+              <li class="feature-item">
+                <i data-lucide="x-circle" style="color:#f43f5e;"></i>
+                <span><strong>Rasparčani alati:</strong> Kamere u jednom programu, Aruba u drugom, čitači u trećem, a štampači bez nadzora.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="x-circle" style="color:#f43f5e;"></i>
+                <span><strong>Reaktivno rešavanje problema:</strong> Za nestanak tonera ili prekid kamere saznajemo tek kada korisnik ili obezbeđenje pozove IT.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="x-circle" style="color:#f43f5e;"></i>
+                <span><strong>Gubitak vremena:</strong> Ručno obilaženje kancelarija i fizička provera stanja brojača i tonera na 48 uređaja.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="x-circle" style="color:#f43f5e;"></i>
+                <span><strong>Rizik od zastoja:</strong> Ispad terminala za radno vreme u 14h remeti smenu stotina radnika ako se ne uoči odmah.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Nova Realnost -->
+          <div class="card highlight">
+            <div class="card-icon emerald"><i data-lucide="check-circle-2"></i></div>
+            <h3 class="card-title" style="color:#6ee7b7;">Nova realnost (Proaktivan sistem)</h3>
+            <p class="card-desc">Šta smo postigli Centralnim Unipromet Panelom:</p>
+            <ul class="feature-list">
+              <li class="feature-item">
+                <i data-lucide="check-check" style="color:#10b981;"></i>
+                <span><strong>Single Pane of Glass:</strong> Jedinstveni dashboard sa prikazom celokupnog hardvera fabrike u realnom vremenu.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="check-check" style="color:#10b981;"></i>
+                <span><strong>Automatsko jutarnje uzbunjivanje (07:00h):</strong> Sistem u 7 ujutru šalje email sa tačnim spiskom tonera ispod 15%.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="check-check" style="color:#10b981;"></i>
+                <span><strong>Live dijagnostika kamera i AP-ova:</strong> Trenutna vizuelna provera slike sa bilo koje kamere bez posebnog softvera.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="check-check" style="color:#10b981;"></i>
+                <span><strong>Sigurnost na nivou kompanije:</strong> Zaštićen pristup isključivo preko Microsoft 365 naloga sa `ITadmin` ulogom.</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 3: SYSTEM ARCHITECTURE -->
+    <section class="slide" data-slide="3">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="layers" style="width:14px;height:14px;"></i> Arhitektura Sistema</div>
+        <h2 class="slide-title">Kako je sistem izgrađen i povezan?</h2>
+        <p class="slide-subtitle">Četiri vertikalna sloja od fizičkih uređaja u pogonima do bezbednog klijentskog interfejsa.</p>
+      </div>
+      <div class="slide-content">
+        <div class="arch-flow">
+          
+          <div class="arch-layer">
+            <div class="arch-layer-num">1</div>
+            <div class="arch-layer-title">Hardverski Sloj (Periferije)</div>
+            <div class="arch-layer-desc">160+ Hikvision kamera, 48 mrežnih štampača (Canon, HP, Konica), 34 Aruba WiFi AP, 9 ZKTeco RFID čitača, 10 NVR snimača.</div>
+            <div class="arch-layer-tags">
+              <span class="tag gold">LAN 192.168.x.x</span>
+              <span class="tag cyan">IoT Uređaji</span>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-num">2</div>
+            <div class="arch-layer-title">Protokolarni Sloj (Komunikacija)</div>
+            <div class="arch-layer-desc">SNMP v1/v2c (OID upiti za tonere i brojače), RTSP 554 (video tok), TCP/ICMP soketi, Aruba TLS REST API, SMTP port 25 (Mail).</div>
+            <div class="arch-layer-tags">
+              <span class="tag cyan">SNMP OIDs</span>
+              <span class="tag emerald">RTSP / WebRTC</span>
+              <span class="tag gold">SMTP 250 OK</span>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-num">3</div>
+            <div class="arch-layer-title">Aplikativni Sloj (Server & DB)</div>
+            <div class="arch-layer-desc">Node.js + TypeScript Express daemon, Dual TCP multiplexer (HTTP/HTTPS na portu 3000), ultra-brza SQLite baza sa WAL režimom.</div>
+            <div class="arch-layer-tags">
+              <span class="tag emerald">Node.js TypeScript</span>
+              <span class="tag gold">SQLite (WAL)</span>
+              <span class="tag cyan">go2rtc Gateway</span>
+            </div>
+          </div>
+
+          <div class="arch-layer">
+            <div class="arch-layer-num">4</div>
+            <div class="arch-layer-title">Korisnički & Sigurnosni Sloj</div>
+            <div class="arch-layer-desc">Microsoft Entra ID OAuth 2.0 / OpenID Connect SSO, RBAC guard za `ITadmin`, moderan responsivan tamni dashboard bez zavisnosti.</div>
+            <div class="arch-layer-tags">
+              <span class="tag gold">Microsoft 365 SSO</span>
+              <span class="tag emerald">RBAC ITadmin</span>
+              <span class="tag cyan">Ultra-fast Web UI</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 4: TECH STACK -->
+    <section class="slide" data-slide="4">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="cpu" style="width:14px;height:14px;"></i> Tehnološki Stek</div>
+        <h2 class="slide-title">Tehnologije izabrane za maksimalne performanse</h2>
+        <p class="slide-subtitle">Sve komponente su izabrane kako bi sistem radio trenutno, stabilno i bez potrebe za teškim održavanjem.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-4col">
+          
+          <div class="card">
+            <div class="card-icon emerald"><i data-lucide="code-2"></i></div>
+            <h3 class="card-title">Node.js & TypeScript</h3>
+            <p class="card-desc">
+              Asinhrona neblokirajuća arhitektura omogućava paralelno ispitivanje stotina uređaja u sekundi. TypeScript garantuje pouzdanost tipova i bezgrešan rad.
+            </p>
+            <div style="margin-top:14px;"><span class="tag emerald">Backend Daemon</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon gold"><i data-lucide="database"></i></div>
+            <h3 class="card-title">SQLite (WAL Režim)</h3>
+            <p class="card-desc">
+              Ugrađena baza sa Write-Ahead Logging režimom. Brzina upita ispod 2ms, nula potrebe za eksternim servisima, kompletna transakciona sigurnost.
+            </p>
+            <div style="margin-top:14px;"><span class="tag gold">Zero Maintenance</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon cyan"><i data-lucide="video"></i></div>
+            <h3 class="card-title">go2rtc Video Gateway</h3>
+            <p class="card-desc">
+              Nativen C/Go mikroservis za konverziju teškog RTSP video toka u WebRTC i MSE, omogućavajući glatki prikaz kamere u browseru sa &lt;300ms kašnjenja.
+            </p>
+            <div style="margin-top:14px;"><span class="tag cyan">Sub-second Latency</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon indigo"><i data-lucide="palette"></i></div>
+            <h3 class="card-title">Modern Vanilla UI</h3>
+            <p class="card-desc">
+              Bez teških framework-ova (React/Angular). Čist JavaScript i modularni CSS koji se učitavaju za manje od 50 milisekundi na bilo kom računaru.
+            </p>
+            <div style="margin-top:14px;"><span class="tag indigo">&lt; 50ms Load Time</span></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 5: SECURITY & M365 SSO -->
+    <section class="slide" data-slide="5">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="shield-check" style="width:14px;height:14px;"></i> Bezbednost i SSO</div>
+        <h2 class="slide-title">Microsoft 365 SSO & Zaštita Pristupa</h2>
+        <p class="slide-subtitle">Sistem je potpuno integrisan sa zvaničnim korporativnim nalogom i bezbednosnom politikom kompanije.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3col">
+          
+          <div class="card">
+            <div class="card-icon gold"><i data-lucide="key-round"></i></div>
+            <h3 class="card-title">Microsoft Entra ID (Azure AD)</h3>
+            <p class="card-desc">
+              Autentifikacija putem standardnog OAuth 2.0 protokola. Nema čuvanja korisničkih lozinki na lokalnom serveru – sve se proverava direktno kroz Microsoft Cloud.
+            </p>
+            <ul class="feature-list">
+              <li class="feature-item"><i data-lucide="check"></i><span>Podrška za Microsoft Authenticator (2FA)</span></li>
+              <li class="feature-item"><i data-lucide="check"></i><span>Dozvoljen samo domen @unipromet.co.rs</span></li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon cyan"><i data-lucide="lock"></i></div>
+            <h3 class="card-title">Role-Based Guard (`ITadmin`)</h3>
+            <p class="card-desc">
+              Čak i kada zaposleni ima Unipromet email, pristup je strogo zabranjen ukoliko u Entra ID imeniku nije član odobrene grupe <strong>ITadmin</strong>.
+            </p>
+            <ul class="feature-list">
+              <li class="feature-item"><i data-lucide="check"></i><span>Automatska provera Microsoft Graph API-ja</span></li>
+              <li class="feature-item"><i data-lucide="check"></i><span>Namenska 'Pristup Odbijen' stranica</span></li>
+            </ul>
+          </div>
+
+          <div class="card">
+            <div class="card-icon emerald"><i data-lucide="file-text"></i></div>
+            <h3 class="card-title">Sesijski Tokeni & Audit Log</h3>
+            <p class="card-desc">
+              Kriptografski potpisani HMAC-SHA256 sesijski kolačići sa in-memory kešom. Svaki pokušaj prijave se beleži u bazi sa datumom i IP adresom.
+            </p>
+            <ul class="feature-list">
+              <li class="feature-item"><i data-lucide="check"></i><span>Kolačić &lt; 800 B (otporan na RFC 6265 limit)</span></li>
+              <li class="feature-item"><i data-lucide="check"></i><span>Live audit uvid na tabu 'Sistemski Logovi'</span></li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 6: MODULE - CCTV CAMERAS -->
+    <section class="slide" data-slide="6">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="video" style="width:14px;height:14px;"></i> Modul Video Nadzora</div>
+        <h2 class="slide-title">160+ CCTV Kamera & Uživo Pregled</h2>
+        <p class="slide-subtitle">Centralizovano mapiranje svih kamera u fabrikama, krugu i upravi sa live video strimingom na klik.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2col">
+          
+          <div class="card">
+            <div class="card-icon cyan"><i data-lucide="eye"></i></div>
+            <h3 class="card-title">Mrežna Integracija & Live Player</h3>
+            <p class="card-desc">
+              Kamere su povezane preko Hikvision NVR snimača i pojedinačnih IP adresa. Klikom na dugme "Uživo" otvara se direktan strim bez instalacije Hikvision softvera.
+            </p>
+            <div style="margin-top:16px; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px;">
+                <span style="font-weight:600; font-size:0.9rem;">Kamera 104 - Pogon 2 (Rampa)</span>
+                <span class="tag emerald"><i data-lucide="activity" style="width:10px;height:10px;"></i> ONLINE &bull; 25 FPS</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px;">
+                <span style="font-weight:600; font-size:0.9rem;">Kamera 032 - Glavna Kapija Ulaz</span>
+                <span class="tag emerald"><i data-lucide="activity" style="width:10px;height:10px;"></i> ONLINE &bull; 25 FPS</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.04); padding:10px 14px; border-radius:8px;">
+                <span style="font-weight:600; font-size:0.9rem;">Kamera 078 - Magacin Gotovih Proizvoda</span>
+                <span class="tag emerald"><i data-lucide="activity" style="width:10px;height:10px;"></i> ONLINE &bull; 25 FPS</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card highlight">
+            <div class="card-icon gold"><i data-lucide="bell-ring"></i></div>
+            <h3 class="card-title">Automatski Nadzor i Alarmi</h3>
+            <p class="card-desc">
+              Sistem vrši kompletnu proveru mrežne dostupnosti svih kamera 5 puta u toku radnog dana:
+            </p>
+            <div style="display:flex; gap:8px; margin-top:14px; flex-wrap:wrap;">
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 07:00</span>
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 09:00</span>
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 11:00</span>
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 13:00</span>
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 15:00</span>
+            </div>
+            <p class="card-desc" style="margin-top:14px;">
+              Ukoliko i samo jedna kamera prestane da šalje signal, IT administratorima momentalno stiže tabelarni email izveštaj sa tačnim brojem kamere, snimačem i zonom.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 7: MODULE - PRINTERS & TONERS -->
+    <section class="slide" data-slide="7">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="printer" style="width:14px;height:14px;"></i> Modul Štampača i Tonera</div>
+        <h2 class="slide-title">48 Mrežnih Štampača & SNMP Telemetrija</h2>
+        <p class="slide-subtitle">Direktno očitavanje senzora nivoa tonera, otpadnog tonera (Waste Box) i brojača strana bez odlaska do uređaja.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2col">
+          
+          <div class="card">
+            <div class="card-icon emerald"><i data-lucide="gauge"></i></div>
+            <h3 class="card-title">SNMP Očitavanje u Realnom Vremenu</h3>
+            <p class="card-desc">Primer stvarnog očitavanja za mrežni kolor štampač:</p>
+
+            <div style="background:rgba(0,0,0,0.3); border:1px solid var(--border-subtle); padding:14px; border-radius:10px; margin-top:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <strong>Canon iR-ADV C3530i &bull; Finansije (192.168.120.48)</strong>
+                <span class="tag emerald">ONLINE</span>
+              </div>
+              
+              <div class="gauge-bar-wrapper">
+                <div class="gauge-label-row"><span>Crni Toner (Black)</span><span>78%</span></div>
+                <div class="gauge-bar-bg"><div class="gauge-fill black" style="width:78%;"></div></div>
+              </div>
+              <div class="gauge-bar-wrapper">
+                <div class="gauge-label-row"><span>Plavi Toner (Cyan)</span><span>42%</span></div>
+                <div class="gauge-bar-bg"><div class="gauge-fill cyan" style="width:42%;"></div></div>
+              </div>
+              <div class="gauge-bar-wrapper">
+                <div class="gauge-label-row"><span>Crveni Toner (Magenta)</span><span>65%</span></div>
+                <div class="gauge-bar-bg"><div class="gauge-fill magenta" style="width:65%;"></div></div>
+              </div>
+              <div class="gauge-bar-wrapper">
+                <div class="gauge-label-row"><span>Žuti Toner (Yellow)</span><span style="color:#f59e0b;">11% (Nizak nivo)</span></div>
+                <div class="gauge-bar-bg"><div class="gauge-fill yellow" style="width:11%;"></div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card highlight">
+            <div class="card-icon gold"><i data-lucide="mail"></i></div>
+            <h3 class="card-title">Jutarnji Alarm u 07:00 (Kritični Toneri)</h3>
+            <p class="card-desc">
+              Svakog radnog dana u <strong>07:00h</strong> automatizovani servis skenira celu flotu od 48 štampača.
+            </p>
+            <ul class="feature-list">
+              <li class="feature-item">
+                <i data-lucide="filter"></i>
+                <span><strong>Filtriranje po pragu &lt; 15%:</strong> U email ulaze isključivo uređaji kojima uskoro preti nestanak tonera.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="trash-2"></i>
+                <span><strong>Waste Toner Box detekcija:</strong> Posebno upozorenje ukoliko je puna posuda za otpadni toner kako štampač ne bi blokirao.</span>
+              </li>
+              <li class="feature-item">
+                <i data-lucide="package-check"></i>
+                <span><strong>Pravovremena zamena:</strong> IT tim ima tačan model tonera na stolu pre nego što radnici dođu na posao.</span>
+              </li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 8: MODULE - ARUBA WIFI -->
+    <section class="slide" data-slide="8">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="wifi" style="width:14px;height:14px;"></i> Modul Bežične Mreže</div>
+        <h2 class="slide-title">34 Aruba WiFi Pristupne Tačke (Klaster)</h2>
+        <p class="slide-subtitle">Kompletna pokrivenost fabričkog kruga i upravne zgrade sa nadzorom Virtualnog Kontrolera i broja klijenata.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3col">
+          
+          <div class="card">
+            <div class="card-icon cyan"><i data-lucide="router"></i></div>
+            <h3 class="card-title">Aruba Virtual Controller</h3>
+            <p class="card-desc">
+              Server je bezbedno integrisan sa glavnim kontrolerom preko TLS protokola na portu 4443. Očitava status svakog uređaja u swarm klasteru.
+            </p>
+            <div style="margin-top:14px;">
+              <span class="tag cyan">AP-505 (Indoor)</span>
+              <span class="tag gold">AP-565 (Outdoor)</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon emerald"><i data-lucide="users"></i></div>
+            <h3 class="card-title">Aktivni Klijenti & Opterećenje</h3>
+            <p class="card-desc">
+              Za svaku pristupnu tačku prati se broj istovremeno povezanih korisnika i uređaja, omogućavajući optimalno raspoređivanje signala u halama.
+            </p>
+            <div style="margin-top:14px; font-size:1.8rem; font-family:var(--font-display); font-weight:800; color:#fff;">
+              ~180 <span style="font-size:0.85rem; color:var(--text-muted); font-family:var(--font-body); font-weight:400;">konektovanih uređaja</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon gold"><i data-lucide="alarm-clock"></i></div>
+            <h3 class="card-title">Nadzor Klastera u 07:00h</h3>
+            <p class="card-desc">
+              Svakog radnog dana u 07:00h servis proverava da li su svih 34 AP uređaja u funkciji. U slučaju ispada ijedne tačke, administratori dobijaju alarm.
+            </p>
+            <div style="margin-top:14px;">
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> 07:00 Pon - Pet</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 9: MODULE - RF READERS -->
+    <section class="slide" data-slide="9">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="id-card" style="width:14px;height:14px;"></i> Evidencija Radnog Vremena</div>
+        <h2 class="slide-title">9 RFID Terminala za Prijavu Radnika</h2>
+        <p class="slide-subtitle">Nadzor ZKTeco / Secutime čitača na kapijama i pogonima pre početka popodnevne smene radnika.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-2col">
+          
+          <div class="card">
+            <div class="card-icon gold"><i data-lucide="credit-card"></i></div>
+            <h3 class="card-title">Infrastruktura RFID Terminala</h3>
+            <p class="card-desc">
+              Terminali se nalaze na strateškim tačkama u krugu fabrike (Glavna kapija, Pogon 1, Pogon 2, Pogon 3, Restoran, Uprava).
+            </p>
+            <ul class="feature-list">
+              <li class="feature-item"><i data-lucide="check"></i><span>Provera mrežnog odziva i ZKTeco komunikacionog porta (TCP 4370)</span></li>
+              <li class="feature-item"><i data-lucide="check"></i><span>Evidentiranje tačne lokacije, IP adrese i smera (Prijava / Odjava)</span></li>
+              <li class="feature-item"><i data-lucide="check"></i><span>Uvid u status u realnom vremenu na kontrolnoj tabli</span></li>
+            </ul>
+          </div>
+
+          <div class="card highlight">
+            <div class="card-icon rose"><i data-lucide="shield-alert"></i></div>
+            <h3 class="card-title">Preventivni Alarm u 14:00h</h3>
+            <p class="card-desc">
+              Zašto baš u 14:00h? Zato što u 14:30h počinje promena smene radnika!
+            </p>
+            <p class="card-desc" style="margin-top:10px;">
+              Servis automatski ispituje svih 9 terminala pola sata pre smene. Ukoliko bilo koji čitač ne reaguje, šalje se hitan email administratorima kako bi kvar bio otklonjen pre nego što radnici počnu da čekaju u redu.
+            </p>
+            <div style="margin-top:16px;">
+              <span class="time-chip active"><i data-lucide="clock" style="width:12px;height:12px;"></i> Svaki radni dan u 14:00h</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 10: AUTOMATION & SCHEDULER -->
+    <section class="slide" data-slide="10">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="cog" style="width:14px;height:14px;"></i> Objedinjeni Scheduler</div>
+        <h2 class="slide-title">Upravljanje Automatizovanim Servisima</h2>
+        <p class="slide-subtitle">Fleksibilan mehanizam u bazi podataka sa potpunom kontrolom kroz korisnički interfejs.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3col">
+          
+          <div class="card">
+            <div class="card-icon emerald"><i data-lucide="sliders"></i></div>
+            <h3 class="card-title">Potpuna Fleksibilnost kroz UI</h3>
+            <p class="card-desc">
+              Nema potrebe za izmenama koda: administratori kroz vizuelne kartice mogu uključiti/isključiti servis, menjati termine i dodavati nove email primaoce.
+            </p>
+            <div style="margin-top:14px;"><span class="tag emerald">Dynamic Database Config</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon cyan"><i data-lucide="play-circle"></i></div>
+            <h3 class="card-title">Dugme "Pokreni Odmah"</h3>
+            <p class="card-desc">
+              Mogućnost trenutnog pokretanja bilo kog servisa na zahtev. Korisno kada se zameni toner ili zameni kamera za momentalnu proveru stanja.
+            </p>
+            <div style="margin-top:14px;"><span class="tag cyan">Instant On-Demand Run</span></div>
+          </div>
+
+          <div class="card">
+            <div class="card-icon gold"><i data-lucide="mail-check"></i></div>
+            <h3 class="card-title">Korporativni Email Šabloni</h3>
+            <p class="card-desc">
+              Svi email izveštaji su dizajnirani u skladu sa brendom Uniprometa, optimizovani za mobilne telefone i sadrže direktan link za brzi pristup portalu.
+            </p>
+            <div style="margin-top:14px;"><span class="tag gold">Responsive HTML Mails</span></div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 11: VALUE & LIVE DEMO -->
+    <section class="slide" data-slide="11">
+      <div class="slide-header">
+        <div class="slide-category"><i data-lucide="trending-up" style="width:14px;height:14px;"></i> Rezultati & Demonstracija</div>
+        <h2 class="slide-title">Šta smo postigli i prelazak na Uživo Demo</h2>
+        <p class="slide-subtitle">Merljive koristi za funkcionisanje IT sektora i kompanije Unipromet.</p>
+      </div>
+      <div class="slide-content">
+        <div class="grid-3col">
+          
+          <div class="card" style="text-align:center;">
+            <div class="stat-number gold" style="font-size:3.5rem;">0</div>
+            <h3 class="card-title">Neprimećenih Ispada</h3>
+            <p class="card-desc">Svaki prekid na kameri ili RF čitaču se registruje i alarmira u roku od nekoliko minuta umesto dana.</p>
+          </div>
+
+          <div class="card" style="text-align:center;">
+            <div class="stat-number emerald" style="font-size:3.5rem; color:#10b981;">100%</div>
+            <h3 class="card-title">Pravovremena Zamena Tonera</h3>
+            <p class="card-desc">Nema zastoja štampe otpremnica ili ugovora. Zamena se vrši pre nego što toner potpuno stane.</p>
+          </div>
+
+          <div class="card" style="text-align:center;">
+            <div class="stat-number cyan" style="font-size:3.5rem; color:#06b6d4;">&gt;80%</div>
+            <h3 class="card-title">Ušteda Vremena za IT</h3>
+            <p class="card-desc">Automatizovani izveštaji oslobađaju vreme za razvoj i strateške projekte kompanije.</p>
+          </div>
+
+        </div>
+
+        <div style="margin-top:24px; text-align:center;">
+          <a href="/" target="_blank" class="btn-header-action" style="display:inline-flex; padding:12px 28px; font-size:1.05rem; border-color:var(--gold-primary); background:rgba(245,158,11,0.15); color:#fff; border-radius:12px;">
+            <i data-lucide="external-link" style="width:18px;height:18px; color:var(--gold-primary);"></i>
+            <span><strong>Kliknite ovde za Prikaz Portala Uživo (Live Demo)</strong></span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SLIDE 12: QUESTIONS & ROADMAP -->
+    <section class="slide" data-slide="12" style="align-items: center;">
+      <div class="hero-slide-wrap" style="max-width: 1140px; width: 100%; margin: 0 auto; display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div class="card-icon gold" style="width:54px; height:54px; border-radius:14px; margin-bottom:12px;">
+          <i data-lucide="help-circle" style="width:28px; height:28px;"></i>
+        </div>
+        <h2 class="hero-title" style="font-size: 2.8rem; margin-bottom: 8px;">Pitanja & Diskusija</h2>
+        <p class="hero-subtitle" style="margin: 0 auto 20px auto; max-width: 860px; text-align: center;">
+          Hvala vam na pažnji! Otvoreni smo za sva vaša pitanja — <strong>svi komentari, sugestije i predlozi su dobrodošli!</strong>
+        </p>
+
+        <div style="width:100%; display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:14px; color:var(--gold-light); font-family:var(--font-display); font-size:0.95rem; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; text-align:center;">
+          <i data-lucide="sparkles" style="width:16px;height:16px; color:var(--gold-primary);"></i>
+          <span>Planirana proširenja sistema</span>
+        </div>
+
+        <div class="grid-3col" style="width: 100%; text-align: left; margin-bottom: 22px;">
+          
+          <!-- Proširenje 1: Role i Prava Pristupa -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; border-color: rgba(245, 158, 11, 0.3);">
+            <div>
+              <div class="card-icon gold"><i data-lucide="user-cog"></i></div>
+              <h3 class="card-title" style="color: var(--gold-light); font-size: 1.15rem; margin-bottom: 8px;">Implementacija Rola & Pristupa</h3>
+              <p class="card-desc" style="font-size: 0.88rem; line-height: 1.55;">
+                Fino definisanje korisničkih nivoa (RBAC) i kontrola pristupa specifičnim funkcijama Centralnog Unipromet Panela za različite službe (IT administratori, obezbeđenje, tehnička služba, rukovodstvo).
+              </p>
+            </div>
+            <div style="margin-top: 14px;">
+              <span class="tag gold"><i data-lucide="shield-check" style="width:11px;height:11px;"></i> Role & Dozvole</span>
+            </div>
+          </div>
+
+          <!-- Proširenje 2: Video Monitoring -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; border-color: rgba(6, 182, 212, 0.3);">
+            <div>
+              <div class="card-icon cyan"><i data-lucide="video"></i></div>
+              <h3 class="card-title" style="color: var(--cyan-neon); font-size: 1.15rem; margin-bottom: 8px;">Video Monitoring</h3>
+              <p class="card-desc" style="font-size: 0.88rem; line-height: 1.55;">
+                Kompletan interfejs za video nadzor: direktan uživo pregled (multi-view matrice), vraćanje i pretraga snimaka sa snimača, uz strogu kontrolu pristupa kamerama i zonama putem rola.
+              </p>
+            </div>
+            <div style="margin-top: 14px;">
+              <span class="tag cyan"><i data-lucide="play-circle" style="width:11px;height:11px;"></i> Uživo &bull; Snimci &bull; Role</span>
+            </div>
+          </div>
+
+          <!-- Proširenje 3: Mrežni Svičevi -->
+          <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; border-color: rgba(16, 185, 129, 0.3);">
+            <div>
+              <div class="card-icon emerald"><i data-lucide="network"></i></div>
+              <h3 class="card-title" style="color: var(--emerald-neon); font-size: 1.15rem; margin-bottom: 8px;">Mrežni Svičevi (Switchevi)</h3>
+              <p class="card-desc" style="font-size: 0.88rem; line-height: 1.55;">
+                Integracija i SNMP telemetrija mrežnih preklopnika: praćenje statusa portova, opterećenja, optičkih i bakarnih uplinkova između pogona i automatski alarmi u slučaju prekida komunikacije.
+              </p>
+            </div>
+            <div style="margin-top: 14px;">
+              <span class="tag emerald"><i data-lucide="activity" style="width:11px;height:11px;"></i> SNMP Switching</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:center; gap:16px; font-size:0.95rem; color:var(--text-dim); margin: 0 auto;">
+          <span style="color:var(--text-muted);"><i data-lucide="message-square" style="width:14px;height:14px; display:inline-block; vertical-align:middle; color:var(--gold-primary); margin-right:4px;"></i> Svi komentari i predlozi su dobrodošli</span>
+          <span style="opacity:0.4;">&bull;</span>
+          <span>Portal je aktivan na: <strong id="portal-origin" style="color:var(--gold-light); font-family:var(--font-mono);">—</strong></span>
+          <script>document.getElementById('portal-origin').textContent = location.origin;</script>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- =============================================================
+       BOTTOM DOCK NAVIGATION
+       ============================================================= -->
+  <nav class="bottom-dock">
+    <button class="dock-btn" id="btn-prev-slide" title="Prethodni slajd (Strelica levo ili Backspace)">
+      <i data-lucide="chevron-left"></i>
+    </button>
+    <div class="slide-counter" id="slide-counter-text">1 / 12</div>
+    <button class="dock-btn primary" id="btn-next-slide" title="Sledeći slajd (Strelica desno ili Space)">
+      <i data-lucide="chevron-right"></i>
+    </button>
+    <div class="dock-divider"></div>
+    <button class="dock-btn" id="btn-fullscreen" title="Prebaci u ceo ekran (F)">
+      <i data-lucide="maximize" id="icon-fullscreen"></i>
+    </button>
+    <div class="keyboard-hint">
+      <span class="kbd-key">&larr;</span>
+      <span class="kbd-key">&rarr;</span>
+      <span class="kbd-key">F</span>
+      <span class="kbd-key">O</span>
+    </div>
+  </nav>
+
+  <!-- =============================================================
+       OVERVIEW MODAL (GRID OF ALL 12 SLIDES)
+       ============================================================= -->
+  <div class="overview-overlay" id="overview-modal">
+    <div class="overview-header">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <img src="/assets/unipromet_logo.png" alt="Logo" style="height:32px;">
+        <h3 style="font-family:var(--font-display); font-size:1.4rem; color:#fff;">Pregled Svih Slajdova</h3>
+      </div>
+      <button class="btn-header-action" id="btn-close-overview">
+        <i data-lucide="x" style="width:16px;height:16px;"></i>
+        <span>Zatvori (Esc)</span>
+      </button>
+    </div>
+    <div class="overview-grid" id="overview-grid-container">
+      <!-- Injected via JavaScript -->
+    </div>
+  </div>
+
+  <!-- =============================================================
+       INTERACTIVE JAVASCRIPT SLIDE ENGINE
+       ============================================================= -->
+  <script>
+    // Initialize Lucide icons
+    if (window.lucide && window.lucide.createIcons) {
+      window.lucide.createIcons();
+    }
+
+    const slides = Array.from(document.querySelectorAll('.slide'));
+    const totalSlides = slides.length;
+    let currentSlideIndex = 0;
+
+    const counterEl = document.getElementById('slide-counter-text');
+    const progressBar = document.getElementById('presentation-progress');
+    const prevBtn = document.getElementById('btn-prev-slide');
+    const nextBtn = document.getElementById('btn-next-slide');
+    const fullscreenBtn = document.getElementById('btn-fullscreen');
+    const overviewModal = document.getElementById('overview-modal');
+    const toggleOverviewBtn = document.getElementById('btn-toggle-overview');
+    const closeOverviewBtn = document.getElementById('btn-close-overview');
+    const overviewGrid = document.getElementById('overview-grid-container');
+
+    // Slide Titles for Overview
+    const slideTitles = [
+      "1. Naslovni Uvod & Metrika",
+      "2. Zašto ovaj projekat? (Cilj)",
+      "3. Sistemska Arhitektura",
+      "4. Tehnološki Stek",
+      "5. Bezbednost & Microsoft 365",
+      "6. CCTV Video Nadzor (160+ kamera)",
+      "7. Štampači & SNMP Toneri (48)",
+      "8. WiFi Aruba AP Mreža (34 AP)",
+      "9. RF Čitači Radnika (14:00h)",
+      "10. Objedinjeni Scheduler",
+      "11. Rezultati & Uživo Demo",
+      "12. Pitanja & Diskusija"
+    ];
+
+    // Build Overview Grid
+    slideTitles.forEach((title, idx) => {
+      const card = document.createElement('div');
+      card.className = 'thumb-card' + (idx === 0 ? ' active-thumb' : '');
+      card.innerHTML = `
+        <div class="thumb-number">SLAJD ${idx + 1}</div>
+        <div class="thumb-title">${title}</div>
+      `;
+      card.addEventListener('click', () => {
+        goToSlide(idx);
+        closeOverview();
+      });
+      overviewGrid.appendChild(card);
+    });
+
+    function updateSlides() {
+      slides.forEach((slide, idx) => {
+        slide.classList.remove('active', 'prev');
+        if (idx === currentSlideIndex) {
+          slide.classList.add('active');
+        } else if (idx < currentSlideIndex) {
+          slide.classList.add('prev');
+        }
+      });
+
+      // Update counter
+      counterEl.textContent = `${currentSlideIndex + 1} / ${totalSlides}`;
+
+      // Update progress bar
+      const progressPercent = ((currentSlideIndex + 1) / totalSlides) * 100;
+      progressBar.style.width = `${progressPercent}%`;
+
+      // Update overview thumb highlights
+      const thumbs = overviewGrid.querySelectorAll('.thumb-card');
+      thumbs.forEach((thumb, idx) => {
+        if (idx === currentSlideIndex) {
+          thumb.classList.add('active-thumb');
+        } else {
+          thumb.classList.remove('active-thumb');
+        }
+      });
+
+      // Re-trigger Lucide icons on active slide if needed
+      if (window.lucide && window.lucide.createIcons) {
+        window.lucide.createIcons();
+      }
+    }
+
+    function goToSlide(index) {
+      if (index >= 0 && index < totalSlides) {
+        currentSlideIndex = index;
+        updateSlides();
+      }
+    }
+
+    function nextSlide() {
+      if (currentSlideIndex < totalSlides - 1) {
+        currentSlideIndex++;
+        updateSlides();
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlideIndex > 0) {
+        currentSlideIndex--;
+        updateSlides();
+      }
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          console.warn('Fullscreen error:', err);
+        });
+      } else {
+        if (document.exitFullscreen) {
+          document.exitFullscreen();
+        }
+      }
+    }
+
+    function toggleOverview() {
+      overviewModal.classList.toggle('open');
+    }
+
+    function closeOverview() {
+      overviewModal.classList.remove('open');
+    }
+
+    // Event Listeners
+    nextBtn.addEventListener('click', nextSlide);
+    prevBtn.addEventListener('click', prevSlide);
+    fullscreenBtn.addEventListener('click', toggleFullscreen);
+    toggleOverviewBtn.addEventListener('click', toggleOverview);
+    closeOverviewBtn.addEventListener('click', closeOverview);
+
+    // Keyboard Navigation
+    document.addEventListener('keydown', (e) => {
+      // If overview is open, Escape closes it
+      if (overviewModal.classList.contains('open')) {
+        if (e.key === 'Escape') {
+          closeOverview();
+        }
+        return;
+      }
+
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        e.preventDefault();
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'Backspace' || e.key === 'PageUp') {
+        e.preventDefault();
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        toggleFullscreen();
+      } else if (e.key === 'o' || e.key === 'O' || e.key === 'Escape') {
+        e.preventDefault();
+        toggleOverview();
+      } else if (e.key === 'Home') {
+        e.preventDefault();
+        goToSlide(0);
+      } else if (e.key === 'End') {
+        e.preventDefault();
+        goToSlide(totalSlides - 1);
+      }
+    });
+
+    // Ambient floating particles canvas
+    (function initAmbientParticles() {
+      const canvas = document.getElementById('ambient-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let w = (canvas.width = window.innerWidth);
+      let h = (canvas.height = window.innerHeight);
+
+      window.addEventListener('resize', () => {
+        w = canvas.width = window.innerWidth;
+        h = canvas.height = window.innerHeight;
+      });
+
+      const particles = [];
+      for (let i = 0; i < 45; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.6 + 0.6,
+          dx: (Math.random() - 0.5) * 0.35,
+          dy: (Math.random() - 0.5) * 0.35,
+          color: Math.random() > 0.4 ? 'rgba(245, 158, 11, ' : 'rgba(6, 182, 212, ',
+          opacity: Math.random() * 0.4 + 0.1
+        });
+      }
+
+      function render() {
+        ctx.clearRect(0, 0, w, h);
+        particles.forEach(p => {
+          p.x += p.dx;
+          p.y += p.dy;
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+          if (p.y < 0) p.y = h;
+          if (p.y > h) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fillStyle = p.color + p.opacity + ')';
+          ctx.fill();
+        });
+        requestAnimationFrame(render);
+      }
+      render();
+    })();
+
+    // Initial view update
+    updateSlides();
+  </script>
+</body>
+</html>

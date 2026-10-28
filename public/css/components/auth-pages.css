@@ -1,0 +1,326 @@
+/* ==========================================================================
+   UNIPROMET Login & Access Denied Pages Styling
+   ========================================================================== */
+
+:root {
+  --bg-deep: #090b0f;
+  --bg-card: rgba(18, 22, 31, 0.88);
+  --border-card: rgba(255, 184, 0, 0.25);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-dim: #64748b;
+  --yellow-accent: #ffb800;
+  --yellow-glow: rgba(255, 184, 0, 0.35);
+  --red-accent: #ef4444;
+  --red-glow: rgba(239, 68, 68, 0.35);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body.auth-page-body {
+  min-height: 100vh;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  position: relative;
+  padding: 24px;
+}
+
+/* Background canvas for ambient glow particles */
+.auth-ambient-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* Central Authentication Card */
+.auth-card-container {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 480px;
+}
+
+.auth-card {
+  background: var(--bg-card);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border-card);
+  border-radius: 20px;
+  padding: 40px 36px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(255, 184, 0, 0.08);
+  text-align: center;
+  animation: authCardPop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-card.denied {
+  border-color: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 40px rgba(239, 68, 68, 0.1);
+}
+
+@keyframes authCardPop {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header & Brand */
+.auth-brand-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.auth-brand-logo {
+  max-width: 220px;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(255, 184, 0, 0.2));
+}
+
+.auth-title {
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin-bottom: 6px;
+}
+
+.auth-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 24px;
+}
+
+/* Badges */
+.auth-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 14px;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--yellow-accent);
+  letter-spacing: 0.02em;
+  margin-bottom: 24px;
+}
+
+.auth-badge.denied {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+/* Primary Microsoft Button */
+.btn-m365-large {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 20px;
+  background: #0f141c;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  margin-bottom: 20px;
+}
+
+.btn-m365-large:hover {
+  background: rgba(255, 184, 0, 0.12);
+  border-color: var(--yellow-accent);
+  color: var(--yellow-accent);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(255, 184, 0, 0.25);
+}
+
+.btn-m365-large:active {
+  transform: translateY(0);
+}
+
+.m365-logo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 9px);
+  grid-gap: 3px;
+  width: 21px;
+  height: 21px;
+  flex-shrink: 0;
+}
+
+.m365-sq {
+  width: 9px;
+  height: 9px;
+  border-radius: 1.5px;
+}
+
+.m365-sq.red { background-color: #f25022; }
+.m365-sq.green { background-color: #7fba00; }
+.m365-sq.blue { background-color: #00a4ef; }
+.m365-sq.yellow { background-color: #ffb900; }
+
+/* Notice Box */
+.auth-notice-box {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  line-height: 1.45;
+  text-align: left;
+}
+
+.auth-notice-box strong {
+  color: #e2e8f0;
+}
+
+.auth-notice-box.warning {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  margin-bottom: 20px;
+}
+
+/* User Profile Preview Card in Access Denied */
+.user-info-panel {
+  background: rgba(10, 14, 22, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.user-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+}
+
+.user-info-row:last-child {
+  margin-bottom: 0;
+}
+
+.user-info-label {
+  color: var(--text-dim);
+  font-weight: 500;
+}
+
+.user-info-val {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.user-info-val.highlight {
+  color: var(--yellow-accent);
+}
+
+.user-groups-chips-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.user-grp-chip {
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  color: #cbd5e1;
+}
+
+/* Action Buttons Container */
+.auth-actions-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.btn-auth-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
+  background: rgba(255, 184, 0, 0.15);
+  border: 1px solid var(--yellow-accent);
+  border-radius: 10px;
+  color: var(--yellow-accent);
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-auth-primary:hover {
+  background: var(--yellow-accent);
+  color: #090b0f;
+  transform: translateY(-1px);
+}
+
+.btn-auth-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-auth-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+/* Footer Slogan */
+.auth-footer-slogan {
+  margin-top: 24px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #475569;
+  font-weight: 700;
+}

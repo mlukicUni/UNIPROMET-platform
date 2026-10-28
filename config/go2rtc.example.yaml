@@ -1,0 +1,13 @@
+# Osnovna go2rtc konfiguracija. Na novoj masini kopirati u config/go2rtc.yaml.
+# go2rtc.yaml se ne cuva u git-u: aplikacija u radu dodaje streamove sa RTSP lozinkama.
+# API (1984) i RTSP (8554) samo lokalno; WebRTC (8555) otvoren jer pregledaci salju medije direktno.
+api:
+  listen: "127.0.0.1:1984"
+  origin: "*"
+webrtc:
+  listen: ":8555"
+rtsp:
+  listen: "127.0.0.1:8554"
+log:
+  level: info
+streams: {}

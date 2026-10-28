@@ -1,0 +1,1052 @@
+/* ==========================================================================
+   UNIPROMET - EQUIPMENT INVENTORY (EVIDENCIJA OPREME) LUXURY STYLES
+   ========================================================================== */
+
+/* Equipment Avatar & Name Cell */
+.eq-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.eq-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  color: var(--yellow-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.eq-avatar i {
+  width: 14px;
+  height: 14px;
+}
+
+tr:hover .eq-avatar {
+  background: rgba(255, 184, 0, 0.18);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 12px rgba(255, 184, 0, 0.2);
+  transform: scale(1.04);
+}
+
+.eq-avatar.eq-type-pc {
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+
+.eq-avatar.eq-type-printer {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #c084fc;
+}
+
+.eq-avatar.eq-type-network {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.eq-info-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.eq-name-title {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+
+.eq-name-sub {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+  font-family: var(--font-mono, monospace);
+}
+
+/* Category Pill Badge */
+.eq-category-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.eq-category-badge i {
+  width: 13px;
+  height: 13px;
+  color: var(--yellow-primary);
+}
+
+/* Equipment Category Pills Bar */
+.eq-category-pills-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px 8px 2px;
+  margin-top: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.eq-category-pills-bar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.eq-category-pills-bar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.eq-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 13px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.eq-pill-btn i {
+  width: 14px;
+  height: 14px;
+  color: #64748b;
+  transition: color 0.2s ease;
+}
+
+.eq-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #f8fafc;
+}
+
+.eq-pill-btn:hover i {
+  color: var(--yellow-primary);
+}
+
+.eq-pill-btn.active {
+  background: rgba(255, 184, 0, 0.14);
+  border-color: var(--yellow-primary);
+  color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.22);
+}
+
+.eq-pill-btn.active i {
+  color: var(--yellow-primary);
+}
+
+.eq-pill-count {
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.eq-pill-btn.active .eq-pill-count {
+  background: rgba(255, 184, 0, 0.25);
+  color: #ffb800;
+}
+
+/* Navision Employee Cell */
+.eq-emp-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.eq-emp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.eq-emp-name {
+  font-weight: 600;
+  color: #f8fafc;
+  font-size: 0.78rem;
+}
+
+.eq-emp-no {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1px 5px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  box-sizing: border-box;
+}
+
+/* Navision HR Status Badges */
+.badge-hr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  height: 18px;
+  box-sizing: border-box;
+  white-space: nowrap;
+}
+
+.badge-hr-active {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+.badge-hr-inactive {
+  background: rgba(245, 158, 11, 0.14);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+}
+
+.badge-hr-left {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+
+.badge-unassigned {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  color: #64748b;
+  font-size: 0.78rem;
+  font-style: italic;
+}
+
+/* Job & Dept Cell */
+.eq-job-title {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  line-height: 1.25;
+}
+
+.eq-dept-name {
+  font-size: 0.72rem;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+/* Equipment Status Badges */
+.badge-eq-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-in-use {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+.status-in-use .status-dot {
+  background: #10b981;
+  box-shadow: 0 0 6px #10b981;
+}
+
+.status-reserve {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+}
+.status-reserve .status-dot {
+  background: #38bdf8;
+  box-shadow: 0 0 6px #38bdf8;
+}
+
+.status-service {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+}
+.status-service .status-dot {
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+.status-scrapped {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #94a3b8;
+}
+.status-scrapped .status-dot {
+  background: #64748b;
+}
+
+/* Location cell */
+.eq-location-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.eq-location-name {
+  font-size: 0.84rem;
+  color: #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.eq-room-name {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Loading Shimmer Skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.eq-skeleton-bar {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 50%, rgba(255,255,255,0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Dynamic Sidebar Category Button */
+.nav-tab-btn[data-category-id] {
+  transition: all 0.18s ease;
+}
+
+.nav-tab-btn[data-category-id].active {
+  background: rgba(255, 184, 0, 0.14) !important;
+  border-color: rgba(255, 184, 0, 0.4) !important;
+  color: #ffffff !important;
+}
+
+.nav-tab-btn[data-category-id].active .nav-badge {
+  background: var(--yellow-primary) !important;
+  color: #0b0f17 !important;
+  font-weight: 700;
+}
+
+/* ==========================================================================
+   PHASE 4: MODAL, AUTOCOMPLETE, TIMELINE & CRUD LUXURY STYLES
+   ========================================================================== */
+
+/* Navision Employee Autocomplete Dropdown */
+.nav-autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: #131924;
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  border-radius: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 1050;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(255, 184, 0, 0.15);
+  backdrop-filter: blur(12px);
+}
+
+.nav-autocomplete-item {
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.15s ease;
+}
+
+.nav-autocomplete-item:last-child {
+  border-bottom: none;
+}
+
+.nav-autocomplete-item:hover,
+.nav-autocomplete-item.focused {
+  background: rgba(255, 184, 0, 0.12);
+  border-left: 3px solid var(--yellow-primary);
+}
+
+.nav-autocomplete-name {
+  font-weight: 600;
+  color: #ffffff;
+  font-size: 0.88rem;
+}
+
+.nav-autocomplete-meta {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Selected Employee Box */
+.nav-emp-selected-box {
+  border-radius: 10px;
+  background: rgba(255, 184, 0, 0.06);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  padding: 12px 16px;
+  transition: all 0.2s ease;
+}
+
+.nav-emp-selected-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-emp-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: rgba(255, 184, 0, 0.15);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  color: var(--yellow-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.nav-emp-info {
+  flex: 1;
+}
+
+.nav-emp-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.nav-emp-meta-row {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.btn-clear-emp {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  color: #f87171;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.btn-clear-emp:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #ffffff;
+  border-color: #ef4444;
+}
+
+/* Modal Section Badges */
+.modal-section-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  color: var(--yellow-primary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.modal-section-badge i {
+  width: 14px;
+  height: 14px;
+}
+
+/* Form Layout Helpers */
+.form-row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 640px) {
+  .form-row-2col,
+  .form-row-3col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.spinner-circle {
+  display: inline-block;
+  border: 2px solid rgba(255, 184, 0, 0.25);
+  border-top-color: var(--yellow-primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Timeline in Card Modal */
+.eq-timeline-wrap {
+  position: relative;
+  padding-left: 6px;
+}
+
+.eq-timeline-item {
+  position: relative;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 3px solid var(--yellow-primary);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.eq-timeline-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 184, 0, 0.3);
+}
+
+/* Equipment Modals Smooth Animation & Compact Loading State */
+.eq-modal-window {
+  transition: max-width 0.38s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.modal-window-loading {
+  max-width: 460px !important;
+}
+
+.eq-modal-loader-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 184, 0, 0.15);
+  border-top-color: var(--yellow-primary, #FFC700);
+  border-right-color: var(--yellow-primary, #FFC700);
+  animation: eqSpin 0.75s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes eqSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.eq-fade-in {
+  animation: eqFadeIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes eqFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ==========================================================================
+   SOFTWARE & LICENSES LUXURY DESIGN SYSTEM
+   ========================================================================== */
+
+/* Software Table Container & Layout */
+#tab-equipment_software .table-container {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+}
+
+#table-software {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+#table-software thead th {
+  background: rgba(15, 23, 42, 0.85);
+  color: #94a3b8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+#table-software tbody tr {
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+#table-software tbody tr:last-child {
+  border-bottom: none;
+}
+
+#table-software tbody tr:hover {
+  background: rgba(255, 184, 0, 0.04) !important;
+  box-shadow: inset 2px 0 0 var(--yellow-primary, #FFC700);
+}
+
+#table-software tbody td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  font-size: 0.84rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+/* Software ID Cell */
+.sw-id-cell {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: #64748b;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+/* Software Name Cell with App/OS Avatar */
+.sw-name-block {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sw-app-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 184, 0, 0.08);
+  border: 1px solid rgba(255, 184, 0, 0.22);
+  color: var(--yellow-primary, #FFC700);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.sw-app-avatar i {
+  width: 16px;
+  height: 16px;
+}
+
+tr:hover .sw-app-avatar {
+  background: rgba(255, 184, 0, 0.16);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 12px rgba(255, 184, 0, 0.25);
+  transform: scale(1.06);
+}
+
+.sw-name-title {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
+.sw-name-subtitle {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Equipment Link Cell */
+.sw-equipment-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sw-equipment-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--yellow-primary, #FFC700);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-decoration: none;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 184, 0, 0.06);
+  border: 1px solid rgba(255, 184, 0, 0.15);
+  transition: all 0.18s ease;
+}
+
+.sw-equipment-link:hover {
+  background: rgba(255, 184, 0, 0.16);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 10px rgba(255, 184, 0, 0.2);
+  transform: translateY(-1px);
+}
+
+.sw-equipment-link i {
+  width: 13px;
+  height: 13px;
+}
+
+.sw-equipment-inv-badge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+/* Vendor Badges */
+.software-vendor-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.vendor-tag-ms {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.vendor-tag-autodesk {
+  background: rgba(249, 115, 22, 0.12);
+  color: #fb923c;
+  border: 1px solid rgba(249, 115, 22, 0.28);
+}
+
+.vendor-tag-adobe {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.vendor-tag-corel {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.vendor-tag-eset {
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.28);
+}
+
+.vendor-tag-default {
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+/* Software Product Key Chip with 1-Click Copy */
+.sw-key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 184, 0, 0.18);
+  padding: 4px 8px 4px 10px;
+  border-radius: 6px;
+  max-width: 100%;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+}
+
+.sw-key-chip:hover {
+  background: rgba(0, 0, 0, 0.7);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 14px rgba(255, 184, 0, 0.18);
+  transform: translateY(-1px);
+}
+
+.sw-key-mono-text {
+  color: #ffffff;
+  font-size: 0.82rem;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  font-family: var(--font-mono, monospace);
+  user-select: all;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 260px;
+}
+
+.btn-copy-sw-key {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #94a3b8;
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.16s ease;
+  padding: 0;
+}
+
+.btn-copy-sw-key:hover {
+  background: rgba(255, 184, 0, 0.22);
+  color: var(--yellow-primary);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 8px rgba(255, 184, 0, 0.3);
+  transform: scale(1.1);
+}
+
+.btn-copy-sw-key i {
+  width: 13px;
+  height: 13px;
+}
+
+/* Status Pill for Software */
+.badge-sw-licensed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.badge-sw-licensed.is-yes {
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.32);
+  color: #34d399;
+}
+
+.badge-sw-licensed.is-yes .sw-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.badge-sw-licensed.is-no {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #94a3b8;
+}
+
+.badge-sw-licensed.is-no .sw-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #64748b;
+}
+
+/* Custom License Status Radio Pills in Modal */
+.sw-radio-pills-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  width: 100%;
+  height: 42px;
+}
+
+.sw-radio-pill {
+  flex: 1;
+  height: 42px;
+  min-height: 42px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.sw-radio-pill i,
+.sw-radio-pill svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.sw-radio-pill input[type="radio"] {
+  display: none;
+}
+
+.sw-radio-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #f1f5f9;
+}
+
+.sw-radio-pill.active-yes {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: #10b981;
+  color: #34d399;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.22);
+}
+
+.sw-radio-pill.active-no {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: #94a3b8;
+  color: #cbd5e1;
+  box-shadow: 0 0 10px rgba(148, 163, 184, 0.15);
+}
+
+/* ==========================================================================
+   MTS BROJEVI - CUSTOM ACCENTS & BADGES
+   ========================================================================== */
+.mts-phone-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.mts-phone-num {
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  font-size: 0.94rem;
+  letter-spacing: 0.5px;
+  color: #f8fafc;
+}
+
+.mts-badge-pkg {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.mts-badge-net {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #38bdf8;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.mts-badge-addon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.28);
+  color: #c084fc;
+  font-size: 0.72rem;
+  font-weight: 500;
+  margin: 1px 2px;
+}
+
+.mts-phone-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #cbd5e1;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+
+
+
+

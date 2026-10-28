@@ -1,0 +1,5 @@
+# Svi tekstualni fajlovi sa LF zavrsecima i na Windows dev racunaru i na Linux serveru
+* text=auto eol=lf
+*.ps1 text eol=crlf
+*.vb text eol=crlf
+bin/* binary
