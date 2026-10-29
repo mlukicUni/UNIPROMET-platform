@@ -11,6 +11,7 @@ Verzija se vodi u `package.json`, a svaka puštena verzija ima git tag `vX.Y.Z` 
 Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o sistemu) i u mejlu „Server ažuriran“.
 
 ## [Neobjavljeno]
+- deploy.log beleži ishod mejla o ažuriranju: poslat (sa odgovorom SMTP servera), greška, ili primalac nije podešen
 
 ## [1.0.0] - 2026-10-28
 Prva zvanična verzija, puštena na produkcijski Linux server (192.168.121.26).
