@@ -4,6 +4,24 @@ import { getPrinterByIp, updatePrinterModelFromSnmp } from '../db/printerDb';
 import { isLargeCopier } from './printerClass';
 import { acquireScanLock } from './scanLockManager';
 
+/**
+ * Poznate greške koje se privremeno ne prijavljuju mejlom (štampač ih i dalje prikazuje na stranici).
+ * Ukloniti stavku kada serviser otkloni kvar.
+ */
+const IGNORED_PRINTER_ERRORS: Array<{ printerId: string; note: string; match: string[] }> = [
+  {
+    // Canon iR C5235i (KV uprava), 192.168.121.40 - lažna dojava prepunjene izlazne fioke, čeka servisera (2026-10-29)
+    printerId: 'prn-1788334747843-221',
+    note: 'KV uprava: izlazna fioka prepunjena (kvar senzora)',
+    match: ['prepunjena', 'output tray is full', 'output tray full']
+  }
+];
+
+function isIgnoredPrinterError(printerId: string, error: string): boolean {
+  const lower = error.toLowerCase();
+  return IGNORED_PRINTER_ERRORS.some(r => r.printerId === printerId && r.match.some(m => lower.includes(m)));
+}
+
 export interface TonerItem {
   color: 'black' | 'cyan' | 'magenta' | 'yellow' | 'other';
   name: string;
@@ -994,7 +1012,9 @@ export async function getFleetLowToners(threshold: number = 5, force: boolean = 
           }
 
           const matchingToners = (data.toners || []).filter(t => t.level >= 0 && t.level <= threshold);
-          const hasHwError = (data.errors && data.errors.length > 0) || !!data.hasError;
+          // Greške sa spiska poznatih kvarova ne ulaze u upozorenja (IGNORED_PRINTER_ERRORS)
+          const alertErrors = (data.errors || []).filter(e => !isIgnoredPrinterError(p.id, e));
+          const hasHwError = alertErrors.length > 0;
           const onlyWaste = matchingToners.length === 0 && !hasHwError && wasteNeedsReplace;
           const onlyHardwareError = matchingToners.length === 0 && !wasteNeedsReplace && hasHwError;
 
@@ -1003,7 +1023,7 @@ export async function getFleetLowToners(threshold: number = 5, force: boolean = 
             if (wasteNeedsReplace) totalWasteAlerts++;
             if (onlyWaste) printersWithOnlyWaste++;
             if (hasHwError) {
-              totalHardwareErrors += (data.errors?.length || 1);
+              totalHardwareErrors += alertErrors.length;
               printersWithHardwareErrors++;
             }
 
@@ -1023,7 +1043,7 @@ export async function getFleetLowToners(threshold: number = 5, force: boolean = 
               isWasteTonerNearFull: isWasteNear,
               onlyWasteToner: onlyWaste,
               wasteTonerNeedsReplacement: wasteNeedsReplace,
-              errors: data.errors || [],
+              errors: alertErrors,
               hasHardwareError: hasHwError,
               onlyHardwareError
             });

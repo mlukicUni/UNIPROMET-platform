@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.0.2] - 2026-10-29
+- Štampač KV uprava (Canon iR C5235i, 192.168.121.40): greška „izlazna fioka prepunjena“ se privremeno ne prijavljuje mejlom (kvar čeka servisera)
+
 ## [1.0.1] - 2026-10-29
 - deploy.log beleži ishod mejla o ažuriranju: poslat (sa odgovorom SMTP servera), greška, ili primalac nije podešen
 
