@@ -196,12 +196,13 @@ function probeHttpBanner(ip: string, timeoutMs = 1200): Promise<{ server: string
  * Scan a single camera IP candidate and cross-reference with inventory
  */
 async function inspectCamera(
-  ip: string, 
-  subnet: '124' | '125', 
-  inventoryMap?: Map<string, any>
+  ip: string,
+  subnet: '124' | '125',
+  inventoryMap?: Map<string, any>,
+  primaryTimeoutMs = 500
 ): Promise<CameraDevice | null> {
-  const port80 = await testPort(ip, 80, 500);
-  const port554 = await testPort(ip, 554, 500);
+  const port80 = await testPort(ip, 80, primaryTimeoutMs);
+  const port554 = await testPort(ip, 554, primaryTimeoutMs);
 
   if (!port80.open && !port554.open) {
     return null;
@@ -568,16 +569,44 @@ export async function checkScheduledInventoryCameras(): Promise<{
   };
 }
 
+// Pretraga novih kamera: nova adresa kreće na svakih 250 ms, najviše 3 u isto vreme,
+// bez obzira da li mreža odgovara ili odbija (tempo ne može da skoči).
+const UNRECORDED_INTERVAL_MS = 250;
+const UNRECORDED_MAX_IN_FLIGHT = 3;
+// 125.x ide preko WAN-a: duže čekanje da spore kamere ne ispadnu kao nedostupne
+const UNRECORDED_TIMEOUT_MS: Record<'124' | '125', number> = { '124': 500, '125': 1000 };
+
+async function pacedProbe<T>(
+  items: string[],
+  intervalMs: number,
+  maxInFlight: number,
+  probe: (item: string) => Promise<T>
+): Promise<T[]> {
+  const results: T[] = [];
+  const running = new Set<Promise<void>>();
+  for (let i = 0; i < items.length; i++) {
+    while (running.size >= maxInFlight) await Promise.race(running);
+    const p: Promise<void> = probe(items[i])
+      .then(r => { results.push(r); }, () => { /* neuspela provera = nema kamere */ })
+      .finally(() => { running.delete(p); });
+    running.add(p);
+    if (i + 1 < items.length) await new Promise(r => setTimeout(r, intervalMs));
+  }
+  await Promise.all(running);
+  return results;
+}
+
 /**
  * Scans camera IP ranges for new, unrecorded devices.
  * CRITICAL SAFETY:
  * 1. STRICTLY SKIPS all IP addresses that are already registered in the SQLite inventory!
- * 2. Scans ONLY the remaining unassigned IP addresses.
- * 3. Rate-limited: Čačak in batches of 8 (30ms pause), Kraljevo in gentle batches of 3 (120ms pause, < 5 pkt/s).
- * 4. Protected by acquireScanLock('cameras', ...).
+ * 2. Scans ONLY the remaining unassigned IP addresses (124.11–230, 125.46–246).
+ * 3. Paced: one new address every 250 ms, at most 3 in flight (max ~4 addresses/s, regardless of replies).
+ * 4. Protected by acquireScanLock('cameras-unrecorded', ...).
  */
 export async function scanUnrecordedCameras(): Promise<{
   unrecordedCameras: CameraDevice[];
+  unrecordedCount: number;
   scannedCount: number;
   skippedInventoryCount: number;
   scanDurationMs: number;
@@ -591,50 +620,29 @@ export async function scanUnrecordedCameras(): Promise<{
       if (c.ip) existingIps.add(c.ip.trim());
     });
 
-    const candidates124: string[] = [];
-    const candidates125: string[] = [];
+    const candidates: Array<{ ip: string; subnet: '124' | '125' }> = [];
 
     // Subnet 124 range: 11..230 (skip any that already exist in DB)
     for (let i = 11; i <= 230; i++) {
       const ip = `192.168.124.${i}`;
-      if (!existingIps.has(ip)) {
-        candidates124.push(ip);
-      }
+      if (!existingIps.has(ip)) candidates.push({ ip, subnet: '124' });
     }
 
     // Subnet 125 range: 46..246 (skip any that already exist in DB)
     for (let i = 46; i <= 246; i++) {
       const ip = `192.168.125.${i}`;
-      if (!existingIps.has(ip)) {
-        candidates125.push(ip);
-      }
+      if (!existingIps.has(ip)) candidates.push({ ip, subnet: '125' });
     }
 
-    console.log(`[CameraScanner] 🔍 Skeniranje van evidencije: ${candidates124.length} kandidata u Čačku, ${candidates125.length} kandidata u Kraljevu (Preskočeno ${existingIps.size} već evidentiranih kamera)...`);
+    const count124 = candidates.filter(t => t.subnet === '124').length;
+    console.log(`[CameraScanner] 🔍 Skeniranje van evidencije: ${count124} kandidata na 124, ${candidates.length - count124} kandidata na 125, 1 adresa / ${UNRECORDED_INTERVAL_MS}ms, najviše ${UNRECORDED_MAX_IN_FLIGHT} istovremeno (Preskočeno ${existingIps.size} već evidentiranih kamera)...`);
 
-    const discoveredUnrecorded: CameraDevice[] = [];
-
-    // 1. Scan Čačak candidates (batch 8, 30ms pause)
-    const batch124Size = 8;
-    for (let i = 0; i < candidates124.length; i += batch124Size) {
-      const batch = candidates124.slice(i, i + batch124Size);
-      const results = await Promise.all(batch.map(ip => inspectCamera(ip, '124')));
-      results.forEach(cam => { if (cam) discoveredUnrecorded.push(cam); });
-      if (i + batch124Size < candidates124.length) {
-        await new Promise(r => setTimeout(r, 30));
-      }
-    }
-
-    // 2. Scan Kraljevo candidates (gentle batch 3, 120ms pause, < 5 packets/sec across Sophos)
-    const batch125Size = 3;
-    for (let i = 0; i < candidates125.length; i += batch125Size) {
-      const batch = candidates125.slice(i, i + batch125Size);
-      const results = await Promise.all(batch.map(ip => inspectCamera(ip, '125')));
-      results.forEach(cam => { if (cam) discoveredUnrecorded.push(cam); });
-      if (i + batch125Size < candidates125.length) {
-        await new Promise(r => setTimeout(r, 120));
-      }
-    }
+    const subnetByIp = new Map(candidates.map(t => [t.ip, t.subnet]));
+    const results = await pacedProbe(candidates.map(t => t.ip), UNRECORDED_INTERVAL_MS, UNRECORDED_MAX_IN_FLIGHT, ip => {
+      const subnet = subnetByIp.get(ip)!;
+      return inspectCamera(ip, subnet, undefined, UNRECORDED_TIMEOUT_MS[subnet]);
+    });
+    const discoveredUnrecorded = results.filter((c): c is CameraDevice => !!c);
 
     discoveredUnrecorded.sort((a, b) => {
       const octA = a.ip.split('.').map(Number);
@@ -644,16 +652,15 @@ export async function scanUnrecordedCameras(): Promise<{
     });
 
     const scanDurationMs = Date.now() - startTime;
-    console.log(`[CameraScanner] ✓ Završeno skeniranje: Pronađeno ${discoveredUnrecorded.length} kamera van evidencije za ${scanDurationMs}ms.`);
+    const foundList = discoveredUnrecorded.map(c => `${c.ip} (${c.vendor})`).join(', ');
+    console.log(`[CameraScanner] ✓ Završeno skeniranje: Pronađeno ${discoveredUnrecorded.length} kamera van evidencije za ${scanDurationMs}ms.${foundList ? ' Adrese: ' + foundList : ''}`);
 
     return {
       unrecordedCameras: discoveredUnrecorded,
       unrecordedCount: discoveredUnrecorded.length,
-      scannedCount: candidates124.length + candidates125.length,
+      scannedCount: candidates.length,
       skippedInventoryCount: existingIps.size,
       scanDurationMs
     };
   });
 }
-
-

@@ -17,11 +17,15 @@ import { isUserAllowed, getAccess, hasLevel } from './services/accessService';
 import { enforceRouteAccess, checkVideoGatewayAccess } from './services/routeAccess';
 import { initRolesSchema, writeAudit } from './db/rolesDb';
 import { initMonitoringSchema } from './db/monitoringDb';
+import { initAiAgentSchema } from './db/aiAgentDb';
+import { initNolekoDocsSchema } from './db/nolekoDocsDb';
 
 // Ensure SQLite database and schema are initialized on startup
 migrateLegacyJsonToSqlite();
 initRolesSchema();
 initMonitoringSchema();
+initAiAgentSchema();
+initNolekoDocsSchema();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);

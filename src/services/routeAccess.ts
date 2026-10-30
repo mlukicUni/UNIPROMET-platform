@@ -124,6 +124,14 @@ const RULES: Rule[] = [
   /* ---------- Monitoring (lični tabovi; pregled stranice je dovoljan i za izmenu sopstvenih tabova) ---------- */
   { m: '*', p: '/monitoring/**', spec: { key: 'video.monitoring', level: 'view' } },
 
+  /* ---------- NOLEKO AI: agent prototip (lični razgovori; pregled stranice je dovoljan za chat) ---------- */
+  { m: '*', p: '/ai-agent/**', spec: { key: 'noleko.agent_prototip', level: 'view' } },
+
+  /* ---------- NOLEKO AI: dokumenti (AI razvojni plan) ---------- */
+  { m: 'GET', p: '/noleko/docs/razvojni_plan/**', spec: { key: 'noleko.razvojni_plan', level: 'view' } },
+  { m: 'GET', p: '/noleko/docs/razvojni_plan', spec: { key: 'noleko.razvojni_plan', level: 'view' } },
+  { m: 'PUT', p: '/noleko/docs/razvojni_plan', spec: { key: 'noleko.razvojni_plan', level: 'edit' } },
+
   /* ---------- Inventar kamera i snimača ---------- */
   { m: 'GET,POST', p: '/inventory/cameras/scan-unrecorded', spec: { action: 'mreza.kamere:skeniranje' } },
   {
