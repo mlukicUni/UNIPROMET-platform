@@ -1,0 +1,443 @@
+/**
+ * ==========================================================================
+ * UNIPROMET IT ADMIN - NOLEKO AI: DOKUMENTI (AI razvojni plan)
+ * Prikaz Markdown dokumenta (.md-doc), sadržaj, istorija verzija i uređivač.
+ * Koristi postojeći dizajn sistem (panel-box, btn-yellow-solid-sm,
+ * btn-dark-outline-sm...). Ovde su samo dodatne komponente.
+ * ==========================================================================
+ */
+
+/* ---- Alati u zaglavlju ---- */
+.plan-tools,
+.plan-tools-view,
+.plan-tools-edit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.plan-tools svg { width: 15px; height: 15px; }
+
+.plan-note-input {
+  width: 260px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(10, 14, 22, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: var(--radius-sm);
+  color: var(--white-pure);
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+}
+
+.plan-note-input:focus { outline: none; border-color: var(--border-yellow-glow); }
+
+/* ---- Telo stranice: fiksna visina, delovi skroluju sami ---- */
+.plan-body {
+  padding: 0;
+  flex: 0 0 auto;
+  height: calc(100vh - 250px);
+  min-height: 460px;
+}
+
+.plan-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--yellow-subtle-bg);
+  border-bottom: 1px solid var(--border-yellow-glow);
+  color: var(--yellow-light);
+  font-size: 0.82rem;
+}
+
+.plan-banner > svg { width: 16px; height: 16px; flex-shrink: 0; }
+.plan-banner > span { flex: 1; }
+.plan-banner-actions { display: flex; gap: 8px; }
+.plan-banner-actions svg { width: 14px; height: 14px; }
+
+.plan-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---- Sadržaj / istorija (leva kolona) ---- */
+.plan-side {
+  width: 270px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: var(--bg-surface);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.plan-side-title {
+  padding: 14px 16px 8px;
+  font-family: var(--font-heading);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.plan-toc,
+.plan-history {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 10px 14px;
+}
+
+.plan-toc a {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border-left: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  text-decoration: none;
+  transition: var(--transition-fast);
+}
+
+.plan-toc a:hover { background: var(--bg-card-hover); color: var(--text-main); }
+
+.plan-toc a.active {
+  color: var(--white-pure);
+  background: var(--yellow-subtle-bg);
+  border-left-color: var(--yellow-primary);
+}
+
+.plan-toc a.lvl-3 {
+  padding-left: 24px;
+  font-size: 0.76rem;
+  color: var(--text-dim);
+}
+
+.plan-history-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  margin-bottom: 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-pitch);
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.plan-history-item:hover { border-color: var(--border-medium); color: var(--text-main); }
+.plan-history-item.active { border-color: var(--border-yellow-glow); background: var(--yellow-subtle-bg); }
+
+.plan-history-item .v {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--white-pure);
+}
+
+.plan-history-item .v em {
+  font-style: normal;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--status-success);
+}
+
+.plan-history-item .who { display: block; font-size: 0.72rem; margin-top: 2px; }
+.plan-history-item .note { display: block; font-size: 0.72rem; margin-top: 4px; color: var(--yellow-light); }
+
+/* ---- Dokument ---- */
+.plan-doc {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 30px 44px 60px;
+  background: var(--bg-pitch);
+}
+
+.plan-doc > * { max-width: 980px; }
+
+/* ---- Markdown dokument (zajednički stil prikaza i pregleda u uređivaču) ---- */
+.md-doc {
+  color: var(--text-main);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.md-doc h1 {
+  font-family: var(--font-heading);
+  font-size: 1.9rem;
+  font-weight: 900;
+  line-height: 1.2;
+  color: var(--white-pure);
+  margin: 0 0 6px;
+}
+
+.md-doc h1 + p strong { color: var(--yellow-primary); font-size: 1.1rem; }
+
+.md-doc h2 {
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--white-pure);
+  margin: 34px 0 12px;
+  padding: 0 0 8px 14px;
+  border-left: 4px solid var(--yellow-primary);
+  border-bottom: 1px solid var(--border-subtle);
+  scroll-margin-top: 16px;
+}
+
+.md-doc h3 {
+  font-family: var(--font-heading);
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--yellow-light);
+  margin: 22px 0 8px;
+  scroll-margin-top: 16px;
+}
+
+.md-doc h4 { font-size: 0.92rem; color: var(--white-pure); margin: 16px 0 6px; }
+
+.md-doc p { margin: 0 0 12px; }
+.md-doc p em { color: var(--text-muted); }
+.md-doc strong { color: var(--white-pure); }
+.md-doc a { color: var(--yellow-light); }
+
+.md-doc ul,
+.md-doc ol { margin: 0 0 14px; padding-left: 22px; }
+.md-doc li { margin: 5px 0; }
+.md-doc ul > li::marker { color: var(--yellow-primary); }
+
+.md-doc ul.md-tasks { list-style: none; padding-left: 4px; }
+
+.md-doc ul.md-tasks li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 10px;
+  margin: 4px 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.md-doc ul.md-tasks li.done > span:last-child { color: var(--text-dim); text-decoration: line-through; }
+
+.md-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  border: 2px solid var(--border-medium);
+}
+
+.md-check.checked {
+  background: var(--status-success);
+  border-color: var(--status-success);
+  box-shadow: inset 0 0 0 2px var(--bg-card);
+}
+
+.md-doc blockquote {
+  margin: 4px 0 16px;
+  padding: 10px 14px;
+  background: var(--yellow-subtle-bg);
+  border: 1px solid rgba(255, 184, 0, 0.25);
+  border-left: 4px solid var(--yellow-primary);
+  border-radius: var(--radius-sm);
+}
+
+.md-doc blockquote p { margin: 0; }
+.md-doc blockquote p + p { margin-top: 6px; }
+
+.md-doc hr { border: none; border-top: 1px solid var(--border-subtle); margin: 22px 0; }
+
+.md-doc code {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-xs);
+  padding: 1px 5px;
+}
+
+.md-doc pre {
+  margin: 6px 0 14px;
+  padding: 12px 14px;
+  background: #05070a;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.md-doc pre code { background: none; border: none; padding: 0; white-space: pre; }
+
+.md-table-wrap {
+  margin: 6px 0 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.md-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--bg-surface-elevated);
+  color: var(--yellow-primary);
+  font-family: var(--font-heading);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border-medium);
+  white-space: nowrap;
+}
+
+.md-table td {
+  padding: 9px 12px;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-subtle);
+  line-height: 1.5;
+}
+
+.md-table tbody tr:nth-child(even) td { background: rgba(255, 255, 255, 0.015); }
+.md-table tbody tr:hover td { background: var(--bg-card-hover); }
+.md-table tbody tr:last-child td { border-bottom: none; }
+.md-table td:first-child { color: var(--white-pure); font-weight: 600; }
+
+/* ---- Uređivač ---- */
+.plan-editor {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.plan-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.plan-editor-toolbar button {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-pitch);
+  color: var(--text-main);
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.plan-editor-toolbar button:hover { border-color: var(--border-yellow-glow); color: var(--yellow-light); }
+.plan-tb-sep { width: 1px; height: 18px; background: var(--border-medium); margin: 0 4px; }
+
+.plan-tb-hint {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+}
+
+.plan-editor-panes {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.plan-editor-input {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  padding: 18px 20px;
+  border: none;
+  border-right: 1px solid var(--border-subtle);
+  background: #070a0e;
+  color: var(--text-main);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  tab-size: 2;
+  outline: none;
+}
+
+.plan-editor-preview {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 18px 26px 40px;
+  background: var(--bg-pitch);
+}
+
+.plan-editor-preview h1 { font-size: 1.5rem; }
+
+/* ---- Manji ekrani ---- */
+@media (max-width: 1000px) {
+  .plan-side { display: none; }
+  .plan-doc { padding: 20px 18px 40px; }
+  .plan-tb-hint { display: none; }
+  .plan-note-input { width: 180px; }
+}
+
+@media (max-width: 760px) {
+  .plan-editor-preview { display: none; }
+}
+
+/* ---- Skrol trake u stilu platforme (zlatne, kao u tabelama) ---- */
+.plan-toc,
+.plan-history,
+.plan-doc,
+.plan-editor-input,
+.plan-editor-preview,
+.md-table-wrap,
+.md-doc pre {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 184, 0, 0.4) rgba(15, 20, 30, 0.85);
+}
+
+.plan-toc::-webkit-scrollbar,
+.plan-history::-webkit-scrollbar,
+.plan-doc::-webkit-scrollbar,
+.plan-editor-input::-webkit-scrollbar,
+.plan-editor-preview::-webkit-scrollbar,
+.md-table-wrap::-webkit-scrollbar,
+.md-doc pre::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+  background: rgba(10, 14, 22, 0.95);
+}
+
+.plan-toc::-webkit-scrollbar-thumb,
+.plan-history::-webkit-scrollbar-thumb,
+.plan-doc::-webkit-scrollbar-thumb,
+.plan-editor-input::-webkit-scrollbar-thumb,
+.plan-editor-preview::-webkit-scrollbar-thumb,
+.md-table-wrap::-webkit-scrollbar-thumb,
+.md-doc pre::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, rgba(255, 184, 0, 0.4), rgba(255, 199, 0, 0.7));
+  border-radius: 8px;
+}

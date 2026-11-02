@@ -26,6 +26,8 @@
   <link rel="stylesheet" href="/css/components/access.css">
   <link rel="stylesheet" href="/css/components/access-roles.css">
   <link rel="stylesheet" href="/css/components/monitoring.css">
+  <link rel="stylesheet" href="/css/components/ai-agent.css">
+  <link rel="stylesheet" href="/css/components/noleko-docs.css">
 </head>
 <body class="unipromet-theme">
   
@@ -207,7 +209,32 @@
           </div>
         </div>
 
-        <!-- 4. SERVER (Accordion Group) -->
+        <!-- 4. NOLEKO AI DEVELOPMENT (Accordion Group) -->
+        <div class="nav-section-group" id="nav-group-noleko-ai">
+          <button type="button" class="nav-section-toggle" data-section="noleko_ai" aria-expanded="false" id="btn-toggle-sec-noleko-ai">
+            <div class="nav-icon-wrap"><i data-lucide="brain"></i></div>
+            <span class="nav-section-title-text">NOLEKO AI DEVELOPMENT</span>
+            <i data-lucide="chevron-down" class="nav-section-chevron"></i>
+          </button>
+          <div class="nav-section-content" id="section-content-noleko-ai">
+            <button class="nav-tab-btn" data-tab="ai_agent_prototype">
+              <div class="nav-icon-wrap"><i data-lucide="bot"></i></div>
+              <span class="nav-label">AI agent prototip</span>
+            </button>
+
+            <button class="nav-tab-btn" data-tab="ai_dev_plan">
+              <div class="nav-icon-wrap"><i data-lucide="map"></i></div>
+              <span class="nav-label">AI razvojni plan</span>
+            </button>
+
+            <button class="nav-tab-btn" data-tab="ai_phased_dev">
+              <div class="nav-icon-wrap"><i data-lucide="layers"></i></div>
+              <span class="nav-label">Fazni razvoj</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 5. SERVER (Accordion Group) -->
         <div class="nav-section-group" id="nav-group-server">
           <button type="button" class="nav-section-toggle" data-section="server" aria-expanded="false" id="btn-toggle-sec-server">
             <div class="nav-icon-wrap"><i data-lucide="cpu"></i></div>
@@ -3011,6 +3038,161 @@
               </div>
 
             </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- NOLEKO AI DEVELOPMENT (za sada prazne stranice)            -->
+        <!-- ========================================================== -->
+        <section id="tab-ai_agent_prototype" class="tab-view">
+          <div class="panel-box full-span">
+            <div class="panel-box-header">
+              <div class="panel-title-with-icon">
+                <div class="yellow-icon-square"><i data-lucide="bot"></i></div>
+                <div>
+                  <h4>NOLEKO AI — Agent prototip</h4>
+                  <p class="panel-desc">Razgovor sa AI agentom (Claude). Vaši razgovori su vidljivi samo vama.</p>
+                </div>
+              </div>
+              <div class="ai-header-tools">
+                <label class="ai-model-pick" title="Model koji odgovara na sledeću poruku">
+                  <i data-lucide="cpu"></i>
+                  <select id="ai-model" class="ai-model-select"></select>
+                </label>
+                <label class="ai-model-pick" title="Nivo truda (effort) za sledeću poruku">
+                  <i data-lucide="gauge"></i>
+                  <select id="ai-effort" class="ai-model-select"></select>
+                </label>
+                <span class="ai-status" id="ai-status" data-state="loading">
+                  <span class="ai-status-dot"></span><span id="ai-status-text">Provera agenta...</span>
+                </span>
+              </div>
+            </div>
+
+            <div class="panel-box-body ai-body">
+              <!-- Leva kolona: razgovori -->
+              <aside class="ai-sidebar">
+                <button type="button" class="btn-yellow-solid-sm ai-new-btn" id="ai-btn-new">
+                  <i data-lucide="plus"></i><span>Novi razgovor</span>
+                </button>
+                <div class="ai-conv-list" id="ai-conv-list"></div>
+              </aside>
+
+              <!-- Desna kolona: poruke i unos -->
+              <div class="ai-chat">
+                <div class="ai-messages" id="ai-messages">
+                  <div class="ai-welcome" id="ai-welcome">
+                    <div class="ai-welcome-icon"><i data-lucide="bot"></i></div>
+                    <h5>Kako mogu da pomognem?</h5>
+                    <p>Postavite pitanje agentu. Ovo je prototip: agent nema pristup podacima platforme, serverima ni fajlovima.</p>
+                  </div>
+                </div>
+
+                <div class="ai-context" id="ai-context" data-level="none" title="Koliko je popunjen kontekst (memorija) razgovora posle poslednjeg odgovora">
+                  <span class="ai-context-label">Kontekst</span>
+                  <div class="ai-context-bar"><div class="ai-context-fill" id="ai-context-fill"></div></div>
+                  <span class="ai-context-text" id="ai-context-text">—</span>
+                </div>
+
+                <form class="ai-composer" id="ai-composer" autocomplete="off">
+                  <textarea id="ai-input" class="ai-input" rows="1" placeholder="Napišite poruku... (Enter šalje, Shift+Enter novi red)"></textarea>
+                  <div class="ai-composer-side">
+                    <span class="ai-counter" id="ai-counter">0 / 4000</span>
+                    <button type="submit" class="btn-yellow-solid-sm ai-send-btn" id="ai-btn-send" title="Pošalji">
+                      <i data-lucide="send"></i><span>Pošalji</span>
+                    </button>
+                    <button type="button" class="btn-dark-outline-sm ai-stop-btn" id="ai-btn-stop" title="Zaustavi odgovor" style="display: none;">
+                      <i data-lucide="square"></i><span>Stop</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-ai_dev_plan" class="tab-view">
+          <div class="panel-box full-span">
+            <div class="panel-box-header">
+              <div class="panel-title-with-icon">
+                <div class="yellow-icon-square"><i data-lucide="map"></i></div>
+                <div>
+                  <h4>AI razvojni plan</h4>
+                  <p class="panel-desc" id="plan-meta">Učitavanje plana...</p>
+                </div>
+              </div>
+              <div class="plan-tools">
+                <div class="plan-tools-view" id="plan-tools-view">
+                  <button type="button" class="btn-dark-outline-sm" id="plan-btn-history" title="Prethodne verzije plana">
+                    <i data-lucide="history"></i><span>Istorija</span>
+                  </button>
+                  <button type="button" class="btn-yellow-solid-sm" id="plan-btn-edit" title="Izmeni plan">
+                    <i data-lucide="pencil"></i><span>Izmeni</span>
+                  </button>
+                </div>
+                <div class="plan-tools-edit" id="plan-tools-edit" style="display: none;">
+                  <input type="text" class="plan-note-input" id="plan-note" maxlength="200" placeholder="Kratak opis izmene (opciono)">
+                  <button type="button" class="btn-dark-outline-sm" id="plan-btn-cancel"><i data-lucide="x"></i><span>Otkaži</span></button>
+                  <button type="button" class="btn-yellow-solid-sm" id="plan-btn-save" title="Sačuvaj (Ctrl+S)"><i data-lucide="save"></i><span>Sačuvaj</span></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-box-body plan-body">
+              <!-- Pregled stare verzije -->
+              <div class="plan-banner" id="plan-banner" style="display: none;">
+                <i data-lucide="history"></i>
+                <span id="plan-banner-text"></span>
+                <div class="plan-banner-actions">
+                  <button type="button" class="btn-dark-outline-sm" id="plan-btn-back">Nazad na važeću</button>
+                  <button type="button" class="btn-yellow-solid-sm" id="plan-btn-restore"><i data-lucide="rotate-ccw"></i><span>Vrati ovu verziju</span></button>
+                </div>
+              </div>
+
+              <!-- Prikaz -->
+              <div class="plan-layout" id="plan-view">
+                <aside class="plan-side">
+                  <div class="plan-side-title" id="plan-side-title">Sadržaj</div>
+                  <nav class="plan-toc" id="plan-toc"></nav>
+                  <div class="plan-history" id="plan-history" style="display: none;"></div>
+                </aside>
+                <article class="plan-doc md-doc" id="plan-doc">
+                  <div class="telemetry-loading-state">
+                    <div class="spinner-circle"></div>
+                    <h5>Učitavanje plana...</h5>
+                  </div>
+                </article>
+              </div>
+
+              <!-- Izmena -->
+              <div class="plan-editor" id="plan-editor" style="display: none;">
+                <div class="plan-editor-toolbar" id="plan-editor-toolbar">
+                  <button type="button" data-md="h2" title="Naslov odeljka">H2</button>
+                  <button type="button" data-md="h3" title="Podnaslov">H3</button>
+                  <span class="plan-tb-sep"></span>
+                  <button type="button" data-md="bold" title="Podebljano (Ctrl+B)"><b>B</b></button>
+                  <button type="button" data-md="italic" title="Kurziv (Ctrl+I)"><i>I</i></button>
+                  <span class="plan-tb-sep"></span>
+                  <button type="button" data-md="ul" title="Lista">• Lista</button>
+                  <button type="button" data-md="task" title="Kontrolna lista">☐ Zadatak</button>
+                  <button type="button" data-md="quote" title="Napomena / rezultat">❝ Napomena</button>
+                  <button type="button" data-md="table" title="Ubaci tabelu">▦ Tabela</button>
+                  <span class="plan-tb-hint">Markdown: ## naslov · - stavka · | kolona | tabela · **podebljano**</span>
+                </div>
+                <div class="plan-editor-panes">
+                  <textarea class="plan-editor-input" id="plan-editor-input" spellcheck="false"></textarea>
+                  <div class="plan-editor-preview md-doc" id="plan-editor-preview"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tab-ai_phased_dev" class="tab-view">
+          <div class="empty-state-card">
+            <div class="empty-icon-wrap"><i data-lucide="layers"></i></div>
+            <h3>Fazni razvoj</h3>
+            <p>Stranica je u pripremi.</p>
           </div>
         </section>
 
@@ -7800,6 +7982,9 @@
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js"></script>
   <script src="/js/monitoring.js"></script>
+  <script src="/js/core/markdown.js"></script>
+  <script src="/js/aiAgent.js"></script>
+  <script src="/js/nolekoPlan.js"></script>
   <!-- App Script -->
   <script src="/js/app.js?v=20261023_1000"></script>
 </body>

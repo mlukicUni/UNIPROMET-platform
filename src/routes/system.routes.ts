@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getLocalIpAddresses, getSystemInfo } from '../utils/network';
 import { getSchedulerStatus } from '../services/schedulerService';
+import { publicUrl } from '../utils/appConfig';
 
 export const systemRouter = Router();
 
@@ -50,7 +51,8 @@ systemRouter.get('/status', (req: Request, res: Response) => {
     system: sysInfo,
     network: {
       clientIp: req.ip || req.socket.remoteAddress,
-      localIps: localIps
+      localIps: localIps,
+      publicUrl: publicUrl()
     }
   });
 });

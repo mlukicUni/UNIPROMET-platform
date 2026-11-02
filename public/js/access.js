@@ -31,6 +31,9 @@
     cctv_cameras: 'video.lista',
     cctv_monitoring: 'video.monitoring',
     cameras: 'video.lista',
+    ai_agent_prototype: 'noleko.agent_prototip',
+    ai_dev_plan: 'noleko.razvojni_plan',
+    ai_phased_dev: 'noleko.fazni_razvoj',
     dashboard: 'server.pregled',
     scheduled_services: 'server.servisi',
     logs: 'server.logovi',
@@ -38,13 +41,13 @@
   };
 
   /** data-section atribut u meniju -> ključ sekcije u katalogu */
-  const NAV_SECTION = { mreza: 'mreza', evidencija: 'evidencija', video_nadzor: 'video', server: 'server' };
+  const NAV_SECTION = { mreza: 'mreza', evidencija: 'evidencija', video_nadzor: 'video', noleko_ai: 'noleko', server: 'server' };
 
   /** Tabovi samo za Super admina */
   const SUPER_ONLY_TABS = new Set(['access_roles']);
 
   /** Lične stranice: nivo "Pregled" je dovoljan i za izmenu sopstvenih podešavanja (bez oznake "samo pregled") */
-  const PERSONAL_TABS = new Set(['cctv_monitoring']);
+  const PERSONAL_TABS = new Set(['cctv_monitoring', 'ai_agent_prototype']);
 
   /** Elementi čije prikazivanje zavisi od posebne akcije ili nivoa izmene */
   const GATED_ELEMENTS = {
@@ -60,7 +63,9 @@
     'btn-export-net-excel': { action: 'evidencija.mrezna_oprema:izvoz' },
     'btn-export-nodes-excel': { action: 'evidencija.cvorista:izvoz' },
     'btn-export-lines-excel': { action: 'evidencija.linije:izvoz' },
-    'btn-export-mts-excel': { action: 'evidencija.mts:izvoz' }
+    'btn-export-mts-excel': { action: 'evidencija.mts:izvoz' },
+    'plan-btn-edit': { edit: 'ai_dev_plan' },
+    'plan-btn-restore': { edit: 'ai_dev_plan' }
   };
 
   const EMPTY_ACCESS = {

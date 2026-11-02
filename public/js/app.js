@@ -376,6 +376,18 @@ function setupNavigationHandlers() {
     access_roles: {
       title: 'Korisnici i Role',
       subtitle: 'Pristup sekcijama platforme i kamerama po rolama, korisnicima i AD grupama'
+    },
+    ai_agent_prototype: {
+      title: 'AI Agent Prototip',
+      subtitle: 'NOLEKO AI Development'
+    },
+    ai_dev_plan: {
+      title: 'AI Razvojni Plan',
+      subtitle: 'NOLEKO AI Development'
+    },
+    ai_phased_dev: {
+      title: 'Fazni Razvoj',
+      subtitle: 'NOLEKO AI Development'
     }
   };
 
@@ -400,6 +412,9 @@ function setupNavigationHandlers() {
     mts_numbers: 'evidencija',
     equipment_software: 'evidencija',
     equipment_dictionaries: 'evidencija',
+    ai_agent_prototype: 'noleko_ai',
+    ai_dev_plan: 'noleko_ai',
+    ai_phased_dev: 'noleko_ai',
     dashboard: 'server',
     scheduled_services: 'server',
     logs: 'server',
@@ -617,6 +632,18 @@ function setupNavigationHandlers() {
     if (tabId === 'access_roles') {
       if (window.AccessRolesModule && typeof window.AccessRolesModule.onTabActivated === 'function') {
         window.AccessRolesModule.onTabActivated();
+      }
+    }
+
+    if (tabId === 'ai_dev_plan') {
+      if (window.NolekoPlanModule && typeof window.NolekoPlanModule.onTabActivated === 'function') {
+        window.NolekoPlanModule.onTabActivated();
+      }
+    }
+
+    if (tabId === 'ai_agent_prototype') {
+      if (window.AiAgentModule && typeof window.AiAgentModule.onTabActivated === 'function') {
+        window.AiAgentModule.onTabActivated();
       }
     }
 
@@ -1216,12 +1243,15 @@ async function fetchStatus() {
     const localIps = data.network?.localIps || [];
     const port = window.location.port || '3000';
 
+    // Zvanična adresa portala (PUBLIC_URL iz .env), npr. https://portal.unipromet.local
+    const portalUrl = data.network?.publicUrl || '';
+
     if (localIps.length > 0) {
-      primaryLanUrl = `http://${localIps[0].address}:${port}`;
+      primaryLanUrl = portalUrl || `http://${localIps[0].address}:${port}`;
       const lanEl = document.getElementById('lan-primary-url');
       if (lanEl) lanEl.textContent = primaryLanUrl;
       const heroLan = document.getElementById('hero-lan-url');
-      if (heroLan) heroLan.textContent = `${localIps[0].address}:${port}`;
+      if (heroLan) heroLan.textContent = portalUrl ? portalUrl.replace(/^https?:\/\//, '') : `${localIps[0].address}:${port}`;
       const primIp = document.getElementById('val-primary-ip');
       if (primIp) primIp.textContent = localIps[0].address;
     } else {
@@ -5305,6 +5335,7 @@ async function handleCameraFormSubmit(e) {
       showToast(id ? '✓ Podaci o kameri uspešno ažurirani!' : '✓ Nova kamera uspešno uneta u evidenciju!', 'success');
       document.getElementById('modal-inv-camera').style.display = 'none';
       fetchInventoryCameras();
+      if (!id) returnToUnrecordedCamerasList(ip);
     } else {
       throw new Error(data.error || 'Greška pri čuvanju');
     }
@@ -5450,9 +5481,11 @@ function setupInventoryCamerasEventListeners() {
 
   document.getElementById('btn-close-inv-camera-modal')?.addEventListener('click', () => {
     document.getElementById('modal-inv-camera').style.display = 'none';
+    returnToUnrecordedCamerasList();
   });
   document.getElementById('btn-cancel-inv-camera-modal')?.addEventListener('click', () => {
     document.getElementById('modal-inv-camera').style.display = 'none';
+    returnToUnrecordedCamerasList();
   });
   document.getElementById('form-inv-camera')?.addEventListener('submit', handleCameraFormSubmit);
 
@@ -5486,7 +5519,7 @@ function setupInventoryCamerasEventListeners() {
 async function scanUnrecordedCamerasClient() {
   if (activeSpinningButtons.has('btn-scan-unrecorded-cameras')) return;
   setButtonSpinning('btn-scan-unrecorded-cameras', true);
-  showToast('🔍 Skeniranje mreže u toku... Proveravam opsege 124 i 125 za neevidentirane kamere...', 'info');
+  showToast('🔍 Skeniranje mreže u toku... Proveravam opsege 124 i 125 za neevidentirane kamere (ide polako zbog Sophosa, oko 2 minuta)...', 'info');
 
   try {
     const res = await fetch('/api/inventory/cameras/scan-unrecorded', { method: 'POST' });
@@ -5519,6 +5552,7 @@ function openUnrecordedCamerasModal(cameras) {
   const title = document.getElementById('unrecorded-modal-title');
   const statusText = document.getElementById('unrecorded-modal-status-text');
   if (!modal || !body) return;
+  lastUnrecordedCameras = cameras;
 
   if (title) title.innerHTML = `<i data-lucide="scan-eye" style="color: var(--yellow-primary);"></i> Pronađene Nove Kamere van Evidencije`;
   if (badge) {
@@ -5565,9 +5599,21 @@ function openUnrecordedCamerasModal(cameras) {
 }
 window.openUnrecordedCamerasModal = openUnrecordedCamerasModal;
 
+// Pronađene kamere iz poslednje pretrage: posle upisa jedne, spisak se vraća sa ostalima
+let lastUnrecordedCameras = [];
+let addingFromUnrecordedList = false;
+
+function returnToUnrecordedCamerasList(savedIp) {
+  if (!addingFromUnrecordedList) return;
+  addingFromUnrecordedList = false;
+  if (savedIp) lastUnrecordedCameras = lastUnrecordedCameras.filter(c => c.ip !== savedIp);
+  if (lastUnrecordedCameras.length > 0) openUnrecordedCamerasModal(lastUnrecordedCameras);
+}
+
 function openAddCameraModalWithData(ip, vendor) {
   const unrecModal = document.getElementById('modal-unrecorded-cameras');
   if (unrecModal) unrecModal.style.display = 'none';
+  addingFromUnrecordedList = true;
 
   openAddCameraModal();
 
