@@ -11,6 +11,8 @@ Verzija se vodi u `package.json`, a svaka puštena verzija ima git tag `vX.Y.Z` 
 Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o sistemu) i u mejlu „Server ažuriran“.
 
 ## [Neobjavljeno]
+
+## [1.1.0] - 2026-11-02
 - Gornja traka i Kontrolna tabla prikazuju zvaničnu adresu portala iz `PUBLIC_URL` (na serveru `https://portal.unipromet.local`) umesto IP adrese i porta 3000
 - Nova sekcija u meniju „NOLEKO AI Development“ sa stranicama AI agent prototip, AI razvojni plan i Fazni razvoj (Fazni razvoj za sada prazan); dodata i u prava pristupa po rolama
 - NOLEKO AI → AI razvojni plan: prikaz plana implementacije (iz Word dokumenta) sa sadržajem odeljaka, tabelama i kontrolnom listom; dugme Izmeni otvara uređivač sa pregledom uživo (samo uz nivo Izmena), svaka izmena je nova verzija sa istorijom i mogućnošću vraćanja stare verzije
