@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.2.1] - 2026-11-05
+- Video nadzor → Monitoring: zatvoreni dodeljeni (deljeni) tab se ponovo otvara i preko dugmeta „+“: kad ih ima, „+“ otvara meni sa „Novi tab“ i spiskom zatvorenih dodeljenih tabova (sa imenom vlasnika); bez njih „+“ odmah otvara pravljenje novog taba kao ranije. Poruka posle zatvaranja to i kaže
+
 ## [1.2.0] - 2026-11-05
 - Video nadzor → Lista kamera: uz svaku kameru dugme „Dodaj u monitoring tab“ otvara prozor za dodavanje u postojeći tab (izbor polja, zamena kamere ili proširenje rasporeda na sledeći šablon kad je tab pun) ili u novi tab sa izabranim šablonom; posle dodavanja poruka sa dugmetom „Otvori tab“. Dugme je sivo za kamere koje korisnik nema pravo da gleda uživo
 - Evidencija kamera: novo dugme „Dodaj po IP adresi“ pored „Pronađi Novu Kameru“. Korisnik unese IP adresu, sistem proveri samo tu adresu (bez skeniranja opsega) i, ako je kamera nađena, otvara formu za unos detalja; ako kamere nema ili je adresa već u evidenciji, javlja to korisniku. Dozvoljene su samo adrese iz lokalnih mreža. Zahteva pravo izmene evidencije kamera
