@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb } from './sqlite';
+import { initRolesSchema, findKnownUserByEmail } from './rolesDb';
 
 /**
  * ==========================================================================
@@ -37,6 +38,19 @@ export interface MonitoringTab {
   cameras: (string | null)[];
   createdAt: string;
   updatedAt?: string;
+  /** Samo za vlastite tabove: role sa kojima je tab podeljen */
+  sharedWith?: TabShare[];
+  /** Samo za tabove koje je podelio neko drugi (samo za gledanje) */
+  shared?: boolean;
+  ownerName?: string;
+  ownerEmail?: string;
+  /** Deljeni tab koji je korisnik sakrio za sebe */
+  hidden?: boolean;
+}
+
+export interface TabShare {
+  roleId: string;
+  roleName: string;
 }
 
 export interface MonitoringTemplate {
@@ -55,12 +69,15 @@ export interface MonitoringSettings {
   lastTabId: string;
   /** Kako video popunjava polje grida */
   fit: VideoFit;
+  /** ID-jevi deljenih tabova koje je korisnik sakrio za sebe */
+  hiddenShared: string[];
 }
 
 const DEFAULT_SETTINGS: MonitoringSettings = {
   rotation: { enabled: false, intervalSec: 30, tabIds: [] },
   lastTabId: '',
-  fit: 'fill'
+  fit: 'fill',
+  hiddenShared: []
 };
 
 /**
@@ -121,10 +138,25 @@ export function initMonitoringSchema(): void {
       updated_at TEXT
     );
 
+    CREATE TABLE IF NOT EXISTS monitoring_tab_shares (
+      tab_id TEXT NOT NULL,
+      role_id TEXT NOT NULL,
+      shared_by TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      PRIMARY KEY (tab_id, role_id)
+    );
+
     CREATE INDEX IF NOT EXISTS idx_monitoring_tabs_owner ON monitoring_tabs(owner, position);
+    CREATE INDEX IF NOT EXISTS idx_monitoring_tab_shares_role ON monitoring_tab_shares(role_id);
     CREATE INDEX IF NOT EXISTS idx_monitoring_templates_owner ON monitoring_templates(owner);
   `);
   migratePresetLayouts();
+  initRolesSchema();
+  // Deljenja obrisanih rola i obrisanih tabova više nemaju smisla
+  getDb().exec(`
+    DELETE FROM monitoring_tab_shares WHERE role_id NOT IN (SELECT id FROM roles);
+    DELETE FROM monitoring_tab_shares WHERE tab_id NOT IN (SELECT id FROM monitoring_tabs);
+  `);
   schemaReady = true;
 }
 
@@ -281,8 +313,10 @@ export function updateTab(owner: string, id: string, input: TabInput): Monitorin
 }
 
 export function deleteTab(owner: string, id: string): void {
-  const info = getDb().prepare('DELETE FROM monitoring_tabs WHERE owner = ? AND id = ?').run(owner, id);
+  const db = getDb();
+  const info = db.prepare('DELETE FROM monitoring_tabs WHERE owner = ? AND id = ?').run(owner, id);
   if (info.changes === 0) throw new Error('Tab nije pronađen.');
+  db.prepare('DELETE FROM monitoring_tab_shares WHERE tab_id = ?').run(id);
 }
 
 export function duplicateTab(owner: string, id: string): MonitoringTab {
@@ -300,6 +334,86 @@ export function reorderTabs(owner: string, ids: unknown): MonitoringTab[] {
     ids.forEach((id, i) => update.run(i, owner, String(id)));
   })();
   return listTabs(owner);
+}
+
+/* ==========================================================================
+   DELJENJE TABOVA SA ROLAMA
+   Vlasnik deli tab sa rolama; članovi rola ga vide (samo za gledanje) pored svojih tabova.
+   ========================================================================== */
+export const MAX_SHARE_ROLES = 50;
+
+/** Role sa kojima su podeljeni tabovi vlasnika: mapa tabId -> role */
+export function listSharesForOwner(owner: string): Map<string, TabShare[]> {
+  initRolesSchema();
+  const rows = getDb().prepare(`
+    SELECT s.tab_id AS tabId, s.role_id AS roleId, r.name AS roleName
+    FROM monitoring_tab_shares s
+    JOIN monitoring_tabs t ON t.id = s.tab_id
+    JOIN roles r ON r.id = s.role_id
+    WHERE t.owner = ?
+    ORDER BY r.name
+  `).all(owner) as { tabId: string; roleId: string; roleName: string }[];
+  const map = new Map<string, TabShare[]>();
+  for (const r of rows) {
+    const list = map.get(r.tabId) || [];
+    list.push({ roleId: r.roleId, roleName: r.roleName });
+    map.set(r.tabId, list);
+  }
+  return map;
+}
+
+/** Zamenjuje listu rola sa kojima je tab podeljen. Samo vlasnik; role moraju postojati. */
+export function setTabShares(owner: string, tabId: string, roleIds: unknown, sharedBy: string): TabShare[] {
+  initRolesSchema();
+  const db = getDb();
+  if (!getTab(owner, tabId)) throw new Error('Tab nije pronađen.');
+  if (!Array.isArray(roleIds)) throw new Error('Lista rola nije ispravna.');
+  const ids = [...new Set(roleIds.map(v => String(v)).filter(Boolean))];
+  if (ids.length > MAX_SHARE_ROLES) throw new Error(`Tab se može podeliti sa najviše ${MAX_SHARE_ROLES} rola.`);
+
+  const existing = new Map((db.prepare('SELECT id, name FROM roles').all() as { id: string; name: string }[]).map(r => [r.id, r.name]));
+  for (const id of ids) {
+    if (!existing.has(id)) throw new Error('Jedna od izabranih rola ne postoji.');
+  }
+
+  const now = new Date().toISOString();
+  db.transaction(() => {
+    const keep = new Set(ids);
+    const current = db.prepare('SELECT role_id FROM monitoring_tab_shares WHERE tab_id = ?').all(tabId) as { role_id: string }[];
+    for (const c of current) {
+      if (!keep.has(c.role_id)) db.prepare('DELETE FROM monitoring_tab_shares WHERE tab_id = ? AND role_id = ?').run(tabId, c.role_id);
+    }
+    const insert = db.prepare('INSERT OR IGNORE INTO monitoring_tab_shares (tab_id, role_id, shared_by, created_at) VALUES (?, ?, ?, ?)');
+    for (const id of ids) insert.run(tabId, id, sharedBy, now);
+  })();
+  return ids.map(id => ({ roleId: id, roleName: existing.get(id) || '' }));
+}
+
+function decorateShared(row: TabRow & { owner: string }): MonitoringTab {
+  const tab = rowToTab(row);
+  const known = findKnownUserByEmail(row.owner);
+  tab.shared = true;
+  tab.ownerEmail = row.owner;
+  tab.ownerName = known?.name || row.owner;
+  return tab;
+}
+
+/** Tabovi koje su drugi podelili sa datim rolama (tuđi, bez duplikata) */
+export function listSharedTabsForRoles(roleIds: string[], viewerKey: string): MonitoringTab[] {
+  initRolesSchema();
+  if (!roleIds.length) return [];
+  const marks = roleIds.map(() => '?').join(',');
+  const rows = getDb().prepare(`
+    SELECT DISTINCT t.* FROM monitoring_tabs t
+    JOIN monitoring_tab_shares s ON s.tab_id = t.id
+    WHERE s.role_id IN (${marks}) AND t.owner <> ?
+    ORDER BY t.owner, t.position, t.created_at
+  `).all(...roleIds, viewerKey) as (TabRow & { owner: string })[];
+  return rows.map(decorateShared);
+}
+
+export function getSharedTab(roleIds: string[], viewerKey: string, id: string): MonitoringTab | null {
+  return listSharedTabsForRoles(roleIds, viewerKey).find(t => t.id === id) || null;
 }
 
 /* ==========================================================================
@@ -371,7 +485,8 @@ export function getSettings(owner: string): MonitoringSettings {
   return {
     rotation: { ...DEFAULT_SETTINGS.rotation, ...(saved.rotation || {}) },
     lastTabId: saved.lastTabId || '',
-    fit: saved.fit && FIT_MODES.includes(saved.fit) ? saved.fit : DEFAULT_SETTINGS.fit
+    fit: saved.fit && FIT_MODES.includes(saved.fit) ? saved.fit : DEFAULT_SETTINGS.fit,
+    hiddenShared: Array.isArray(saved.hiddenShared) ? saved.hiddenShared.map(String) : []
   };
 }
 
@@ -380,6 +495,9 @@ export function saveSettings(owner: string, input: any): MonitoringSettings {
   const next: MonitoringSettings = { ...current, rotation: { ...current.rotation } };
 
   if (input && typeof input.lastTabId === 'string') next.lastTabId = input.lastTabId.slice(0, 80);
+  if (input && Array.isArray(input.hiddenShared)) {
+    next.hiddenShared = [...new Set<string>(input.hiddenShared.map((v: unknown) => String(v)))].slice(0, 200);
+  }
   if (input && input.fit !== undefined) {
     if (!FIT_MODES.includes(input.fit)) throw new Error('Nepoznat način prikaza videa.');
     next.fit = input.fit;

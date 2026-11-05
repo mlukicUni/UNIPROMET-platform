@@ -19,6 +19,8 @@
     loaded: false,
     loading: false,
     tabs: [],
+    sharedAll: [],
+    canShare: false,
     templates: [],
     settings: { rotation: { enabled: false, intervalSec: 30, tabIds: [] }, lastTabId: '', fit: 'fill' },
     cameras: [],
@@ -111,7 +113,10 @@
     if (!S.loaded) $('mon-loading').style.display = '';
     try {
       const data = await api(`${API}/state`);
-      S.tabs = data.tabs || [];
+      // Vlastiti tabovi, pa tabovi koje su drugi podelili sa vašim rolama (samo za gledanje)
+      S.sharedAll = data.sharedTabs || [];
+      S.canShare = !!data.canShare;
+      S.tabs = (data.tabs || []).concat(S.sharedAll.filter(t => !t.hidden));
       S.templates = data.templates || [];
       S.settings = data.settings || S.settings;
       S.cameras = data.cameras || [];
@@ -164,13 +169,23 @@
     const wrap = $('mon-tabs');
     wrap.innerHTML = S.tabs.map(t => {
       const filled = t.cameras.filter(Boolean).length;
+      const sharedOut = !t.shared && t.sharedWith && t.sharedWith.length
+        ? `<span class="mon-tab-shared-dot" title="Podeljeno sa: ${esc(t.sharedWith.map(s => s.roleName).join(', '))}"><i data-lucide="share-2"></i></span>`
+        : '';
+      const title = t.shared
+        ? `${t.name} — deljeno od: ${t.ownerName || t.ownerEmail || ''} (samo gledanje), desni klik za opcije`
+        : `${t.name} — dvoklik za preimenovanje, desni klik za opcije`;
+      const closeBtn = t.shared
+        ? `<button type="button" class="mon-tab-close" data-hide="${esc(t.id)}" title="Sakrij za mene"><i data-lucide="eye-off"></i></button>`
+        : `<button type="button" class="mon-tab-close" data-close="${esc(t.id)}" title="Zatvori (obriši) tab"><i data-lucide="x"></i></button>`;
       return `
-        <div class="mon-tab ${t.id === S.activeId ? 'is-active' : ''}" data-id="${esc(t.id)}" draggable="true" role="tab"
-             aria-selected="${t.id === S.activeId}" title="${esc(t.name)} — dvoklik za preimenovanje, desni klik za opcije">
-          <i data-lucide="layout-grid"></i>
+        <div class="mon-tab ${t.id === S.activeId ? 'is-active' : ''} ${t.shared ? 'is-shared' : ''}" data-id="${esc(t.id)}" draggable="${t.shared ? 'false' : 'true'}" role="tab"
+             aria-selected="${t.id === S.activeId}" title="${esc(title)}">
+          <i data-lucide="${t.shared ? 'share-2' : 'layout-grid'}"></i>
           <span class="mon-tab-label">${esc(t.name)}</span>
+          ${sharedOut}
           <span class="mon-tab-count">${filled}/${t.layout.cells.length}</span>
-          <button type="button" class="mon-tab-close" data-close="${esc(t.id)}" title="Zatvori (obriši) tab"><i data-lucide="x"></i></button>
+          ${closeBtn}
         </div>`;
     }).join('');
     C.icons(wrap);
@@ -181,9 +196,35 @@
     });
     updateRotationButton();
     updateFitButton();
+    updateSharedUi();
 
     const active = wrap.querySelector('.mon-tab.is-active');
     if (active) active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }
+
+  /** Oznaka deljenog taba, dugme za sakrivene deljene tabove i zabrana izmene tuđeg taba */
+  function updateSharedUi() {
+    const tab = activeTab();
+    const shared = !!(tab && tab.shared);
+    const edit = $('mon-btn-edit');
+    edit.disabled = !tab || shared;
+    edit.title = shared ? 'Deljeni tab se ne može menjati — napravite svoju kopiju (desni klik na tab)' : 'Izmeni tab (naziv, šablon, kamere)';
+
+    // Dugme „Podeli“: samo uz pravo deljenja, i samo za vlastiti tab
+    const shareBtn = $('mon-btn-share');
+    shareBtn.style.display = S.canShare ? '' : 'none';
+    shareBtn.disabled = !tab || shared;
+    shareBtn.title = shared ? 'Tuđi deljeni tab ne možete dalje deliti' : 'Podeli tab sa rolama';
+    shareBtn.classList.toggle('is-on', !!(tab && !shared && tab.sharedWith && tab.sharedWith.length));
+
+    const badge = $('mon-shared-badge');
+    badge.style.display = shared ? 'inline-flex' : 'none';
+    if (shared) badge.querySelector('span').textContent = `Deljeno od: ${tab.ownerName || tab.ownerEmail || '—'} · samo gledanje`;
+
+    const hiddenCount = S.sharedAll.filter(t => t.hidden).length;
+    const hiddenBtn = $('mon-btn-hidden');
+    hiddenBtn.style.display = hiddenCount ? '' : 'none';
+    hiddenBtn.title = `Sakriveni deljeni tabovi (${hiddenCount})`;
   }
 
   function currentFit() {
@@ -247,6 +288,7 @@
     if (!S.tabs.some(t => t.id === id)) return;
     const changed = S.activeId !== id;
     S.activeId = id;
+    updateSharedUi();
     document.querySelectorAll('#mon-tabs .mon-tab').forEach(el => {
       const on = el.dataset.id === id;
       el.classList.toggle('is-active', on);
@@ -283,13 +325,19 @@
         confirmDeleteTab(close.dataset.close);
         return;
       }
+      const hide = e.target.closest('[data-hide]');
+      if (hide) {
+        e.stopPropagation();
+        hideShared(hide.dataset.hide);
+        return;
+      }
       const tabEl = e.target.closest('.mon-tab');
       if (tabEl && !e.target.closest('.mon-tab-rename')) setActive(tabEl.dataset.id);
     });
 
     wrap.addEventListener('dblclick', (e) => {
       const tabEl = e.target.closest('.mon-tab');
-      if (tabEl && !e.target.closest('[data-close]')) startRename(tabEl.dataset.id);
+      if (tabEl && !e.target.closest('[data-close], [data-hide]') && !isSharedTab(tabEl.dataset.id)) startRename(tabEl.dataset.id);
     });
 
     wrap.addEventListener('contextmenu', (e) => {
@@ -303,6 +351,10 @@
     wrap.addEventListener('dragstart', (e) => {
       const tabEl = e.target.closest('.mon-tab');
       if (!tabEl) return;
+      if (isSharedTab(tabEl.dataset.id)) {
+        e.preventDefault();
+        return;
+      }
       S.dragTabId = tabEl.dataset.id;
       tabEl.classList.add('is-dragging');
       e.dataTransfer.effectAllowed = 'move';
@@ -313,7 +365,7 @@
       const tabEl = e.target.closest('.mon-tab');
       e.preventDefault();
       wrap.querySelectorAll('.mon-tab').forEach(el => el.classList.remove('is-drop-before', 'is-drop-after'));
-      if (!tabEl || tabEl.dataset.id === S.dragTabId) return;
+      if (!tabEl || tabEl.dataset.id === S.dragTabId || isSharedTab(tabEl.dataset.id)) return;
       const r = tabEl.getBoundingClientRect();
       tabEl.classList.add(e.clientX < r.left + r.width / 2 ? 'is-drop-before' : 'is-drop-after');
     });
@@ -323,13 +375,14 @@
       const tabEl = e.target.closest('.mon-tab');
       const dragId = S.dragTabId;
       S.dragTabId = '';
-      if (!tabEl || tabEl.dataset.id === dragId) return renderTabs();
+      if (!tabEl || tabEl.dataset.id === dragId || isSharedTab(tabEl.dataset.id)) return renderTabs();
       const before = tabEl.classList.contains('is-drop-before');
-      const ids = S.tabs.map(t => t.id).filter(id => id !== dragId);
+      const ids = S.tabs.filter(t => !t.shared).map(t => t.id).filter(id => id !== dragId);
       let idx = ids.indexOf(tabEl.dataset.id);
       if (!before) idx++;
       ids.splice(idx, 0, dragId);
-      S.tabs = ids.map(id => S.tabs.find(t => t.id === id));
+      // Redosled se menja samo među vlastitim tabovima; deljeni ostaju na kraju
+      S.tabs = ids.map(id => S.tabs.find(t => t.id === id)).concat(S.tabs.filter(t => t.shared));
       renderTabs();
       api(`${API}/tabs/order`, 'PUT', { ids }).catch(err => notify(`Redosled nije sačuvan: ${err.message}`, 'error'));
     });
@@ -339,10 +392,15 @@
     });
   }
 
+  function isSharedTab(id) {
+    const t = S.tabs.find(x => x.id === id);
+    return !!(t && t.shared);
+  }
+
   function startRename(id) {
     const tab = S.tabs.find(t => t.id === id);
     const tabEl = document.querySelector(`#mon-tabs .mon-tab[data-id="${CSS.escape(id)}"]`);
-    if (!tab || !tabEl) return;
+    if (!tab || !tabEl || tab.shared) return;
     const label = tabEl.querySelector('.mon-tab-label');
     const input = document.createElement('input');
     input.className = 'mon-tab-rename';
@@ -378,8 +436,15 @@
 
   function replaceTab(tab) {
     const i = S.tabs.findIndex(t => t.id === tab.id);
-    if (i >= 0) S.tabs[i] = tab;
-    else S.tabs.push(tab);
+    if (i >= 0) {
+      tab.sharedWith = S.tabs[i].sharedWith || [];
+      S.tabs[i] = tab;
+    } else {
+      // Novi vlastiti tab ide ispred deljenih
+      const firstShared = S.tabs.findIndex(t => t.shared);
+      if (firstShared < 0) S.tabs.push(tab);
+      else S.tabs.splice(firstShared, 0, tab);
+    }
   }
 
   let ctxMenu = null;
@@ -391,16 +456,29 @@
 
   function openContextMenu(id, x, y) {
     closeContextMenu();
-    const items = [
-      { act: 'rename', icon: 'text-cursor-input', label: 'Preimenuj' },
-      { act: 'edit', icon: 'pencil', label: 'Izmeni šablon i kamere' },
-      { act: 'duplicate', icon: 'copy', label: 'Dupliraj' },
-      { sep: true },
+    const tab = S.tabs.find(t => t.id === id);
+    if (!tab) return;
+    const common = [
       { act: 'window', icon: 'app-window', label: 'Otvori u novom prozoru' },
-      { act: 'shortcut', icon: 'monitor-up', label: 'Kopiraj prečicu (app prozor)' },
-      { sep: true },
-      { act: 'delete', icon: 'trash-2', label: 'Obriši tab', danger: true }
+      { act: 'shortcut', icon: 'monitor-up', label: 'Prečica za radnu površinu…' },
+      { sep: true }
     ];
+    const items = tab.shared
+      ? [
+        { act: 'duplicate', icon: 'copy', label: 'Napravi moju kopiju' },
+        { sep: true },
+        ...common,
+        { act: 'hide', icon: 'eye-off', label: 'Sakrij za mene' }
+      ]
+      : [
+        { act: 'rename', icon: 'text-cursor-input', label: 'Preimenuj' },
+        { act: 'edit', icon: 'pencil', label: 'Izmeni šablon i kamere' },
+        { act: 'duplicate', icon: 'copy', label: 'Dupliraj' },
+        ...(S.canShare ? [{ act: 'share', icon: 'share-2', label: 'Podeli sa rolama…' }] : []),
+        { sep: true },
+        ...common,
+        { act: 'delete', icon: 'trash-2', label: 'Obriši tab', danger: true }
+      ];
     ctxMenu = document.createElement('div');
     ctxMenu.className = 'mon-ctx-menu';
     ctxMenu.innerHTML = items.map(it => it.sep
@@ -425,18 +503,21 @@
   function runTabAction(act, id) {
     const tab = S.tabs.find(t => t.id === id);
     if (!tab) return;
-    if (act === 'rename') startRename(id);
-    else if (act === 'edit') openWizard('edit', tab);
-    else if (act === 'duplicate') duplicateTab(id);
+    if (act === 'duplicate') duplicateTab(id);
     else if (act === 'window') openTabWindow(id);
-    else if (act === 'shortcut') copyShortcut(`/monitor?tab=${encodeURIComponent(id)}`);
+    else if (act === 'shortcut') openShortcut(`/monitor?tab=${encodeURIComponent(id)}`, tab.name);
+    else if (act === 'hide') hideShared(id);
+    else if (tab.shared) return; // deljeni tab se ne preimenuje, ne menja i ne briše
+    else if (act === 'rename') startRename(id);
+    else if (act === 'edit') openWizard('edit', tab);
+    else if (act === 'share') openShare(tab);
     else if (act === 'delete') confirmDeleteTab(id);
   }
 
   async function duplicateTab(id) {
     try {
       const data = await api(`${API}/tabs/${encodeURIComponent(id)}/duplicate`, 'POST');
-      S.tabs.push(data.tab);
+      replaceTab(data.tab);
       renderTabs();
       setActive(data.tab.id, { force: true });
       renderSummary();
@@ -448,7 +529,7 @@
 
   function confirmDeleteTab(id) {
     const tab = S.tabs.find(t => t.id === id);
-    if (!tab) return;
+    if (!tab || tab.shared) return;
     confirmAction({
       title: 'Obriši monitoring tab',
       text: `Tab „${tab.name}“ i njegov raspored kamera biće obrisani. Kamere i snimci se ne menjaju.`,
@@ -468,6 +549,158 @@
       } catch (err) {
         notify(err.message, 'error');
       }
+    });
+  }
+
+  /* ==========================================================================
+     DELJENI TABOVI: SAKRIVANJE
+     ========================================================================== */
+  async function saveHidden(ids) {
+    const data = await api(`${API}/settings`, 'PUT', { hiddenShared: ids });
+    S.settings.hiddenShared = data.settings.hiddenShared || ids;
+  }
+
+  async function hideShared(id) {
+    const tab = S.sharedAll.find(t => t.id === id);
+    if (!tab) return;
+    const ids = S.sharedAll.filter(t => t.hidden).map(t => t.id).concat(id);
+    try {
+      await saveHidden(ids);
+      tab.hidden = true;
+      const idx = S.tabs.findIndex(t => t.id === id);
+      if (idx >= 0) S.tabs.splice(idx, 1);
+      if (S.activeId === id) {
+        const next = S.tabs[idx] || S.tabs[idx - 1];
+        S.activeId = next ? next.id : '';
+      }
+      if (S.tabs.length < 2) stopRotation(true);
+      renderAll();
+      notify(`Tab „${tab.name}“ je sakriven. Vraćate ga dugmetom sa precrtanim okom u traci.`, 'info');
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  }
+
+  async function unhideShared(id) {
+    const tab = S.sharedAll.find(t => t.id === id);
+    if (!tab) return;
+    try {
+      await saveHidden(S.sharedAll.filter(t => t.hidden && t.id !== id).map(t => t.id));
+      tab.hidden = false;
+      S.tabs.push(tab);
+      renderTabs();
+      setActive(id, { force: true });
+      renderSummary();
+    } catch (err) {
+      notify(err.message, 'error');
+    }
+  }
+
+  function openHiddenMenu() {
+    closeContextMenu();
+    const hidden = S.sharedAll.filter(t => t.hidden);
+    if (!hidden.length) return;
+    ctxMenu = document.createElement('div');
+    ctxMenu.className = 'mon-ctx-menu';
+    ctxMenu.innerHTML = hidden.map(t => `
+      <button type="button" class="mon-ctx-item" data-unhide="${esc(t.id)}"><i data-lucide="eye"></i><span>Prikaži „${esc(t.name)}“ (${esc(t.ownerName || '')})</span></button>`).join('');
+    document.body.appendChild(ctxMenu);
+    C.icons(ctxMenu);
+    const b = $('mon-btn-hidden').getBoundingClientRect();
+    const r = ctxMenu.getBoundingClientRect();
+    ctxMenu.style.left = `${Math.max(8, Math.min(b.right - r.width, window.innerWidth - r.width - 8))}px`;
+    ctxMenu.style.top = `${b.bottom + 6}px`;
+    ctxMenu.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-unhide]');
+      if (!btn) return;
+      closeContextMenu();
+      unhideShared(btn.dataset.unhide);
+    });
+  }
+
+  /* ==========================================================================
+     DELJENJE TABA SA ROLAMA (vlasnik taba)
+     ========================================================================== */
+  const SH = { tabId: '', roles: [], cameraCount: 0 };
+
+  async function openShare(tab) {
+    SH.tabId = tab.id;
+    SH.roles = [];
+    $('mon-share-sub').textContent = `Tab „${tab.name}“`;
+    $('mon-share-list').innerHTML = '<div class="mon-picker-empty">Učitavam role...</div>';
+    $('mon-share-footer').textContent = '';
+    $('mon-btn-share-save').disabled = true;
+    openModalEl('modal-mon-share');
+    try {
+      const data = await api(`${API}/share-roles?tabId=${encodeURIComponent(tab.id)}`);
+      SH.roles = data.roles || [];
+      SH.cameraCount = data.cameraCount || 0;
+      const chosen = new Set((tab.sharedWith || []).map(s => s.roleId));
+      renderShareList(chosen);
+    } catch (err) {
+      closeModalEl('modal-mon-share');
+      notify(err.message, 'error');
+    }
+  }
+
+  function renderShareList(chosen) {
+    const list = $('mon-share-list');
+    if (!SH.roles.length) {
+      list.innerHTML = '<div class="mon-picker-empty">Nema definisanih rola.</div>';
+      return;
+    }
+    list.innerHTML = SH.roles.map(r => {
+      const warn = r.missingCameras > 0;
+      const right = warn
+        ? `${r.missingCameras}/${SH.cameraCount} ${C.cameraWord(SH.cameraCount)} bez prava`
+        : `${r.assignmentCount} dodela`;
+      const tip = warn
+        ? `Članovi ove role nemaju pravo da gledaju ${r.missingCameras} od ${SH.cameraCount} kamera iz ovog taba uživo; ta polja će im biti prikazana kao „Nema pristupa“.`
+        : (r.description || '');
+      return `
+        <label class="mon-rot-item" title="${esc(tip)}">
+          <input type="checkbox" value="${esc(r.id)}" ${chosen.has(r.id) ? 'checked' : ''}>
+          <span>${esc(r.name)}</span>
+          <span class="${warn ? 'mon-share-role-warn' : ''}">${esc(right)}</span>
+        </label>`;
+    }).join('');
+    updateShareFooter();
+  }
+
+  function updateShareFooter() {
+    const n = $('mon-share-list').querySelectorAll('input:checked').length;
+    $('mon-share-footer').textContent = n ? `Izabrano rola: ${n}` : 'Tab nije podeljen ni sa jednom rolom';
+    $('mon-btn-share-save').disabled = !SH.roles.length;
+  }
+
+  async function saveShare() {
+    const roleIds = Array.from($('mon-share-list').querySelectorAll('input:checked')).map(i => i.value);
+    const btn = $('mon-btn-share-save');
+    btn.disabled = true;
+    try {
+      const data = await api(`${API}/tabs/${encodeURIComponent(SH.tabId)}/shares`, 'PUT', { roleIds });
+      const tab = S.tabs.find(t => t.id === SH.tabId);
+      if (tab) tab.sharedWith = data.sharedWith || [];
+      closeModalEl('modal-mon-share');
+      renderTabs();
+      notify(roleIds.length ? `Tab je podeljen sa rolama: ${(data.sharedWith || []).map(s => s.roleName).join(', ')}` : 'Deljenje taba je uklonjeno', 'success');
+    } catch (err) {
+      notify(err.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function bindSharing() {
+    $('mon-btn-share-save').addEventListener('click', saveShare);
+    $('mon-share-list').addEventListener('change', updateShareFooter);
+    $('mon-btn-share').addEventListener('click', () => {
+      const t = activeTab();
+      if (t && !t.shared) openShare(t);
+    });
+    $('mon-btn-hidden').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openHiddenMenu();
     });
   }
 
@@ -498,20 +731,64 @@
     if (!w) notify('Pretraživač je blokirao novi prozor. Dozvolite iskačuće prozore za ovu adresu.', 'error');
   }
 
-  /** Komanda za prečicu na radnoj površini: Edge u "app" režimu nema ni adresnu traku ni tabove */
-  async function copyShortcut(path) {
-    const cmd = `msedge --app="${location.origin}${path}"`;
+  /**
+   * Prečica na radnoj površini. Čarobnjak „Create Shortcut“ traži punu putanju do programa.
+   * Edge i Chrome imaju "app" režim (bez adresne trake i tabova); Firefox nema, pa ide ceo ekran (kiosk).
+   */
+  const SHORTCUT_BROWSERS = [
+    { id: 'edge', label: 'Edge', exe: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', args: (u) => `--app="${u}"`, note: 'Prozor bez adresne trake i tabova.' },
+    { id: 'chrome', label: 'Chrome', exe: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', args: (u) => `--app="${u}"`, note: 'Prozor bez adresne trake i tabova.' },
+    { id: 'opera', label: 'Opera', exe: '%LOCALAPPDATA%\\Programs\\Opera\\opera.exe', args: (u) => `--new-window "${u}"`, note: 'Opera nema „app“ prozor: otvara se običan novi prozor sa adresnom trakom. Putanja koristi %LOCALAPPDATA% jer se Opera instalira po korisniku.' },
+    { id: 'firefox', label: 'Firefox', exe: 'C:\\Program Files\\Mozilla Firefox\\firefox.exe', args: (u) => `-kiosk "${u}"`, note: 'Firefox nema „app“ prozor: otvara se preko celog ekrana (kiosk), zatvara se sa Alt+F4.' }
+  ];
+  const SC = { path: '', browser: 'edge' };
+
+  function shortcutCommand() {
+    const b = SHORTCUT_BROWSERS.find(x => x.id === SC.browser) || SHORTCUT_BROWSERS[0];
+    return `"${b.exe}" ${b.args(`${location.origin}${SC.path}`)}`;
+  }
+
+  function renderShortcut() {
+    const b = SHORTCUT_BROWSERS.find(x => x.id === SC.browser) || SHORTCUT_BROWSERS[0];
+    $('mon-sc-browsers').innerHTML = SHORTCUT_BROWSERS.map(x => `
+      <label class="sw-radio-pill ${x.id === SC.browser ? 'active-yes' : ''}" data-sc-browser="${x.id}" style="cursor: pointer;"><span>${x.label}</span></label>`).join('');
+    $('mon-sc-browser-note').textContent = b.note;
+    $('mon-sc-cmd').value = shortcutCommand();
+  }
+
+  function openShortcut(path, name) {
+    SC.path = path;
+    try {
+      const saved = localStorage.getItem('uni_mon_shortcut_browser');
+      if (SHORTCUT_BROWSERS.some(x => x.id === saved)) SC.browser = saved;
+    } catch (e) { /* localStorage nije dostupan */ }
+    $('mon-sc-sub').textContent = name ? `Tab „${name}“ u zasebnom prozoru` : 'Rotacija tabova u zasebnom prozoru';
+    renderShortcut();
+    openModalEl('modal-mon-shortcut');
+  }
+
+  async function copyShortcut() {
+    const cmd = shortcutCommand();
     try {
       await navigator.clipboard.writeText(cmd);
     } catch (e) {
-      const ta = document.createElement('textarea');
-      ta.value = cmd;
-      document.body.appendChild(ta);
+      const ta = $('mon-sc-cmd');
       ta.select();
       try { document.execCommand('copy'); } catch (err) { /* ignorisano */ }
-      ta.remove();
     }
-    notify('Komanda je kopirana. Desni klik na radnu površinu → Novo → Prečica, pa je nalepite kao lokaciju.', 'success');
+    closeModalEl('modal-mon-shortcut');
+    notify('Komanda je kopirana. Desni klik na radnu površinu → Novo → Prečica, pa je nalepite (Ctrl+V) kao lokaciju stavke.', 'success');
+  }
+
+  function bindShortcut() {
+    $('mon-sc-browsers').addEventListener('click', (e) => {
+      const pill = e.target.closest('[data-sc-browser]');
+      if (!pill) return;
+      SC.browser = pill.dataset.scBrowser;
+      try { localStorage.setItem('uni_mon_shortcut_browser', SC.browser); } catch (err) { /* ignorisano */ }
+      renderShortcut();
+    });
+    $('mon-sc-copy').addEventListener('click', copyShortcut);
   }
 
   /* ==========================================================================
@@ -594,7 +871,7 @@
     $('mon-rot-list').innerHTML = S.tabs.map(t => `
       <label class="mon-rot-item">
         <input type="checkbox" value="${esc(t.id)}" ${chosen.has(t.id) ? 'checked' : ''}>
-        <span>${esc(t.name)}</span>
+        <span>${esc(t.name)}${t.shared ? ' · deljeno' : ''}</span>
         <span>${t.layout.cells.length} ${C.fieldWord(t.layout.cells.length)}</span>
       </label>`).join('') || '<div class="mon-picker-empty">Još nema tabova.</div>';
     openModalEl('modal-mon-rotation');
@@ -1549,7 +1826,9 @@
   function init() {
     if (!$('tab-cctv_monitoring')) return;
 
-    ['modal-mon-tab', 'modal-mon-template', 'modal-mon-rotation', 'modal-mon-confirm'].forEach(bindModalClose);
+    ['modal-mon-tab', 'modal-mon-template', 'modal-mon-rotation', 'modal-mon-confirm', 'modal-mon-share', 'modal-mon-shortcut'].forEach(bindModalClose);
+    bindSharing();
+    bindShortcut();
 
     bindTabStrip();
     bindWizard();
@@ -1557,7 +1836,7 @@
 
     $('mon-btn-new-tab').addEventListener('click', () => openWizard('create'));
     $('mon-btn-empty-new').addEventListener('click', () => openWizard('create'));
-    $('mon-btn-edit').addEventListener('click', () => { const t = activeTab(); if (t) openWizard('edit', t); });
+    $('mon-btn-edit').addEventListener('click', () => { const t = activeTab(); if (t && !t.shared) openWizard('edit', t); });
     $('mon-btn-rotation').addEventListener('click', () => {
       if (S.rotation.timer) {
         stopRotation(true);
@@ -1625,8 +1904,15 @@
     if (C.isFullscreen() && document.fullscreenElement === $('mon-stage')) C.toggleFullscreen($('mon-stage'));
   }
 
+  /** Spolja (npr. iz liste kamera): otvara Monitoring na zadatom tabu */
+  function openTab(id) {
+    S.activeId = id; // load() zadržava aktivni tab ako postoji
+    if (S.visible) load();
+    else if (typeof window.activateTab === 'function') window.activateTab('cctv_monitoring');
+  }
+
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
 
-  window.MonitoringModule = { onTabActivated, onTabDeactivated, reload: load };
+  window.MonitoringModule = { onTabActivated, onTabDeactivated, reload: load, openTab };
 })();

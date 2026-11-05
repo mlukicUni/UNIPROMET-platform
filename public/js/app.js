@@ -5507,6 +5507,16 @@ function setupInventoryCamerasEventListeners() {
   // Scan unrecorded cameras button
   document.getElementById('btn-scan-unrecorded-cameras')?.addEventListener('click', scanUnrecordedCamerasClient);
 
+  // Add camera by IP address (no range scan)
+  document.getElementById('btn-add-camera-by-ip')?.addEventListener('click', openFindCameraByIpModal);
+  document.getElementById('btn-find-camera-ip')?.addEventListener('click', findCameraByIp);
+  document.getElementById('input-find-camera-ip')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); findCameraByIp(); }
+  });
+  document.getElementById('input-find-camera-ip')?.addEventListener('input', () => showFindCameraResult(null));
+  document.getElementById('btn-close-find-ip-modal')?.addEventListener('click', closeFindCameraByIpModal);
+  document.getElementById('btn-cancel-find-ip-modal')?.addEventListener('click', closeFindCameraByIpModal);
+
   // Unrecorded modal close
   document.getElementById('btn-close-unrecorded-modal')?.addEventListener('click', () => {
     document.getElementById('modal-unrecorded-cameras').style.display = 'none';
@@ -5515,6 +5525,90 @@ function setupInventoryCamerasEventListeners() {
     document.getElementById('modal-unrecorded-cameras').style.display = 'none';
   });
 }
+
+/* ---------- Dodavanje kamere po IP adresi ---------- */
+const FIND_IP_REGEX = /^(\d{1,3})(\.\d{1,3}){3}$/;
+
+function openFindCameraByIpModal() {
+  const modal = document.getElementById('modal-find-camera-ip');
+  const input = document.getElementById('input-find-camera-ip');
+  if (!modal || !input) return;
+  input.value = '';
+  showFindCameraResult(null);
+  modal.style.display = 'flex';
+  if (window.lucide) window.lucide.createIcons();
+  setTimeout(() => input.focus(), 60);
+}
+
+function closeFindCameraByIpModal() {
+  const modal = document.getElementById('modal-find-camera-ip');
+  if (modal) modal.style.display = 'none';
+}
+
+/** kind: 'info' | 'warning' | 'error' | null (sakriva) */
+function showFindCameraResult(kind, html) {
+  const box = document.getElementById('find-camera-ip-result');
+  if (!box) return;
+  if (!kind) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+  const colors = {
+    info: ['#38bdf8', 'rgba(56, 189, 248, 0.08)', 'loader'],
+    warning: ['#f59e0b', 'rgba(245, 158, 11, 0.1)', 'alert-triangle'],
+    error: ['#ef4444', 'rgba(239, 68, 68, 0.08)', 'video-off']
+  }[kind];
+  box.style.cssText = `display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; border: 1px solid ${colors[0]}55; background: ${colors[1]}; color: #e2e8f0; font-size: 0.88rem; line-height: 1.45;`;
+  box.innerHTML = `<i data-lucide="${colors[2]}" style="width: 20px; height: 20px; flex-shrink: 0; color: ${colors[0]};${kind === 'info' ? ' animation: spin 0.8s linear infinite;' : ''}"></i><div>${html}</div>`;
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function findCameraByIp() {
+  const input = document.getElementById('input-find-camera-ip');
+  const btn = document.getElementById('btn-find-camera-ip');
+  if (!input || !btn || btn.disabled) return;
+  const ip = input.value.trim();
+
+  if (!FIND_IP_REGEX.test(ip) || ip.split('.').some(n => Number(n) > 255)) {
+    showFindCameraResult('warning', 'Unesite ispravnu IP adresu, npr. <strong>192.168.125.106</strong>.');
+    input.focus();
+    return;
+  }
+
+  btn.disabled = true;
+  showFindCameraResult('info', `Proveravam adresu <strong>${escapeHtml(ip)}</strong>...`);
+  try {
+    const res = await fetch('/api/inventory/cameras/probe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || data.details || 'Provera adrese nije uspela');
+
+    if (data.status === 'in_inventory') {
+      const c = data.camera || {};
+      showFindCameraResult('warning', `Kamera na adresi <strong>${escapeHtml(ip)}</strong> je već u evidenciji: <strong>${escapeHtml(c.position || c.name || c.id || '')}</strong>${c.recorder ? ` (snimač: ${escapeHtml(c.recorder)})` : ''}.`);
+    } else if (data.status === 'not_found') {
+      showFindCameraResult('error', `Na adresi <strong>${escapeHtml(ip)}</strong> nije pronađena kamera. Portovi 80, 554, 8000 i 37777 ne odgovaraju. Proverite adresu i da li je kamera uključena, pa pokušajte ponovo.`);
+    } else if (data.status === 'found') {
+      const cam = data.camera || {};
+      closeFindCameraByIpModal();
+      showToast(`✓ Kamera pronađena na ${ip}${cam.vendor ? ' (' + cam.vendor + ')' : ''}. Unesite detalje i sačuvajte je u evidenciju.`, 'success');
+      openAddCameraModalWithData(ip, cam.vendor || '', { manual: true });
+    } else {
+      throw new Error('Neočekivan odgovor servera');
+    }
+  } catch (err) {
+    showFindCameraResult('error', escapeHtml(err.message));
+  } finally {
+    btn.disabled = false;
+    if (window.lucide) window.lucide.createIcons();
+  }
+}
+
+window.openFindCameraByIpModal = openFindCameraByIpModal;
 
 async function scanUnrecordedCamerasClient() {
   if (activeSpinningButtons.has('btn-scan-unrecorded-cameras')) return;
@@ -5610,10 +5704,12 @@ function returnToUnrecordedCamerasList(savedIp) {
   if (lastUnrecordedCameras.length > 0) openUnrecordedCamerasModal(lastUnrecordedCameras);
 }
 
-function openAddCameraModalWithData(ip, vendor) {
+function openAddCameraModalWithData(ip, vendor, opts) {
+  const manual = !!(opts && opts.manual);
   const unrecModal = document.getElementById('modal-unrecorded-cameras');
   if (unrecModal) unrecModal.style.display = 'none';
-  addingFromUnrecordedList = true;
+  // Ručno dodavanje po IP adresi ne vraća se na spisak pronađenih kamera
+  addingFromUnrecordedList = !manual;
 
   openAddCameraModal();
 
@@ -5628,7 +5724,7 @@ function openAddCameraModalWithData(ip, vendor) {
   }
   if (typeInput) typeInput.value = 'IP Kamera';
   if (posInput) posInput.value = `${vendor ? vendor + ' ' : ''}Kamera ${ip}`;
-  if (noteInput) noteInput.value = `Automatski pronađena mrežnim skenerom (${new Date().toLocaleDateString('sr-RS')})`;
+  if (noteInput) noteInput.value = `${manual ? 'Ručno dodata po IP adresi' : 'Automatski pronađena mrežnim skenerom'} (${new Date().toLocaleDateString('sr-RS')})`;
 }
 window.openAddCameraModalWithData = openAddCameraModalWithData;
 
@@ -5896,19 +5992,20 @@ function renderCctvCamerasTab() {
                 <tr style="height: 140px;">
                   <td class="font-mono text-dim" style="font-size: 0.85rem; font-weight: 700;">${rowNum}</td>
                   <td style="vertical-align: middle;">
-                    <div style="display: flex; flex-direction: column; gap: 6px;">
-                      <div style="display: flex; align-items: center; gap: 8px;">
-                        <i data-lucide="video" style="width: 17px; height: 17px; color: #FFB800; flex-shrink: 0;"></i>
-                        <strong class="text-white" style="font-size: 0.98rem; font-weight: 700; letter-spacing: -0.2px;">${escapeHtml(cam.position || cam.name || '')}</strong>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 10px; margin-left: 25px;">
-                        <span class="font-mono" style="color: #38bdf8; font-size: 0.82rem; font-weight: 600;">${escapeHtml(cam.ip)}</span>
-                        <button class="btn-copy-chip-sm" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj IP adresu">
-                          <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
-                        </button>
-                        <span class="status-pill active-pill" style="font-size: 0.70rem; padding: 2px 7px;">
+                    <div class="cctv-cam-info">
+                      <div class="cctv-cam-title">
+                        <span class="cctv-cam-icon"><i data-lucide="video"></i></span>
+                        <strong>${escapeHtml(cam.position || cam.name || '')}</strong>
+                        <span class="status-pill active-pill" style="font-size: 0.70rem; padding: 2px 8px;">
                           <span class="status-dot"></span> Uživo
                         </span>
+                      </div>
+                      <div class="cctv-cam-actions">
+                        <button type="button" class="cctv-ip-chip" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj IP adresu">
+                          <span>${escapeHtml(cam.ip)}</span>
+                          <i data-lucide="copy"></i>
+                        </button>
+                        ${window.MonitoringQuickAdd ? window.MonitoringQuickAdd.buttonHtml(cam.id) : ''}
                       </div>
                     </div>
                   </td>
@@ -5984,12 +6081,16 @@ function renderCctvCamerasTab() {
               <i data-lucide="video" style="width: 15px; height: 15px; color: #FFB800; flex-shrink: 0;"></i>
               <strong class="text-white" style="font-size: 0.92rem;">${escapeHtml(cam.position || cam.name || '')}</strong>
             </div>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span class="location-highlight" style="font-size: 0.78rem;">
-                <i data-lucide="map-pin" style="width: 11px; height: 11px; display: inline-block;"></i>
-                ${escapeHtml(cam.recorder || 'Fabrika')}
-              </span>
-              <span class="font-mono text-dim text-xs">${escapeHtml(cam.ip)}</span>
+            <span class="location-highlight" style="font-size: 0.78rem;">
+              <i data-lucide="map-pin" style="width: 11px; height: 11px; display: inline-block;"></i>
+              ${escapeHtml(cam.recorder || 'Fabrika')}
+            </span>
+            <div class="cctv-cam-actions" style="margin-top: 10px;">
+              <button type="button" class="cctv-ip-chip" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj IP adresu">
+                <span>${escapeHtml(cam.ip)}</span>
+                <i data-lucide="copy"></i>
+              </button>
+              ${window.MonitoringQuickAdd ? window.MonitoringQuickAdd.buttonHtml(cam.id) : ''}
             </div>
           </div>
         </div>
@@ -5998,6 +6099,7 @@ function renderCctvCamerasTab() {
   }
 
   if (window.lucide) window.lucide.createIcons();
+  if (window.MonitoringQuickAdd) window.MonitoringQuickAdd.decorate(container);
   mountCctvSubStreams(pageItems);
 }
 

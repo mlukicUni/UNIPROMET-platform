@@ -59,7 +59,21 @@ if (!SESSION_SECRET) {
 }
 
 export const COOKIE_NAME = 'unipromet_session';
+// Sesija ističe posle 7 dana BEZ korišćenja platforme: svaka aktivnost pomera rok na 7 dana od tog trenutka
 const SESSION_TTL_MS = 7 * 24 * 3600 * 1000;
+// Rok se pomera najviše jednom na sat, da se baza i cookie ne prepisuju na svaki zahtev
+const SESSION_RENEW_AFTER_MS = 3600 * 1000;
+
+/** Opcije session cookie-ja (HTTP-only, važi koliko i sesija) */
+export function sessionCookieOptions(req: express.Request): express.CookieOptions {
+  return {
+    httpOnly: true,
+    secure: (req.socket as any).encrypted || req.headers['x-forwarded-proto'] === 'https',
+    sameSite: 'lax',
+    maxAge: SESSION_TTL_MS,
+    path: '/'
+  };
+}
 
 /**
  * Determines the proper redirect URI for the incoming request,
@@ -85,6 +99,9 @@ export function buildAuthorizeUrl(req: express.Request, state: string = 'login')
     redirect_uri: redirectUri,
     response_mode: 'query',
     scope: 'openid profile email User.Read GroupMember.Read.All',
+    // Microsoft uvek nudi izbor naloga, pa posle odjave može da se pređe na drugi nalog
+    // (bez ovoga se tiho ponovo prijavi nalog kojim je pretraživač već prijavljen na Microsoft 365)
+    prompt: 'select_account',
     state
   });
 
@@ -246,6 +263,11 @@ function saveSession(sid: string, user: SessionUser, expiresAt: number): void {
   `).run(sid, JSON.stringify(user), expiresAt);
 }
 
+/** Upisuje osvežene podatke korisnika, a rok sesije ostavlja kakav jeste */
+function updateSessionUser(sid: string, user: SessionUser): void {
+  sessionDb().prepare('UPDATE sessions SET user_json = ? WHERE sid = ?').run(JSON.stringify(user), sid);
+}
+
 function loadSession(sid: string): SessionUser | null {
   const db = sessionDb();
   const row = db.prepare('SELECT user_json, expires_at FROM sessions WHERE sid = ?').get(sid) as
@@ -307,6 +329,26 @@ export function createSessionCookie(user: SessionUser): string {
   saveSession(sid, user, expiresAt);
 
   const base64 = Buffer.from(JSON.stringify({ sid, exp: expiresAt })).toString('base64url');
+  return `${base64}.${signPayload(base64)}`;
+}
+
+/**
+ * Pomera rok važeće sesije na 7 dana od sada (korisnik je aktivan).
+ * Vraća novi cookie, ili null ako sesija nije važeća ili je rok pomeren pre manje od sat vremena.
+ */
+export function renewSessionCookie(cookieValue?: string): string | null {
+  const parsed = parseCookie(cookieValue);
+  const now = Date.now();
+  if (!parsed || parsed.exp < now) return null;
+  if (parsed.exp - now > SESSION_TTL_MS - SESSION_RENEW_AFTER_MS) return null;
+
+  const expiresAt = now + SESSION_TTL_MS;
+  const result = sessionDb()
+    .prepare('UPDATE sessions SET expires_at = ? WHERE sid = ? AND expires_at >= ?')
+    .run(expiresAt, parsed.sid, now);
+  if (result.changes === 0) return null; // odjavljen ili istekao u bazi
+
+  const base64 = Buffer.from(JSON.stringify({ sid: parsed.sid, exp: expiresAt })).toString('base64url');
   return `${base64}.${signPayload(base64)}`;
 }
 
@@ -397,7 +439,7 @@ export async function getOrRefreshCurrentUser(req: express.Request, forceRefresh
         .then((updated) => {
           // Keep the stored session up to date with the refreshed groups
           const parsed = parseCookie(req.cookies?.[COOKIE_NAME]);
-          if (parsed) saveSession(parsed.sid, updated, parsed.exp);
+          if (parsed) updateSessionUser(parsed.sid, updated);
           return updated;
         })
         .finally(() => {

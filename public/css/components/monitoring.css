@@ -1605,3 +1605,59 @@ body.mon-window {
   color: var(--white-pure);
   font-family: var(--font-heading);
 }
+
+/* ---- Deljeni tabovi ---- */
+.mon-tab.is-shared {
+  background: rgba(56, 189, 248, 0.06);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.mon-tab.is-shared > i,
+.mon-tab.is-shared > svg {
+  color: #38bdf8;
+}
+
+.mon-tab.is-shared.is-active {
+  box-shadow: inset 0 2px 0 #38bdf8;
+}
+
+.mon-tab-shared-dot {
+  display: inline-flex;
+  align-items: center;
+  color: #38bdf8;
+}
+
+.mon-tab-shared-dot svg {
+  width: 12px;
+  height: 12px;
+}
+
+.mon-shared-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.mon-shared-badge svg {
+  width: 13px;
+  height: 13px;
+}
+
+.mon-share-role-warn {
+  color: #fbbf24 !important;
+  font-size: 0.68rem;
+}
+
+.mon-shared-badge > span {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

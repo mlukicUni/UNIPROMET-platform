@@ -99,7 +99,10 @@ export const PERMISSION_CATALOG: SectionDef[] = [
     icon: 'video',
     items: [
       { key: 'video.lista', label: 'Lista kamera', tab: 'cctv_cameras', actions: [] },
-      { key: 'video.monitoring', label: 'Monitoring', tab: 'cctv_monitoring', actions: [] }
+      {
+        key: 'video.monitoring', label: 'Monitoring', tab: 'cctv_monitoring',
+        actions: [{ key: 'deljenje', label: 'Deljenje tabova sa rolama' }]
+      }
     ]
   },
   {
