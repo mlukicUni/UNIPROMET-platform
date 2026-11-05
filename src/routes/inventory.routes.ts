@@ -157,6 +157,51 @@ inventoryRouter.get('/cameras/:id', (req: Request, res: Response) => {
   }
 });
 
+/** IPv4 iz privatnih opsega (10.x, 172.16-31.x, 192.168.x); server ne sme da proverava proizvoljne spoljne adrese */
+function isPrivateIpv4(ip: string): boolean {
+  if (!/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) return false;
+  const o = ip.split('.').map(Number);
+  if (o.some(n => n > 255)) return false;
+  if (o[3] === 0 || o[3] === 255) return false;
+  return o[0] === 10 || (o[0] === 172 && o[1] >= 16 && o[1] <= 31) || (o[0] === 192 && o[1] === 168);
+}
+
+// POST /api/inventory/cameras/probe - Provera jedne IP adrese (ručno dodavanje), bez skeniranja opsega
+// Odgovor: status 'in_inventory' | 'found' | 'not_found'
+inventoryRouter.post('/cameras/probe', async (req: Request, res: Response) => {
+  try {
+    const ip = String(req.body?.ip ?? '').trim();
+    if (!isPrivateIpv4(ip)) {
+      return res.status(400).json({ error: 'Unesite ispravnu IP adresu iz lokalne mreže (npr. 192.168.125.106).' });
+    }
+
+    const existing = getAllCameraInventory().find(c => (c.ip || '').trim() === ip);
+    if (existing) {
+      return res.json({
+        success: true,
+        status: 'in_inventory',
+        ip,
+        camera: { id: existing.id, name: existing.name, position: existing.position, recorder: existing.recorder }
+      });
+    }
+
+    const { probeCameraByIp } = await import('../services/cameraScanner');
+    const found = await probeCameraByIp(ip);
+    addServerLog('info', `Ručna provera kamere na adresi ${ip}: ${found ? 'pronađena (' + found.vendor + ')' : 'nije pronađena'}`, 'Inventory DB');
+    if (!found) return res.json({ success: true, status: 'not_found', ip });
+
+    res.json({
+      success: true,
+      status: 'found',
+      ip,
+      camera: { ip: found.ip, vendor: found.vendor, openPorts: found.openPorts, webUrl: found.webUrl, pingMs: found.pingMs, serverBanner: found.serverBanner || '' }
+    });
+  } catch (err: any) {
+    console.error('Probe camera error:', err);
+    res.status(500).json({ error: 'Provera adrese nije uspela', details: err?.message });
+  }
+});
+
 // POST /api/inventory/cameras - Add new camera to SQLite inventory
 inventoryRouter.post('/cameras', (req: Request, res: Response) => {
   try {

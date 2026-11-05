@@ -11,7 +11,7 @@ import { getLocalIpAddresses } from './utils/network';
 import { isEnabled, publicHost } from './utils/appConfig';
 import { migrateLegacyJsonToSqlite } from './db/migrateFromJson';
 import { getOrCreateSslCertificate } from './services/sslService';
-import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, COOKIE_NAME } from './services/authService';
+import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
 import { getCameraCredentials } from './services/cameraLiveService';
 import { isUserAllowed, getAccess, hasLevel } from './services/accessService';
 import { enforceRouteAccess, checkVideoGatewayAccess } from './services/routeAccess';
@@ -51,6 +51,16 @@ app.use(cors());
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Aktivan korisnik: rok sesije se pomera na 7 dana od poslednjeg korišćenja platforme
+app.use((req, res, next) => {
+  const renewed = renewSessionCookie(req.cookies?.[COOKIE_NAME]);
+  if (renewed) {
+    req.cookies[COOKIE_NAME] = renewed;
+    res.cookie(COOKIE_NAME, renewed, sessionCookieOptions(req));
+  }
+  next();
+});
 
 // Request logger
 app.use((req, res, next) => {

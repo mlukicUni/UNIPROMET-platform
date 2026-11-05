@@ -1130,6 +1130,10 @@
                   <i data-lucide="radar" id="icon-scan-unrecorded-spin"></i>
                   <span>Pronađi Novu Kameru</span>
                 </button>
+                <button class="btn-dark-outline-sm" id="btn-add-camera-by-ip" title="Dodaj kameru ako znate IP adresu — proverava se samo ta adresa, bez skeniranja opsega">
+                  <i data-lucide="crosshair"></i>
+                  <span>Dodaj po IP adresi</span>
+                </button>
               </div>
             </div>
 
@@ -1351,7 +1355,7 @@
                 </div>
                 <div>
                   <h4>Monitoring Video Nadzora</h4>
-                  <p class="panel-desc">Vaši lični tabovi sa gridovima kamera uživo — svaki korisnik podešava svoje</p>
+                  <p class="panel-desc">Vaši tabovi sa gridovima kamera uživo, kao i tabovi koje su sa vašom rolom podelili drugi</p>
                 </div>
               </div>
               <span class="panel-tag-dark" id="mon-summary">—</span>
@@ -1366,7 +1370,10 @@
                   <span class="mon-stream-warn" id="mon-stream-warn" style="display: none;" title="Svaki živi strim ide preko servera">
                     <i data-lucide="alert-triangle"></i><span></span>
                   </span>
+                  <span class="mon-shared-badge" id="mon-shared-badge" style="display: none;"><i data-lucide="share-2"></i><span></span></span>
+                  <button type="button" class="mon-tool-btn mon-tool-icon" id="mon-btn-hidden" style="display: none;" title="Sakriveni deljeni tabovi"><i data-lucide="eye-off"></i></button>
                   <button type="button" class="mon-tool-btn" id="mon-btn-edit" title="Izmeni tab (naziv, šablon, kamere)"><i data-lucide="pencil"></i><span>Izmeni</span></button>
+                  <button type="button" class="mon-tool-btn" id="mon-btn-share" style="display: none;" title="Podeli tab sa rolama"><i data-lucide="share-2"></i><span>Podeli</span></button>
                   <div class="mon-tool-group">
                     <button type="button" class="mon-tool-btn" id="mon-btn-rotation" title="Pokreni / zaustavi rotaciju tabova"><i data-lucide="repeat"></i><span>Rotacija</span></button>
                     <button type="button" class="mon-tool-btn mon-tool-icon" id="mon-btn-rotation-settings" title="Podešavanja rotacije"><i data-lucide="settings-2"></i></button>
@@ -4742,6 +4749,92 @@
     </div>
   </div>
 
+  <!-- MONITORING: DELJENJE TABA SA ROLAMA -->
+  <div class="modal-overlay" id="modal-mon-share" style="display: none;">
+    <div class="modal-window modal-glass eq-modal-window" style="max-width: 560px; width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="share-2"></i></div>
+          <div>
+            <h3 class="modal-title">Podeli tab sa rolama</h3>
+            <p class="modal-subtitle" id="mon-share-sub"></p>
+          </div>
+        </div>
+        <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 12px;">
+        <p class="mon-gallery-note" style="margin: 0;">Članovi izabranih rola vide ovaj tab pored svojih. Tab mogu samo da gledaju; mogu da naprave svoju kopiju ili da ga sakriju za sebe.</p>
+        <div class="mon-rot-list" id="mon-share-list"></div>
+      </div>
+      <div class="modal-bottom-actions mon-modal-footer">
+        <span class="mon-footer-info" id="mon-share-footer"></span>
+        <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
+        <button type="button" class="btn-yellow-solid-sm" id="mon-btn-share-save"><i data-lucide="check"></i><span>Sačuvaj</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONITORING: DODAJ KAMERU U TAB (iz liste kamera) -->
+  <div class="modal-overlay" id="modal-mon-quick-add" style="display: none;">
+    <div class="modal-window modal-glass eq-modal-window mon-modal-wide">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="layout-grid"></i></div>
+          <div>
+            <h3 class="modal-title">Dodaj kameru u monitoring</h3>
+            <p class="modal-subtitle" id="mqa-camera-info"></p>
+          </div>
+        </div>
+        <div class="sw-radio-pills-group" style="width: auto; flex-shrink: 0;">
+          <label class="sw-radio-pill" data-mqa-mode="existing" style="min-width: 150px; cursor: pointer;"><i data-lucide="layout-grid"></i><span>Postojeći tab</span></label>
+          <label class="sw-radio-pill" data-mqa-mode="new" style="min-width: 150px; cursor: pointer;"><i data-lucide="plus-square"></i><span>Novi tab</span></label>
+        </div>
+        <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
+      </div>
+
+      <!-- Postojeći tab: izbor taba, pa polja -->
+      <div class="modal-body-content mon-step-body" id="mqa-existing">
+        <div class="mon-gallery-head">
+          <h6><i data-lucide="layout-grid"></i> Vaši tabovi</h6>
+          <span class="mon-gallery-note" id="mqa-tabs-note"></span>
+        </div>
+        <div class="mon-gallery" id="mqa-tabs"></div>
+        <div id="mqa-slots-wrap" style="display: none; margin-top: 16px;">
+          <div class="mon-assign-head">
+            <span id="mqa-slots-info"></span>
+            <button type="button" class="btn-dark-outline-sm" id="mqa-btn-expand" style="display: none;"><i data-lucide="maximize"></i><span id="mqa-btn-expand-text">Proširi raspored</span></button>
+          </div>
+          <div class="mon-assign-stage" style="height: 42vh;">
+            <div class="mon-assign-grid" id="mqa-grid"></div>
+          </div>
+          <p class="mon-remap-note" id="mqa-note" style="display: none;"></p>
+        </div>
+      </div>
+
+      <!-- Novi tab: naziv i šablon -->
+      <div class="modal-body-content mon-step-body" id="mqa-new" style="display: none;">
+        <div class="form-group" style="max-width: 460px;">
+          <label for="mqa-tab-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Naziv taba <span style="color: #ef4444;">*</span></label>
+          <div class="modal-input-wrap">
+            <i data-lucide="tag" class="modal-input-icon"></i>
+            <input type="text" id="mqa-tab-name" class="glass-input has-icon" maxlength="60" placeholder="npr. Hala 5 – ulazi" autocomplete="off">
+          </div>
+        </div>
+        <div class="mon-gallery-head">
+          <h6><i data-lucide="layout-template"></i> Šablon</h6>
+          <span class="mon-gallery-note">Kamera ide u polje 1, ostala polja popunjavate kasnije</span>
+        </div>
+        <div class="mon-gallery" id="mqa-templates"></div>
+      </div>
+
+      <div class="modal-bottom-actions mon-modal-footer">
+        <span class="mon-footer-info" id="mqa-footer-info"></span>
+        <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
+        <button type="button" class="btn-yellow-solid-sm" id="mqa-btn-save" disabled><i data-lucide="check"></i><span>Dodaj</span></button>
+      </div>
+    </div>
+  </div>
+
   <!-- MONITORING: EDITOR CUSTOM ŠABLONA -->
   <div class="modal-overlay" id="modal-mon-template" style="display: none; z-index: 10100;">
     <div class="modal-window modal-glass eq-modal-window mon-modal-wide">
@@ -4866,6 +4959,43 @@
         <button type="button" class="btn-dark-outline-sm" id="mon-btn-rot-window" style="margin-right: auto;" title="Rotacija u zasebnom prozoru (npr. za zidni monitor)"><i data-lucide="app-window"></i><span>Rotacija u novom prozoru</span></button>
         <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
         <button type="button" class="btn-yellow-solid-sm" id="mon-btn-rot-save"><i data-lucide="check"></i><span>Sačuvaj</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MONITORING: PREČICA ZA RADNU POVRŠINU (izbor pretraživača) -->
+  <div class="modal-overlay" id="modal-mon-shortcut" style="display: none;">
+    <div class="modal-window modal-glass eq-modal-window" style="max-width: 600px; width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="monitor-up"></i></div>
+          <div>
+            <h3 class="modal-title">Prečica za radnu površinu</h3>
+            <p class="modal-subtitle" id="mon-sc-sub"></p>
+          </div>
+        </div>
+        <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
+      </div>
+      <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group">
+          <label><i data-lucide="globe" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Pretraživač</label>
+          <div class="sw-radio-pills-group" id="mon-sc-browsers"></div>
+          <span class="mon-gallery-note" id="mon-sc-browser-note"></span>
+        </div>
+        <div class="form-group">
+          <label for="mon-sc-cmd"><i data-lucide="terminal" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Komanda za prečicu</label>
+          <textarea id="mon-sc-cmd" class="glass-input" rows="3" readonly style="font-family: var(--font-mono); font-size: 0.78rem; resize: none;"></textarea>
+        </div>
+        <ol class="mon-gallery-note" style="margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 4px;">
+          <li>Kliknite „Kopiraj komandu“.</li>
+          <li>Desni klik na radnu površinu → Novo → Prečica.</li>
+          <li>Nalepite komandu (Ctrl+V) kao lokaciju stavke, pa Next, upišite naziv i Finish.</li>
+        </ol>
+        <p class="mon-gallery-note" style="margin: 0;">Ako je pretraživač instaliran na drugom mestu, izmenite putanju na početku komande.</p>
+      </div>
+      <div class="modal-bottom-actions mon-modal-footer">
+        <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Zatvori</span></button>
+        <button type="button" class="btn-yellow-solid-sm" id="mon-sc-copy"><i data-lucide="copy"></i><span>Kopiraj komandu</span></button>
       </div>
     </div>
   </div>
@@ -5209,6 +5339,49 @@
           <i data-lucide="trash-2"></i>
           <span>Trajno Obriši Kameru</span>
         </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: DODAJ KAMERU PO IP ADRESI                                          -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="modal-find-camera-ip" style="display: none;">
+    <div class="modal-window modal-glass" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); border: 1px solid rgba(255, 184, 0, 0.35); color: var(--yellow-primary);">
+            <i data-lucide="crosshair"></i>
+          </div>
+          <div>
+            <h3 class="modal-title">Dodaj kameru po IP adresi</h3>
+            <p class="modal-subtitle">Proverava se samo uneta adresa, bez skeniranja celog opsega</p>
+          </div>
+        </div>
+        <button class="modal-close-icon" id="btn-close-find-ip-modal" type="button" title="Zatvori">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="input-find-camera-ip"><i data-lucide="network" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> IP adresa kamere <span style="color: #ef4444;">*</span></label>
+          <div style="display: flex; gap: 10px; align-items: stretch;">
+            <div class="modal-input-wrap" style="flex: 1;">
+              <i data-lucide="network" class="modal-input-icon"></i>
+              <input type="text" id="input-find-camera-ip" class="glass-input has-icon" placeholder="npr. 192.168.125.106" autocomplete="off" inputmode="decimal" maxlength="15">
+            </div>
+            <button type="button" class="btn-yellow-solid-sm" id="btn-find-camera-ip">
+              <i data-lucide="search"></i>
+              <span>Pronađi</span>
+            </button>
+          </div>
+        </div>
+        <div id="find-camera-ip-result" style="display: none;"></div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 14px 24px;">
+        <button type="button" class="btn-modal-cancel" id="btn-cancel-find-ip-modal">Zatvori</button>
       </div>
     </div>
   </div>
@@ -7982,6 +8155,7 @@
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js"></script>
   <script src="/js/monitoring.js"></script>
+  <script src="/js/monitoringQuickAdd.js"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>
   <script src="/js/nolekoPlan.js"></script>

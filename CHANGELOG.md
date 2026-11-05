@@ -12,6 +12,14 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.2.0] - 2026-11-05
+- Video nadzor → Lista kamera: uz svaku kameru dugme „Dodaj u monitoring tab“ otvara prozor za dodavanje u postojeći tab (izbor polja, zamena kamere ili proširenje rasporeda na sledeći šablon kad je tab pun) ili u novi tab sa izabranim šablonom; posle dodavanja poruka sa dugmetom „Otvori tab“. Dugme je sivo za kamere koje korisnik nema pravo da gleda uživo
+- Evidencija kamera: novo dugme „Dodaj po IP adresi“ pored „Pronađi Novu Kameru“. Korisnik unese IP adresu, sistem proveri samo tu adresu (bez skeniranja opsega) i, ako je kamera nađena, otvara formu za unos detalja; ako kamere nema ili je adresa već u evidenciji, javlja to korisniku. Dozvoljene su samo adrese iz lokalnih mreža. Zahteva pravo izmene evidencije kamera
+- Video nadzor → Monitoring: deljenje tabova sa rolama. Nova akcija „Deljenje tabova sa rolama“ (Uloge i prava → Monitoring) dozvoljava vlasniku taba (npr. šefu obezbeđenja) da u meniju taba (desni klik) ili dugmetom „Podeli“ pored „Izmeni“ izabere role; nude se samo role koje imaju pristup Monitoringu; uz svaku rolu piše za koliko kamera iz taba njeni članovi nemaju pravo uživo. Članovi izabranih rola vide taj tab pored svojih (plav, sa ikonicom deljenja i imenom vlasnika), samo za gledanje: mogu da ga uvećaju, otvore u zasebnom prozoru i uključe u rotaciju, da naprave svoju kopiju ili da ga sakriju za sebe (vraća se dugmetom sa okom u traci). Izmena kod vlasnika odmah važi za sve. Polja sa kamerama bez prava prikazuju „Nema pristupa“. Deljenja se upisuju u evidenciju (audit)
+- Video nadzor → Monitoring → „Prečica za radnu površinu…“: prozor sa izborom pretraživača (Edge, Chrome, Opera ili Firefox) i komandom koja sadrži punu putanju do programa, pa je Windows čarobnjak „Create Shortcut“ prihvata (ranije je za „msedge“ javljao da fajl ne može da se nađe). Edge i Chrome otvaraju prozor bez adresne trake i tabova, Opera običan novi prozor (nema „app“ režim), Firefox preko celog ekrana (kiosk). Izbor se pamti
+- Prijava ističe tek posle 7 dana bez korišćenja platforme; dok korisnik radi, rok se pomera (ranije je isticala 7 dana od prijave bez obzira na korišćenje)
+- Prijava preko Microsoft 365: uvek se nudi izbor naloga, pa posle odjave može da se prijavi drugi nalog (ranije se automatski ponovo prijavljivao isti)
+
 ## [1.1.0] - 2026-11-02
 - Gornja traka i Kontrolna tabla prikazuju zvaničnu adresu portala iz `PUBLIC_URL` (na serveru `https://portal.unipromet.local`) umesto IP adrese i porta 3000
 - Nova sekcija u meniju „NOLEKO AI Development“ sa stranicama AI agent prototip, AI razvojni plan i Fazni razvoj (Fazni razvoj za sada prazan); dodata i u prava pristupa po rolama

@@ -149,7 +149,7 @@
     $('mw-rot-list').innerHTML = S.tabs.map(t => `
       <label class="mon-rot-item">
         <input type="checkbox" value="${C.esc(t.id)}" ${chosen.has(t.id) ? 'checked' : ''}>
-        <span>${C.esc(t.name)}</span>
+        <span>${C.esc(t.name)}${t.shared ? ' · deljeno' : ''}</span>
         <span>${t.layout.cells.length} ${C.fieldWord(t.layout.cells.length)}</span>
       </label>`).join('');
     const m = $('mw-modal-rotation');
@@ -186,12 +186,18 @@
     }
   }
 
+  /** Vlastiti tabovi, pa tabovi koje su drugi podelili (osim sakrivenih; zadati tab se uvek otvara) */
+  function mergeTabs(data) {
+    const shared = (data.sharedTabs || []).filter(t => !t.hidden || t.id === tabParam);
+    return (data.tabs || []).concat(shared);
+  }
+
   /* ---------- Učitavanje ---------- */
   async function load() {
     try {
       if (tourMode) {
         const data = await api('/api/monitoring/state');
-        S.tabs = data.tabs || [];
+        S.tabs = mergeTabs(data);
         S.camById = new Map((data.cameras || []).map(c => [c.id, c]));
         if (data.settings && data.settings.fit) S.player.setFit(data.settings.fit);
         if (!S.tabs.length) return showError('Nema tabova', 'Napravite bar jedan monitoring tab na platformi.');
@@ -205,7 +211,7 @@
         if (!tabParam) return showError('Tab nije izabran', 'Otvorite tab iz stranice Monitoring na platformi.');
         // Učitavaju se svi tabovi korisnika da bi strelice mogle da menjaju tab; počinje se od zadatog
         const data = await api('/api/monitoring/state');
-        const tabs = data.tabs || [];
+        const tabs = mergeTabs(data);
         if (!S.activeId && !tabs.some(t => t.id === tabParam)) return showError('Tab nije pronađen', 'Tab je obrisan ili ne pripada vašem nalogu.');
         // Pri osvežavanju ne prekidaj strimove ako se tabovi i dostupne kamere nisu promenili
         const key = JSON.stringify([tabs, (data.cameras || []).map(c => `${c.id}:${c.isOffline}`)]);

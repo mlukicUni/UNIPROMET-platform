@@ -664,3 +664,14 @@ export async function scanUnrecordedCameras(): Promise<{
     };
   });
 }
+
+/**
+ * Provera JEDNE IP adrese (ručno dodavanje kamere): bez skeniranja opsega.
+ * Proverava portove 80 i 554, pa 8000 i 37777 samo ako nešto odgovori, i čita HTTP zaglavlje.
+ * Vraća null ako na adresi nije nađena kamera.
+ */
+export async function probeCameraByIp(ip: string): Promise<CameraDevice | null> {
+  const subnet: '124' | '125' = ip.startsWith('192.168.125.') ? '125' : '124';
+  // Adrese iza WAN veze (125.x) odgovaraju sporije
+  return inspectCamera(ip, subnet, undefined, subnet === '125' ? 1000 : 700);
+}

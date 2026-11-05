@@ -8,6 +8,7 @@ import {
   getOrRefreshCurrentUser,
   refreshUserGroups,
   getRedirectUri,
+  sessionCookieOptions,
   COOKIE_NAME,
   SessionUser
 } from '../services/authService';
@@ -63,14 +64,8 @@ authRouter.get('/callback', async (req: Request, res: Response) => {
 
   const cookieVal = createSessionCookie(user);
 
-  // Set HTTP-only, secure cookie (valid for 7 days)
-  res.cookie(COOKIE_NAME, cookieVal, {
-    httpOnly: true,
-    secure: (req.socket as any).encrypted || req.headers['x-forwarded-proto'] === 'https',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 3600 * 1000,
-    path: '/'
-  });
+  // HTTP-only cookie; važi 7 dana od poslednjeg korišćenja platforme
+  res.cookie(COOKIE_NAME, cookieVal, sessionCookieOptions(req));
 
   try {
     recordKnownUser({ id: user.id, name: user.name, email: user.email, groups: user.groups });
@@ -190,13 +185,7 @@ authRouter.get('/dev-login', (req: Request, res: Response) => {
   };
 
   const cookieVal = createSessionCookie(devUser);
-  res.cookie(COOKIE_NAME, cookieVal, {
-    httpOnly: true,
-    secure: (req.socket as any).encrypted || req.headers['x-forwarded-proto'] === 'https',
-    sameSite: 'lax',
-    maxAge: 7 * 24 * 3600 * 1000,
-    path: '/'
-  });
+  res.cookie(COOKIE_NAME, cookieVal, sessionCookieOptions(req));
 
   res.redirect('/#wifi_aps');
 });

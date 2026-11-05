@@ -5844,3 +5844,118 @@ button:disabled svg.spin-fast {
 
 
 
+/* Video nadzor - lista kamera: naziv, IP adresa i dugmad */
+.cctv-cam-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cctv-cam-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cctv-cam-title strong {
+  color: var(--white-pure);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+}
+
+.cctv-cam-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(255, 184, 0, 0.12);
+  border: 1px solid rgba(255, 184, 0, 0.3);
+  color: var(--yellow-primary);
+}
+
+.cctv-cam-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.cctv-cam-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cctv-ip-chip,
+.cctv-cam-btn {
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border-radius: 8px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.cctv-ip-chip {
+  background: rgba(56, 189, 248, 0.08);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.cctv-ip-chip svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.65;
+}
+
+.cctv-ip-chip:hover {
+  background: rgba(56, 189, 248, 0.16);
+  border-color: #38bdf8;
+}
+
+.cctv-ip-chip:hover svg {
+  opacity: 1;
+}
+
+.cctv-cam-btn {
+  background: rgba(255, 184, 0, 0.1);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  color: var(--yellow-primary);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.cctv-cam-btn {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+.cctv-cam-btn svg {
+  width: 17px;
+  height: 17px;
+}
+
+.cctv-cam-btn:hover {
+  background: rgba(255, 184, 0, 0.2);
+  border-color: var(--yellow-primary);
+  box-shadow: 0 0 12px rgba(255, 184, 0, 0.2);
+}
+
+.cctv-cam-btn.is-disabled {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-dim);
+  box-shadow: none;
+  cursor: not-allowed;
+}
