@@ -575,7 +575,7 @@
       }
       if (S.tabs.length < 2) stopRotation(true);
       renderAll();
-      notify(`Tab „${tab.name}“ je sakriven. Vraćate ga dugmetom sa precrtanim okom u traci.`, 'info');
+      notify(`Tab „${tab.name}“ je zatvoren. Ponovo ga otvarate preko dugmeta „+“ ili dugmeta sa precrtanim okom.`, 'info');
     } catch (err) {
       notify(err.message, 'error');
     }
@@ -596,26 +596,49 @@
     }
   }
 
-  function openHiddenMenu() {
+  /** Meni ispod dugmeta; klik na stavku sa data-unhide vraća deljeni tab, a data-new-tab otvara pravljenje novog */
+  function openAnchoredMenu(anchor, html) {
     closeContextMenu();
-    const hidden = S.sharedAll.filter(t => t.hidden);
-    if (!hidden.length) return;
     ctxMenu = document.createElement('div');
     ctxMenu.className = 'mon-ctx-menu';
-    ctxMenu.innerHTML = hidden.map(t => `
-      <button type="button" class="mon-ctx-item" data-unhide="${esc(t.id)}"><i data-lucide="eye"></i><span>Prikaži „${esc(t.name)}“ (${esc(t.ownerName || '')})</span></button>`).join('');
+    ctxMenu.innerHTML = html;
     document.body.appendChild(ctxMenu);
     C.icons(ctxMenu);
-    const b = $('mon-btn-hidden').getBoundingClientRect();
+    const b = anchor.getBoundingClientRect();
     const r = ctxMenu.getBoundingClientRect();
-    ctxMenu.style.left = `${Math.max(8, Math.min(b.right - r.width, window.innerWidth - r.width - 8))}px`;
+    ctxMenu.style.left = `${Math.max(8, Math.min(b.left, window.innerWidth - r.width - 8))}px`;
     ctxMenu.style.top = `${b.bottom + 6}px`;
     ctxMenu.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-unhide]');
-      if (!btn) return;
+      const unhide = e.target.closest('[data-unhide]');
+      const create = e.target.closest('[data-new-tab]');
+      if (!unhide && !create) return;
       closeContextMenu();
-      unhideShared(btn.dataset.unhide);
+      if (unhide) unhideShared(unhide.dataset.unhide);
+      else openWizard('create');
     });
+  }
+
+  function hiddenSharedItems() {
+    return S.sharedAll.filter(t => t.hidden).map(t => `
+      <button type="button" class="mon-ctx-item" data-unhide="${esc(t.id)}"><i data-lucide="share-2"></i><span>Prikaži „${esc(t.name)}“ (deljeno od: ${esc(t.ownerName || '')})</span></button>`).join('');
+  }
+
+  function openHiddenMenu() {
+    if (!S.sharedAll.some(t => t.hidden)) return;
+    openAnchoredMenu($('mon-btn-hidden'), hiddenSharedItems());
+  }
+
+  /**
+   * Dugme „+“: ako ima dodeljenih (deljenih) tabova koje je korisnik zatvorio, nudi ih za ponovno otvaranje
+   * pored pravljenja novog taba; inače odmah otvara pravljenje novog taba.
+   */
+  function openNewTabMenu(anchor) {
+    if (!S.sharedAll.some(t => t.hidden)) return openWizard('create');
+    openAnchoredMenu(anchor, `
+      <button type="button" class="mon-ctx-item" data-new-tab="1"><i data-lucide="plus"></i><span>Novi tab</span></button>
+      <div class="mon-ctx-sep"></div>
+      <div style="padding: 4px 12px 2px; font-size: 0.68rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em;">Dodeljeni tabovi</div>
+      ${hiddenSharedItems()}`);
   }
 
   /* ==========================================================================
@@ -1834,8 +1857,8 @@
     bindWizard();
     bindEditor();
 
-    $('mon-btn-new-tab').addEventListener('click', () => openWizard('create'));
-    $('mon-btn-empty-new').addEventListener('click', () => openWizard('create'));
+    $('mon-btn-new-tab').addEventListener('click', (e) => { e.stopPropagation(); openNewTabMenu(e.currentTarget); });
+    $('mon-btn-empty-new').addEventListener('click', (e) => { e.stopPropagation(); openNewTabMenu(e.currentTarget); });
     $('mon-btn-edit').addEventListener('click', () => { const t = activeTab(); if (t && !t.shared) openWizard('edit', t); });
     $('mon-btn-rotation').addEventListener('click', () => {
       if (S.rotation.timer) {
