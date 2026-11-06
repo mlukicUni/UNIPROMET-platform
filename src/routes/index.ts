@@ -17,6 +17,7 @@ import { accessRouter } from './access.routes';
 import { monitoringRouter } from './monitoring.routes';
 import { aiAgentRouter } from './aiAgent.routes';
 import { nolekoDocsRouter } from './nolekoDocs.routes';
+import { dmsRouter } from './dms.routes';
 
 export const apiRouter = Router();
 
@@ -42,6 +43,7 @@ apiRouter.use('/access', accessRouter);
 apiRouter.use('/monitoring', monitoringRouter);
 apiRouter.use('/ai-agent', aiAgentRouter);
 apiRouter.use('/noleko/docs', nolekoDocsRouter);
+apiRouter.use('/dms', dmsRouter);
 
 // Dedicated mail endpoints under /mail
 apiRouter.use('/mail', mailRouter);

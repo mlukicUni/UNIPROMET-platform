@@ -388,6 +388,26 @@ function setupNavigationHandlers() {
     ai_phased_dev: {
       title: 'Fazni Razvoj',
       subtitle: 'NOLEKO AI Development'
+    },
+    dms_analytics: {
+      title: 'DMS Izveštaji i Analitika',
+      subtitle: 'DMS Analiza podataka: poređenje izveštaja kroz vremenske tačke'
+    },
+    dms_users: {
+      title: 'DMS Korisnici i Službe',
+      subtitle: 'DMS Analiza podataka: zaposleni, ključni korisnici i službe'
+    },
+    dms_reminder: {
+      title: 'DMS Podsetnik za Overu',
+      subtitle: 'DMS Analiza podataka: računi koji čekaju overu po službama i osobama'
+    },
+    dms_scheduled_mails: {
+      title: 'DMS Zakazani Mailovi',
+      subtitle: 'DMS Analiza podataka: mailovi koji se šalju po rasporedu'
+    },
+    dms_signatures: {
+      title: 'DMS Provera Potpisa',
+      subtitle: 'DMS Analiza podataka: provera elektronskih potpisa i skeniranih dokumenata'
     }
   };
 
@@ -415,6 +435,11 @@ function setupNavigationHandlers() {
     ai_agent_prototype: 'noleko_ai',
     ai_dev_plan: 'noleko_ai',
     ai_phased_dev: 'noleko_ai',
+    dms_analytics: 'dms',
+    dms_users: 'dms',
+    dms_reminder: 'dms',
+    dms_scheduled_mails: 'dms',
+    dms_signatures: 'dms',
     dashboard: 'server',
     scheduled_services: 'server',
     logs: 'server',
@@ -638,6 +663,12 @@ function setupNavigationHandlers() {
     if (tabId === 'ai_dev_plan') {
       if (window.NolekoPlanModule && typeof window.NolekoPlanModule.onTabActivated === 'function') {
         window.NolekoPlanModule.onTabActivated();
+      }
+    }
+
+    if (tabId.startsWith('dms_')) {
+      if (window.DmsModule && typeof window.DmsModule.onTabActivated === 'function') {
+        window.DmsModule.onTabActivated(tabId);
       }
     }
 
@@ -7061,7 +7092,12 @@ function renderScheduledServicesTab() {
     let targetLabel = 'Sistemski Servis';
     let targetBadgeClass = 'sched-target-custom';
 
-    if (service.service_key === 'azure_secret_expiry') {
+    if (service.service_key === 'dms_reminder_task') {
+      avatarClass = 'sched-avatar-custom';
+      iconName = 'bell-ring';
+      targetLabel = 'DMS Analiza podataka (podsetnik)';
+      targetBadgeClass = 'sched-target-custom';
+    } else if (service.service_key === 'azure_secret_expiry') {
       avatarClass = 'sched-avatar-custom';
       iconName = 'key-round';
       targetLabel = 'Azure ključ (Microsoft 365 prijava)';
@@ -10587,6 +10623,8 @@ async function initAuthWidget() {
         roleLabel = accessRoles.length === 1
           ? (accessRoles[0].length > 18 ? accessRoles[0].slice(0, 17) + '…' : accessRoles[0])
           : `${accessRoles.length} role`;
+      } else if (data.access && data.access.rolesScope === 'dms') {
+        roleLabel = 'DMS admin';
       } else if (user.isAdmin) {
         roleLabel = 'IT Admin';
       } else if (groups.length > 0) {

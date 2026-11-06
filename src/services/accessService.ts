@@ -7,6 +7,8 @@ import {
   getRolePermissions,
   getAllCameraAccessRules,
   getCameraGroupMembersMap,
+  getRole,
+  getRoleCameraAccess,
   listRoles,
   RoleAssignment,
   CameraScope
@@ -59,6 +61,8 @@ interface CamRuleDetail {
 
 export interface EffectiveAccess {
   isSuperAdmin: boolean;
+  /** Član AD grupe DMS-Admins (a nije Super admin): u „Korisnici i role“ vidi i dodeljuje samo DMS role */
+  isDmsRoleAdmin: boolean;
   hasAnyAccess: boolean;
   roles: AppliedRole[];
   perms: PermDetail[];
@@ -69,6 +73,28 @@ export interface EffectiveAccess {
 }
 
 const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
+
+/** AD grupa čiji članovi dodeljuju DMS role (poređenje po imenu, bez obzira na velika/mala slova) */
+export const DMS_ROLE_ADMIN_GROUP = 'DMS-Admins';
+
+const inDmsSection = (key: string) => key === 'dms' || key.startsWith('dms.');
+
+/** Da li su sve dozvole (i posebne akcije) iz sekcije DMS */
+export function permissionsAreDmsOnly(perms: { key: string; actions?: string[] }[]): boolean {
+  return perms.every(p => inDmsSection(String(p?.key || '')) && (p.actions || []).every(a => inDmsSection(String(a))));
+}
+
+/**
+ * DMS rola = obična (ne sistemska) rola bez ijedne dozvole van sekcije DMS i bez pristupa kamerama.
+ * Nova prazna rola se računa kao DMS rola, da DMS administrator može da je napravi pa joj da dozvole.
+ * Proverava se pri svakom zahtevu: ako Super admin roli doda nešto van DMS-a, DMS administrator je više ne vidi.
+ */
+export function isDmsOnlyRole(roleId: string): boolean {
+  const role = getRole(roleId);
+  if (!role || role.isSuperAdmin || role.isSystem) return false;
+  if (!permissionsAreDmsOnly(getRolePermissions(role.id))) return false;
+  return getRoleCameraAccess(role.id).length === 0;
+}
 
 function userMatches(a: RoleAssignment, user: { id?: string; email?: string }): boolean {
   const pid = norm(a.principalId);
@@ -125,6 +151,7 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
   }
 
   const isSuperAdmin = roles.some(r => r.isSuperAdmin);
+  const isDmsRoleAdmin = !isSuperAdmin && groups.some(g => norm(g.name) === norm(DMS_ROLE_ADMIN_GROUP));
 
   const perms: PermDetail[] = [];
   const camRules: CamRuleDetail[] = [];
@@ -157,7 +184,9 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
 
   return {
     isSuperAdmin,
-    hasAnyAccess: isSuperAdmin || grants.size > 0,
+    isDmsRoleAdmin,
+    // DMS administrator bez ijedne role i dalje ulazi na platformu (stranica „Korisnici i role“)
+    hasAnyAccess: isSuperAdmin || isDmsRoleAdmin || grants.size > 0,
     roles,
     perms,
     camRules,
@@ -345,6 +374,8 @@ export interface ClientAccess {
   sections: Record<string, boolean>;
   actions: string[];
   canManageRoles: boolean;
+  /** 'all' = Super admin (sve role), 'dms' = DMS-Admins (samo dodela DMS rola), 'none' */
+  rolesScope: 'all' | 'dms' | 'none';
   cameras: {
     all: { live: boolean; playback: boolean };
     byId: Record<string, { live: boolean; playback: boolean }>;
@@ -380,7 +411,8 @@ export function buildClientAccess(access: EffectiveAccess): ClientAccess {
     items,
     sections,
     actions: access.isSuperAdmin ? ['*'] : [...access.allActions],
-    canManageRoles: access.isSuperAdmin,
+    canManageRoles: access.isSuperAdmin || access.isDmsRoleAdmin,
+    rolesScope: access.isSuperAdmin ? 'all' : access.isDmsRoleAdmin ? 'dms' : 'none',
     cameras: { all, byId, byIp }
   };
 }

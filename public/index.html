@@ -28,6 +28,14 @@
   <link rel="stylesheet" href="/css/components/monitoring.css">
   <link rel="stylesheet" href="/css/components/ai-agent.css">
   <link rel="stylesheet" href="/css/components/noleko-docs.css">
+  <link rel="stylesheet" href="/css/components/dms.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-common.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-podaci.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-overview.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-sektori.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-oscilacije.css?v=20261105">
+  <link rel="stylesheet" href="/css/components/dms-perf.css?v=20261106">
+  <link rel="stylesheet" href="/css/components/dms-loader.css?v=20261106">
 </head>
 <body class="unipromet-theme">
   
@@ -234,6 +242,39 @@
           </div>
         </div>
 
+        <!-- DMS-BEGIN nav -->
+        <!-- 4b. DMS ANALIZA PODATAKA (Accordion Group) -->
+        <div class="nav-section-group" id="nav-group-dms">
+          <button type="button" class="nav-section-toggle" data-section="dms" aria-expanded="false" id="btn-toggle-sec-dms">
+            <div class="nav-icon-wrap"><i data-lucide="bar-chart-3"></i></div>
+            <span class="nav-section-title-text">DMS ANALIZA PODATAKA</span>
+            <i data-lucide="chevron-down" class="nav-section-chevron"></i>
+          </button>
+          <div class="nav-section-content" id="section-content-dms">
+            <button class="nav-tab-btn" data-tab="dms_analytics">
+              <div class="nav-icon-wrap"><i data-lucide="line-chart"></i></div>
+              <span class="nav-label">Izveštaji i analitika</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="dms_users">
+              <div class="nav-icon-wrap"><i data-lucide="users"></i></div>
+              <span class="nav-label">Korisnici i službe</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="dms_reminder">
+              <div class="nav-icon-wrap"><i data-lucide="bell-ring"></i></div>
+              <span class="nav-label">Podsetnik za overu</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="dms_scheduled_mails">
+              <div class="nav-icon-wrap"><i data-lucide="calendar-clock"></i></div>
+              <span class="nav-label">Zakazani mailovi</span>
+            </button>
+            <button class="nav-tab-btn" data-tab="dms_signatures">
+              <div class="nav-icon-wrap"><i data-lucide="file-signature"></i></div>
+              <span class="nav-label">Provera potpisa</span>
+            </button>
+          </div>
+        </div>
+        <!-- DMS-END nav -->
+
         <!-- 5. SERVER (Accordion Group) -->
         <div class="nav-section-group" id="nav-group-server">
           <button type="button" class="nav-section-toggle" data-section="server" aria-expanded="false" id="btn-toggle-sec-server">
@@ -264,7 +305,7 @@
               <span class="nav-label">Podešavanja Servera</span>
             </button>
 
-            <button class="nav-tab-btn access-hidden" data-tab="access_roles" data-super-only>
+            <button class="nav-tab-btn access-hidden" data-tab="access_roles">
               <div class="nav-icon-wrap"><i data-lucide="shield-check"></i></div>
               <span class="nav-label">Korisnici i role</span>
             </button>
@@ -3202,6 +3243,94 @@
             <p>Stranica je u pripremi.</p>
           </div>
         </section>
+
+        <!-- DMS-BEGIN sections -->
+        <!-- ========================================================== -->
+        <!-- DMS ANALIZA PODATAKA: Izveštaji i analitika                -->
+        <!-- ========================================================== -->
+        <section id="tab-dms_analytics" class="tab-view">
+          <div class="panel-box full-span dms-root" id="dms-analytics-root">
+            <div class="panel-box-header">
+              <div class="panel-title-with-icon">
+                <div class="yellow-icon-square"><i data-lucide="line-chart"></i></div>
+                <div>
+                  <h4>Izveštaji i analitika</h4>
+                  <p class="panel-desc">Poređenje DMS Excel izveštaja kroz vremenske tačke: aktivnost korisnika, sektori, oscilacije, SEF i ispravnost dokumentacije</p>
+                </div>
+              </div>
+              <div class="panel-actions-group">
+                <span id="statusBadge" class="dms-status-badge"><span class="dms-dot"></span> Čekam učitavanje fajlova</span>
+                <button type="button" class="btn-dark-sm" id="dms-btn-clear-all" onclick="clearAllFiles()" title="Briše sve učitane izveštaje sa servera">
+                  <i data-lucide="trash-2"></i><span>Očisti sve</span>
+                </button>
+                <button type="button" class="btn-yellow-solid-sm" id="btnBrowseFiles" title="Učitaj Excel izveštaje (.xlsx)">
+                  <i data-lucide="upload-cloud"></i><span>Učitaj izveštaje</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="panel-box-body">
+              <div class="dms-upload-grid">
+                <div id="dropZoneMulti" class="dms-dropzone" title="Prevucite Excel fajlove ovde ili kliknite">
+                  <input type="file" id="fileInputMulti" accept=".xlsx,.xls,.XLSX,.XLS" multiple class="dms-hidden">
+                  <div class="dms-dropzone-icon"><i data-lucide="upload-cloud"></i></div>
+                  <strong>Prevucite izveštaje ovde</strong>
+                  <span>.xlsx, .xls · izaberite dva ili više izveštaja, sortiraju se po datumu</span>
+                </div>
+                <div class="dms-timeline-wrap">
+                  <div class="dms-section-label"><i data-lucide="history"></i> Vremenska linija izveštaja</div>
+                  <div id="timelineContainer"></div>
+                </div>
+              </div>
+              <button type="button" id="btnCompare" onclick="executeComparison()" class="dms-hidden" disabled></button>
+
+              <div id="resultsSection" class="dms-hidden dms-results">
+                <div class="dms-section-label"><i data-lucide="bar-chart-3"></i> Ukupni napredak (najstariji naspram najnovijeg izveštaja)</div>
+                <div class="network-kpi-banner" id="kpiCards" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"></div>
+
+                <div class="dms-card">
+                  <div class="dms-card-head">
+                    <h5><i data-lucide="line-chart"></i> Vremenski trend kretanja dokumenata po periodima</h5>
+                    <span>Praćenje napretka u intervalima</span>
+                  </div>
+                  <div class="dms-chart-box"><canvas id="trendChart"></canvas></div>
+                </div>
+
+                <nav id="sheetSidebarNav" class="dms-subnav"></nav>
+                <div class="dms-card dms-sheet-body" id="sheetTabContents"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- DMS ANALIZA PODATAKA: Korisnici i službe                   -->
+        <!-- ========================================================== -->
+        <section id="tab-dms_users" class="tab-view">
+          <div class="panel-box full-span dms-root" id="dms-users-root"></div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- DMS ANALIZA PODATAKA: Podsetnik za overu                   -->
+        <!-- ========================================================== -->
+        <section id="tab-dms_reminder" class="tab-view">
+          <div class="panel-box full-span dms-root" id="dms-reminder-root"></div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- DMS ANALIZA PODATAKA: Zakazani mailovi                     -->
+        <!-- ========================================================== -->
+        <section id="tab-dms_scheduled_mails" class="tab-view">
+          <div class="panel-box full-span dms-root" id="dms-scheduled-root"></div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- DMS ANALIZA PODATAKA: Provera potpisa                      -->
+        <!-- ========================================================== -->
+        <section id="tab-dms_signatures" class="tab-view">
+          <div class="panel-box full-span dms-root" id="dms-signatures-root"></div>
+        </section>
+        <!-- DMS-END sections -->
 
         <!-- ========================================================== -->
         <!-- TAB 3: LOGS / SISTEMSKI LOGOVI                             -->
@@ -8160,6 +8289,21 @@
   <script src="/js/aiAgent.js"></script>
   <script src="/js/nolekoPlan.js"></script>
   <!-- App Script -->
+  <!-- DMS Analiza podataka (SheetJS i Chart.js se učitavaju tek pri prvom otvaranju sekcije) -->
+  <script src="/js/dmsModule.js?v=20261105"></script>
+  <script src="/js/dms/core-reports.js?v=20261105"></script>
+  <script src="/js/dms/core-tabs.js?v=20261105"></script>
+  <script src="/js/dms/views-podaci.js?v=20261105"></script>
+  <script src="/js/dms/views-overview.js?v=20261105"></script>
+  <script src="/js/dms/views-sektori.js?v=20261105"></script>
+  <script src="/js/dms/views-oscilacije.js?v=20261105"></script>
+  <script src="/js/dms/users.js?v=20261105"></script>
+  <script src="/js/dms/email.js?v=20261105"></script>
+  <script src="/js/dms/reminder.js?v=20261105"></script>
+  <script src="/js/dms/scheduled-mails.js?v=20261105"></script>
+  <script src="/js/dms/signatures.js?v=20261105"></script>
+  <script src="/js/dms/table-fullscreen.js?v=20261105"></script>
+  <script src="/js/dms/paging.js?v=20261106"></script>
   <script src="/js/app.js?v=20261023_1000"></script>
 </body>
 

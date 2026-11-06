@@ -1,0 +1,240 @@
+/* DMS analitika: prikaz sektori. Klase specifične za ovaj prikaz; zajednički rečnik je u dms-common.css. */
+
+/* ---------- Zaglavlje sa sažetkom ---------- */
+.dms-sektori-banner {
+  padding: 18px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: linear-gradient(90deg, rgba(56, 189, 248, 0.14), rgba(99, 102, 241, 0.14));
+}
+.dms-sektori-kpi {
+  min-width: 120px;
+  padding: 10px 14px;
+  text-align: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.dms-sektori-kpi-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.dms-sektori-kpi-value {
+  margin-top: 2px;
+  font-family: var(--font-heading);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+.dms-sektori-kpi.is-warning { background: rgba(245, 158, 11, 0.12); border-color: rgba(245, 158, 11, 0.4); }
+.dms-sektori-kpi.is-warning .dms-sektori-kpi-label { color: #fcd34d; }
+.dms-sektori-kpi.is-warning .dms-sektori-kpi-value { color: #fbbf24; }
+
+.dms-sektori-empty-icon { font-size: 1.75rem; }
+
+/* ---------- Panel naglih oscilacija ---------- */
+.dms-sektori-osc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
+}
+.dms-sektori-events {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.dms-sektori-event {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  font-size: 0.75rem;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.dms-badge.dms-sektori-net {
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+/* ---------- Zaglavlje tabele, filter i pretraga ---------- */
+.dms-sektori-head .dms-subtitle { font-weight: 400; }
+.dms-sektori-seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 3px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.dms-sektori-search {
+  position: relative;
+  width: 256px;
+  max-width: 100%;
+}
+.dms-sektori-search-icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+.dms-sektori-search input.dms-sektori-search-input[type="text"] {
+  width: 100%;
+  padding: 6px 10px 6px 30px;
+  font-size: 0.75rem;
+}
+
+/* ---------- Legenda bojenja ---------- */
+.dms-sektori-legend {
+  padding: 10px 14px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.6875rem;
+}
+.dms-sektori-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  font-weight: 600;
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+}
+.dms-sektori-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+.dms-sektori-swatch.is-plain { background: var(--bg-surface); border: 1px solid var(--border-medium); }
+.dms-sektori-swatch.is-light-green { background: rgba(16, 185, 129, 0.25); border: 1px solid rgba(16, 185, 129, 0.6); }
+.dms-sektori-swatch.is-dark-green { background: #047857; }
+.dms-sektori-swatch.is-light-red { background: rgba(244, 63, 94, 0.25); border: 1px solid rgba(244, 63, 94, 0.6); }
+.dms-sektori-swatch.is-dark-red { background: #be123c; }
+
+/* ---------- Tabele ---------- */
+.dms-sektori-scroll { overflow: auto; max-height: 600px; }
+.dms-sektori-table th { text-transform: uppercase; }
+.dms-sektori-col-idx { width: 32px; }
+.dms-sektori-tags { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.dms-sektori-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-main);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.dms-sektori-loc-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 10px;
+  border-radius: var(--radius-xs);
+  color: #ffffff;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+.dms-sektori-loc-tag.is-ca { background: #1d4ed8; }
+.dms-sektori-loc-tag.is-kv { background: #4338ca; }
+
+/* Redovi hijerarhije: služba -> lokacija -> zaposleni */
+.dms-sektori-row-sector { font-weight: 700; background: var(--bg-surface-elevated); }
+.dms-sektori-row-sector > td { border-top: 2px solid var(--border-medium); }
+.dms-sektori-row-sector > td:first-child { border-left: 4px solid #38bdf8; }
+.dms-sektori-row-sector.is-nested > td { border-top: 1px solid var(--border-medium); }
+.dms-sektori-row-sector.is-nested > td:first-child { border-left: 4px solid var(--border-medium); }
+.dms-sektori-row-sector.is-nested > td:nth-child(2) { padding-left: 28px; }
+
+.dms-sektori-row-loc { font-weight: 700; }
+.dms-sektori-row-loc.is-ca { background: rgba(56, 189, 248, 0.07); }
+.dms-sektori-row-loc.is-kv { background: rgba(99, 102, 241, 0.09); }
+.dms-sektori-row-loc.is-ca > td:first-child { border-left: 4px solid #38bdf8; }
+.dms-sektori-row-loc.is-kv > td:first-child { border-left: 4px solid #6366f1; }
+.dms-sektori-row-loc > td:nth-child(2) { padding-left: 20px; }
+
+.dms-sektori-row-emp { font-size: 0.6875rem; color: var(--text-muted); }
+.dms-sektori-row-emp > td { font-size: 0.6875rem; }
+.dms-sektori-row-emp.is-ca > td:first-child { border-left: 4px solid rgba(56, 189, 248, 0.4); }
+.dms-sektori-row-emp.is-kv > td:first-child { border-left: 4px solid rgba(99, 102, 241, 0.4); }
+.dms-sektori-row-emp > td:nth-child(2) { padding-left: 40px; }
+
+/* Posebne kolone */
+.dms-sektori-table .dms-sektori-avg {
+  background: rgba(56, 189, 248, 0.1);
+  color: #bae6fd;
+  font-weight: 700;
+  border-left: 2px solid rgba(56, 189, 248, 0.4);
+  border-right: 2px solid rgba(56, 189, 248, 0.4);
+}
+.dms-sektori-table th.dms-sektori-avg { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+.dms-sektori-avg-sub { font-size: 0.656rem; font-weight: 400; opacity: 0.8; }
+.dms-sektori-table .dms-sektori-open {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fde68a;
+  font-weight: 700;
+  border-left: 1px solid rgba(245, 158, 11, 0.3);
+  border-right: 1px solid rgba(245, 158, 11, 0.3);
+}
+.dms-sektori-table th.dms-sektori-open { background: rgba(245, 158, 11, 0.2); color: #fcd34d; border-bottom: 2px solid #f59e0b; }
+.dms-sektori-table .dms-sektori-total { color: #7dd3fc; font-weight: 700; border-left: 1px solid var(--border-subtle); }
+.dms-sektori-table th.dms-sektori-total { background: rgba(56, 189, 248, 0.1); color: #7dd3fc; }
+.dms-sektori-table .dms-sektori-share { color: var(--text-muted); border-left: 1px solid var(--border-subtle); }
+.dms-sektori-table th.dms-sektori-share { background: var(--bg-surface-elevated); }
+
+/* Zbirni red */
+.dms-sektori-foot td {
+  background: var(--bg-surface-elevated);
+  border-top: 2px solid var(--border-medium);
+  font-weight: 700;
+  color: var(--text-main);
+}
+.dms-sektori-foot td:first-child { text-transform: uppercase; font-weight: 800; }
+.dms-sektori-table .dms-sektori-foot .dms-sektori-avg { background: rgba(56, 189, 248, 0.18); }
+.dms-sektori-table .dms-sektori-foot .dms-sektori-open { background: rgba(245, 158, 11, 0.18); }
+
+/* Ćelije sa označenom oscilacijom (sektor) */
+.dms-sektori-osc { font-weight: 800; }
+.dms-sektori-osc.is-jump { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.45); }
+.dms-sektori-osc.is-drop { background: rgba(244, 63, 94, 0.18); color: #fda4af; box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.45); }
+
+/* Ćelije zaposlenog sa mesečnim napretkom */
+.dms-sektori-prog.is-dark-green { background: #047857; color: #ecfdf5; font-weight: 800; }
+.dms-sektori-prog.is-light-green { background: rgba(16, 185, 129, 0.18); color: #6ee7b7; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.45); }
+.dms-sektori-prog.is-dark-red { background: #be123c; color: #fff1f2; font-weight: 800; }
+.dms-sektori-prog.is-light-red { background: rgba(244, 63, 94, 0.18); color: #fda4af; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(244, 63, 94, 0.45); }
+.dms-sektori-prog.is-up { color: #34d399; font-weight: 500; }
+.dms-sektori-prog.is-neutral { color: var(--text-main); font-weight: 500; }
+.dms-sektori-prog.is-muted { color: var(--text-muted); }
+
+/* Male oznake procenta */
+.dms-sektori-delta { display: block; font-size: 0.625rem; line-height: 1.2; font-weight: 800; }
+.dms-sektori-delta.is-up { color: #34d399; }
+.dms-sektori-delta.is-down { color: #fb7185; }
+.dms-sektori-delta.is-flat { color: var(--text-dim); font-weight: 500; }
+.dms-sektori-pct { margin-left: 4px; font-size: 0.656rem; font-weight: 600; }
+.dms-badge.dms-sektori-pct { padding: 0 5px; font-size: 0.656rem; font-weight: 800; }
+.dms-sektori-pct.is-up { color: #34d399; }
+.dms-sektori-pct.is-down { color: #fb7185; }
+.dms-sektori-pct.is-warn { color: #fbbf24; }
+.dms-sektori-pct.is-flat { color: var(--text-dim); font-weight: 400; }

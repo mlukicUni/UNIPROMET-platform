@@ -1,0 +1,74 @@
+/* DMS analitika: prikaz overview (SEF statusi, Vrste dokumenata, Zaposleni, Ispravnost dokumentacije).
+   Klase specifične za ovaj prikaz; zajednički rečnik je u dms-common.css. */
+
+/* ---- Prekidač sistemskog korisnika ---- */
+.dms-toggle.dms-overview-toggle { display: flex; width: fit-content; }
+.dms-overview-toggle strong { color: var(--text-main); }
+
+/* ---- Tekstovi i ćelije ---- */
+.dms-overview-note { margin: 0; }
+.dms-overview-hint { margin: 0; min-height: 1rem; font-size: 0.75rem; color: var(--text-muted); }
+.dms-overview-key-cell { font-weight: 600; color: var(--text-main); }
+.dms-table tr.dms-overview-row-inactive td { color: var(--text-dim); }
+.dms-overview-flag { font-weight: 600; }
+.dms-overview-flag.is-danger { color: #fb7185; }
+.dms-overview-flag.is-warning { color: #fbbf24; }
+.dms-overview-flag.is-muted { color: var(--text-dim); font-weight: 400; }
+.dms-overview-archive-sub { color: var(--text-dim); font-weight: 400; }
+.dms-overview-section-title { margin: 0 0 8px; }
+
+/* ---- Kartica vrste koja se klikom označava u tabeli ---- */
+.dms-overview-mark-card { cursor: pointer; user-select: none; transition: box-shadow var(--transition-fast); }
+.dms-overview-mark-card:hover { box-shadow: var(--shadow-card); }
+.dms-overview-mark-card.is-selected { box-shadow: 0 0 0 2px var(--yellow-primary); }
+
+/* ---- Kartica provere (dugme koje otvara listu dokumenata) ---- */
+.dms-stat.dms-overview-check-card {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  border-left-width: 4px;
+  border-left-color: var(--text-dim);
+  transition: box-shadow var(--transition-fast), background var(--transition-fast);
+}
+.dms-stat.dms-overview-check-card:hover { background: var(--bg-card-hover); box-shadow: var(--shadow-card); }
+.dms-stat.dms-overview-check-card.is-attention { border-left-color: var(--status-warning); }
+.dms-stat.dms-overview-check-card.is-attention .dms-stat-label { color: #fbbf24; }
+
+/* ---- Zaglavlje ispravnosti dokumentacije ---- */
+.dms-overview-correctness { scroll-margin-top: 80px; }
+.dms-overview-banner.dms-spread {
+  align-items: flex-end;
+  padding: 18px 20px;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-elevated);
+  border: 1px solid var(--border-medium);
+}
+.dms-overview-banner-value { font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: var(--text-main); margin-top: 2px; }
+.dms-overview-banner-meta { text-align: right; }
+@media (max-width: 600px) { .dms-overview-banner-meta { text-align: left; } }
+
+/* ---- Lista provera (details) ---- */
+.dms-overview-check {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-left: 4px solid var(--text-dim);
+  border-radius: var(--radius-md);
+}
+.dms-overview-check.is-attention { border-left-color: var(--status-warning); }
+.dms-overview-check-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; cursor: pointer; }
+.dms-overview-check-title { font-weight: 600; font-size: 0.875rem; color: var(--text-main); }
+.dms-overview-check-body { display: flex; flex-direction: column; gap: 8px; padding: 4px 16px 12px; }
+.dms-overview-check-body p { margin: 0; }
+.dms-overview-detail-scroll { max-height: 28rem; overflow: auto; border-top: 1px solid var(--border-subtle); }
+.dms-overview-detail-note { padding: 12px 16px; border-top: 1px solid var(--border-subtle); font-size: 0.75rem; color: var(--text-muted); }
+
+/* ---- Oznake redova u listi dokumenata (dvostruki unos, označeni dokumenti) ---- */
+.dms-table tbody tr.dms-overview-dup-open,
+.dms-table tbody tr.dms-overview-dup-open:hover { background: rgba(99, 102, 241, 0.26); }
+.dms-table tbody tr.dms-overview-dup-related,
+.dms-table tbody tr.dms-overview-dup-related:hover,
+.dms-table tbody tr.dms-overview-row-marked,
+.dms-table tbody tr.dms-overview-row-marked:hover { background: rgba(99, 102, 241, 0.16); }

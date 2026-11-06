@@ -19,6 +19,7 @@ import { syncAndCheckWifiAps } from '../db/wifiApDb';
 import { checkAllRecordersStatus } from './recorderScanner';
 import { serverLogs } from '../routes/api';
 import { getAzureSecretExpiry, sendAzureSecretExpiryEmail } from './secretExpiryService';
+import { sendTaskReminder, isReminderDay } from './dms/reminderService';
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 const lastTriggeredKeys = new Set<string>();
@@ -269,6 +270,20 @@ export async function executeService(service: ScheduledServiceRecord, manual = f
       updateServiceLastRun(service.id, 'Uredno', msg);
       serverLogs.push({ id: serverLogs.length + 1, timestamp: new Date().toISOString(), level: 'info', message: `${triggerPrefix} ${service.name}: ${msg}`, source: 'Scheduler' });
       return { success: true, serviceName: service.name, daysLeft: status.daysLeft, message: msg };
+    }
+
+    // DMS: podsetnik administratoru (automatski samo 8., 9. i 10. u mesecu; ručno pokretanje šalje uvek)
+    if (service.service_key === 'dms_reminder_task') {
+      if (!manual && !isReminderDay()) {
+        const msg = 'Danas nije dan za podsetnik (8., 9. ili 10. u mesecu).';
+        updateServiceLastRun(service.id, 'Preskočeno', msg);
+        return { success: true, serviceName: service.name, skipped: true, message: msg };
+      }
+      const result = await sendTaskReminder(service.recipients);
+      const msg = `Podsetnik za učitavanje DMS podataka poslat na: ${service.recipients.join(', ')}`;
+      updateServiceLastRun(service.id, 'Podsetnik poslat (250 OK)', msg);
+      serverLogs.push({ id: serverLogs.length + 1, timestamp: new Date().toISOString(), level: 'success', message: `${triggerPrefix} ${msg}`, source: 'Scheduler' });
+      return { success: true, serviceName: service.name, details: result };
     }
 
     // Default fallback

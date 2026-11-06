@@ -24,13 +24,14 @@ import {
   writeAudit
 } from '../db/rolesDb';
 import { PERMISSION_CATALOG, ROLES_TAB } from '../services/permissionCatalog';
-import { computeAccess, describeAccess, searchAdPrincipals } from '../services/accessService';
+import { computeAccess, describeAccess, searchAdPrincipals, isDmsOnlyRole, permissionsAreDmsOnly } from '../services/accessService';
 import { UserGroup } from '../services/authService';
 import { fetchUserGroupsFromGraph } from '../services/graphService';
 
 /**
  * Upravljanje rolama, dodelama, grupama kamera i evidencijom.
- * Montirano na /api/access - routeAccess dozvoljava isključivo Super adminu.
+ * Montirano na /api/access - routeAccess dozvoljava Super adminu, a članovima grupe DMS-Admins
+ * pravljenje, izmenu, brisanje i dodelu DMS rola (dozvole samo iz sekcije DMS).
  */
 export const accessRouter = Router();
 
@@ -44,9 +45,11 @@ accessRouter.get('/catalog', (_req: Request, res: Response) => {
 });
 
 /* ---------- Role ---------- */
-accessRouter.get('/roles', (_req: Request, res: Response) => {
+accessRouter.get('/roles', (req: Request, res: Response) => {
   try {
-    res.json({ success: true, roles: listRoles() });
+    const roles = listRoles();
+    // DMS administrator (grupa DMS-Admins) vidi samo DMS role
+    res.json({ success: true, roles: req.access?.isSuperAdmin ? roles : roles.filter(r => isDmsOnlyRole(r.id)) });
   } catch (err) {
     fail(res, err, 500);
   }
@@ -67,6 +70,10 @@ accessRouter.get('/roles/:id', (req: Request, res: Response) => {
 accessRouter.post('/roles', (req: Request, res: Response) => {
   try {
     const { name, description, copyFrom } = req.body || {};
+    // DMS administrator sme da kopira samo DMS rolu (prazna nova rola je uvek DMS rola)
+    if (copyFrom && !req.access?.isSuperAdmin && !isDmsOnlyRole(String(copyFrom))) {
+      return fail(res, new Error('Možete da kopirate samo DMS rolu.'), 403);
+    }
     const role = copyFrom ? duplicateRole(String(copyFrom), name) : createRole(name, description);
     writeAudit(req.sessionUser || null, 'role.create', 'role', role.id, `Napravljena rola „${role.name}“${copyFrom ? ' (kopija)' : ''}`);
     res.status(201).json({ success: true, role });
@@ -103,8 +110,12 @@ accessRouter.put('/roles/:id/permissions', (req: Request, res: Response) => {
   try {
     const role = getRole(req.params.id);
     if (!role) return fail(res, new Error('Rola nije pronađena'), 404);
+    const requested = Array.isArray(req.body?.permissions) ? req.body.permissions : [];
+    if (!req.access?.isSuperAdmin && !permissionsAreDmsOnly(requested)) {
+      return fail(res, new Error('DMS administrator može da daje samo dozvole iz sekcije DMS Analiza podataka.'), 403);
+    }
     const before = getRolePermissions(role.id);
-    setRolePermissions(role.id, req.body?.permissions || []);
+    setRolePermissions(role.id, requested);
     const after = getRolePermissions(role.id);
     writeAudit(
       req.sessionUser || null, 'role.permissions', 'role', role.id,

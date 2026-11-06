@@ -10,7 +10,8 @@ import {
   canAccessCameraIp,
   canAccessCamera,
   lookupCameraById,
-  lookupCameraByIp
+  lookupCameraByIp,
+  isDmsOnlyRole
 } from './accessService';
 import { writeAudit } from '../db/rolesDb';
 import { PermissionLevel } from './permissionCatalog';
@@ -73,7 +74,18 @@ const RULES: Rule[] = [
   /* ---------- Prijava ---------- */
   { m: '*', p: '/auth/**', spec: { noAuth: true } },
 
-  /* ---------- Upravljanje rolama (samo Super admin) ---------- */
+  /* ---------- Upravljanje rolama ---------- */
+  // Članovi AD grupe DMS-Admins: pravljenje, izmena, brisanje i dodela DMS rola (dozvole samo iz sekcije DMS,
+  // proverava access.routes). Role van DMS-a za njih ne postoje.
+  { m: 'GET', p: '/access/catalog', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
+  { m: 'GET', p: '/access/known', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
+  { m: 'GET', p: '/access/ad/search', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
+  { m: 'GET,POST', p: '/access/roles', spec: { custom: ({ access }) => access.isDmsRoleAdmin } }, // lista: samo DMS role; kopija: samo od DMS role
+  { m: 'GET,PUT,DELETE', p: '/access/roles/:id', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
+  { m: 'PUT', p: '/access/roles/:id/permissions', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
+  { m: 'POST', p: '/access/roles/:id/assignments', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
+  { m: 'DELETE', p: '/access/roles/:id/assignments/:aid', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
+  // Sve ostalo (pristup kamerama, grupe kamera, provera korisnika, evidencija) samo Super admin
   { m: '*', p: '/access/**', spec: { superOnly: true } },
 
   /* ---------- Video gateway (go2rtc proxy) ---------- */
@@ -131,6 +143,25 @@ const RULES: Rule[] = [
   { m: 'GET', p: '/noleko/docs/razvojni_plan/**', spec: { key: 'noleko.razvojni_plan', level: 'view' } },
   { m: 'GET', p: '/noleko/docs/razvojni_plan', spec: { key: 'noleko.razvojni_plan', level: 'view' } },
   { m: 'PUT', p: '/noleko/docs/razvojni_plan', spec: { key: 'noleko.razvojni_plan', level: 'edit' } },
+
+  /* ---------- DMS Analiza podataka ---------- */
+  { m: 'GET', p: '/dms/users', spec: { anyOf: ['dms.izvestaji', 'dms.korisnici', 'dms.podsetnik'] } },
+  { m: 'POST', p: '/dms/users/sync', spec: { action: 'dms.izvestaji:ucitavanje' } },
+  { m: '*', p: '/dms/users/**', spec: { key: 'dms.korisnici', level: 'edit' } },
+  { m: 'POST', p: '/dms/users', spec: { key: 'dms.korisnici', level: 'edit' } },
+  { m: 'GET', p: '/dms/reports', spec: { key: 'dms.izvestaji', level: 'view' } },
+  { m: 'GET', p: '/dms/reports/**', spec: { key: 'dms.izvestaji', level: 'view' } },
+  { m: 'POST', p: '/dms/reports/upload', spec: { action: 'dms.izvestaji:ucitavanje' } },
+  { m: 'DELETE', p: '/dms/reports/:filename', spec: { action: 'dms.izvestaji:ucitavanje' } },
+  { m: 'POST', p: '/dms/mail/send', spec: { action: 'dms.izvestaji:mejl' } },
+  { m: 'GET', p: '/dms/reminders/**', spec: { key: 'dms.podsetnik', level: 'view' } },
+  { m: 'POST', p: '/dms/reminders/send', spec: { action: 'dms.podsetnik:slanje' } },
+  { m: '*', p: '/dms/scheduled-mails', spec: { key: 'dms.mailovi' } },
+  { m: '*', p: '/dms/scheduled-mails/**', spec: { key: 'dms.mailovi' } },
+  // Provera zipa i OCR su POST, ali samo čitaju: dovoljan je pregled; potvrde i izmene traže izmenu
+  { m: 'POST', p: '/dms/signatures/bilateral', spec: { key: 'dms.potpisi', level: 'edit' } },
+  { m: 'POST', p: '/dms/signatures/confirm', spec: { key: 'dms.potpisi', level: 'edit' } },
+  { m: '*', p: '/dms/signatures/**', spec: { key: 'dms.potpisi', level: 'view' } },
 
   /* ---------- Inventar kamera i snimača ---------- */
   { m: 'GET,POST', p: '/inventory/cameras/scan-unrecorded', spec: { action: 'mreza.kamere:skeniranje' } },

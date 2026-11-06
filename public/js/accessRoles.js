@@ -140,6 +140,18 @@
   const rank = (l) => LEVEL_RANK[l || 'none'] || 0;
   const maxLvl = (a, b) => (rank(a) >= rank(b) ? a : b);
 
+  /** Član grupe DMS-Admins: radi samo sa DMS rolama i dozvolama iz sekcije DMS (server proverava isto) */
+  const dmsOnly = () => !!(window.UniAccess && window.UniAccess.rolesScope === 'dms');
+
+  /** DMS administratoru sakriva kamere, grupe kamera, proveru korisnika i evidenciju */
+  function applyScope() {
+    const limited = dmsOnly();
+    const show = (el, on) => { if (el) el.style.display = on ? '' : 'none'; };
+    document.querySelectorAll('#ar-main-pills [data-ar-tab]').forEach(b => show(b, !limited || b.getAttribute('data-ar-tab') === 'roles'));
+    document.querySelectorAll('#ar-editor-pills [data-ar-edit]').forEach(b => show(b, !limited || b.getAttribute('data-ar-edit') !== 'cameras'));
+    if (limited && S.mainTab !== 'roles') switchMain('roles');
+  }
+
   /* ==========================================================================
      UČITAVANJE
      ========================================================================== */
@@ -147,13 +159,16 @@
     if (S.loading) return;
     S.loading = true;
     try {
+      applyScope();
       const [cat, roles, tree, known] = await Promise.all([
         api(`${API}/catalog`),
         api(`${API}/roles`),
-        api(`${API}/camera-tree`),
+        // DMS administrator ne radi sa kamerama
+        dmsOnly() ? Promise.resolve({ recorders: [], unassigned: [], groups: [] }) : api(`${API}/camera-tree`),
         api(`${API}/known`)
       ]);
-      S.catalog = cat.sections || [];
+      // DMS administrator u matrici dozvola vidi samo sekciju DMS
+      S.catalog = (cat.sections || []).filter(s => !dmsOnly() || s.key === 'dms');
       S.roles = roles.roles || [];
       applyTree(tree);
       S.known = { users: known.users || [], groups: known.groups || [] };
@@ -268,10 +283,14 @@
     if (!tbody) return;
     const q = S.rolesSearch.trim().toLowerCase();
     const items = S.roles.filter(r => !q || r.name.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
-    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} rola`;
+    const limited = dmsOnly();
+    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : 'rola'}`;
 
     if (items.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6"><div class="ar-tree-empty">Nema rola za dati pojam.</div></td></tr>`;
+      const empty = limited && S.roles.length === 0
+        ? 'Nema DMS rola. Napravite rolu dugmetom „Nova rola“ i dajte joj dozvole iz sekcije DMS Analiza podataka.'
+        : 'Nema rola za dati pojam.';
+      tbody.innerHTML = `<tr><td colspan="6"><div class="ar-tree-empty">${empty}</div></td></tr>`;
       return;
     }
 
