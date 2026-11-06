@@ -394,18 +394,10 @@ export async function refreshUserGroups(user: SessionUser): Promise<SessionUser>
 
   try {
     const graphGroups = await fetchUserGroupsFromGraph(user.email || user.id || identifier);
+    // Prazan odgovor = Graph greška (korisnik platforme je uvek u bar jednoj grupi), pa grupe ostaju kakve jesu
     if (graphGroups.length > 0) {
-      const existingNames = new Set((user.groups || []).map((g) => g.name.toLowerCase()));
-      const mergedGroups = [...(user.groups || [])];
-
-      for (const group of graphGroups) {
-        if (!existingNames.has(group.name.toLowerCase())) {
-          mergedGroups.push(group);
-          existingNames.add(group.name.toLowerCase());
-        }
-      }
-
-      user.groups = mergedGroups;
+      // Grupe iz Graph-a zamenjuju stare: grupa iz koje je korisnik uklonjen nestaje i sa njom prava
+      user.groups = graphGroups;
       user.isAuthorized = isUserAuthorized(user);
       user.isAdmin = user.isAuthorized;
     }

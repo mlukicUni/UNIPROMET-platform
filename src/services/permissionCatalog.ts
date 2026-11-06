@@ -116,6 +116,27 @@ export const PERMISSION_CATALOG: SectionDef[] = [
     ]
   },
   {
+    key: 'dms',
+    label: 'DMS ANALIZA PODATAKA',
+    icon: 'chart-column',
+    items: [
+      {
+        key: 'dms.izvestaji', label: 'Izveštaji i analitika', tab: 'dms_analytics',
+        actions: [
+          { key: 'ucitavanje', label: 'Učitavanje i brisanje izveštaja' },
+          { key: 'mejl', label: 'Slanje mejlova korisnicima i službama' }
+        ]
+      },
+      { key: 'dms.korisnici', label: 'Korisnici i službe', tab: 'dms_users', actions: [] },
+      {
+        key: 'dms.podsetnik', label: 'Podsetnik za overu', tab: 'dms_reminder',
+        actions: [{ key: 'slanje', label: 'Slanje podsetnika' }]
+      },
+      { key: 'dms.mailovi', label: 'Zakazani mailovi', tab: 'dms_scheduled_mails', actions: [] },
+      { key: 'dms.potpisi', label: 'Provera potpisa', tab: 'dms_signatures', actions: [] }
+    ]
+  },
+  {
     key: 'server',
     label: 'SERVER',
     icon: 'server',

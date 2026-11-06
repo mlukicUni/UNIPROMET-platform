@@ -1,0 +1,71 @@
+/* ==========================================================================
+   DMS ANALIZA PODATAKA - loader stranice
+   Dok je na sekciji klasa dms-is-loading, vidi se samo loader; sadržaj se otkriva kad je sve učitano.
+   ========================================================================== */
+
+.tab-view.dms-is-loading > .dms-root {
+  display: none;
+}
+
+.dms-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  min-height: 55vh;
+  padding: 32px 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  text-align: center;
+}
+
+.dms-loader-spinner {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  border: 3px solid var(--border-medium);
+  border-top-color: var(--yellow-primary);
+  animation: dms-spin 0.9s linear infinite;
+  box-shadow: 0 0 22px var(--yellow-glow);
+}
+
+.dms-loader-text {
+  max-width: 460px;
+  font-family: var(--font-heading);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--text-main);
+  line-height: 1.5;
+}
+
+.dms-loader-bar {
+  position: relative;
+  width: min(360px, 80%);
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border-subtle);
+  overflow: hidden;
+}
+
+.dms-loader-bar > span {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 3px;
+  background: var(--yellow-primary);
+  transition: width 0.35s ease;
+}
+
+/* Bez poznatog procenta: traka koja "putuje" */
+.dms-loader-bar.is-indeterminate > span {
+  width: 35%;
+  animation: dms-loader-slide 1.2s ease-in-out infinite;
+}
+
+@keyframes dms-loader-slide {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(300%); }
+}

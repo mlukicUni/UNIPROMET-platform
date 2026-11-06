@@ -12,6 +12,11 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.0] - 2026-11-06
+- Korisnici i role: članovi AD grupe „DMS-Admins“ vide stranicu „Korisnici i role“, ali samo DMS role (obične role bez ijedne dozvole van sekcije DMS Analiza podataka i bez kamera). Mogu da ih prave, kopiraju, menjaju, brišu i dodeljuju korisnicima i AD grupama; u matrici dozvola vide samo sekciju DMS, a server odbija svaku dozvolu van nje. Pristup kamerama, grupe kamera, provera korisnika, evidencija i sve ostale role ostaju samo Super adminu. Ako Super admin DMS roli doda dozvolu van DMS-a, DMS administrator je više ne vidi
+- Osvežavanje grupa korisnika iz Microsoft Entra: spisak grupa se zamenjuje novim, pa grupa iz koje je korisnik uklonjen nestaje i sa njom prava (ranije su se grupe samo dodavale, a uklonjene ostajale do nove prijave)
+- Nova sekcija u meniju „DMS Analiza podataka“ (prenet samostalni projekat „DMS - analiza podataka“) sa pet stranica: Izveštaji i analitika (učitavanje DMS Excel izveštaja, vremenska linija, KPI kartice, trend i sedam pogleda: aktivnost korisnika, kreirani dokumenti po sektorima, nagle oscilacije, SEF statusi, vrste dokumenata, zaposleni, ispravnost dokumentacije), Korisnici i službe, Podsetnik za overu računa, Zakazani mailovi i Provera potpisa (elektronski potpisi u PDF-ovima iz zip-a i OCR skenova). Pristup preko rola (nova sekcija i akcije „Učitavanje i brisanje izveštaja“, „Slanje mejlova…“, „Slanje podsetnika“); mejlovi se šalju sa adrese platforme. Podsetnik administratorima 8., 9. i 10. u mesecu u 08:00 je novi automatski servis. Podaci stare aplikacije prenose se skriptom `src/db/migrateDmsFromFolder.ts` (zakazani mailovi se prenose isključeni). OCR jezički fajlovi su u `resources/tessdata`
+
 ## [1.2.1] - 2026-11-05
 - Video nadzor → Monitoring: zatvoreni dodeljeni (deljeni) tab se ponovo otvara i preko dugmeta „+“: kad ih ima, „+“ otvara meni sa „Novi tab“ i spiskom zatvorenih dodeljenih tabova (sa imenom vlasnika); bez njih „+“ odmah otvara pravljenje novog taba kao ranije. Poruka posle zatvaranja to i kaže
 

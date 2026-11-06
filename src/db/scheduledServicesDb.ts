@@ -282,6 +282,36 @@ export function seedDefaultScheduledServices(): void {
 
     console.log('[SQLite] Inicijalizovan servis za upozorenje o isteku Azure ključa (07:00) u tabeli scheduled_services.');
   }
+
+  // 8. DMS Analiza podataka: podsetnik administratoru 8., 9. i 10. u mesecu u 08:00 (dan u mesecu proverava servis)
+  const dmsReminderService = db.prepare("SELECT id FROM scheduled_services WHERE id = 'sched-dms-reminder' OR service_key = 'dms_reminder_task'").get();
+  if (!dmsReminderService) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO scheduled_services (
+        id, service_key, name, description, target_type, cron_times,
+        weekdays_only, is_enabled, recipients, last_run_at, last_run_status,
+        last_run_message, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'sched-dms-reminder',
+      'dms_reminder_task',
+      'DMS: podsetnik za učitavanje podataka i overu računa',
+      'Svakog 8., 9. i 10. u mesecu u 08:00 šalje administratorima kratak podsetnik da u sekciji DMS Analiza podataka učitaju najnoviji izveštaj i pošalju korisnicima podsetnik za overu računa.',
+      'custom',
+      JSON.stringify(['08:00']),
+      0,
+      1,
+      JSON.stringify(['marko.lukic@unipromet.co.rs', 'andrija.borovnjak@unipromet.co.rs']),
+      null,
+      'Spremno',
+      'Čeka 8., 9. ili 10. u mesecu u 08:00',
+      now,
+      now
+    );
+
+    console.log('[SQLite] Inicijalizovan DMS servis podsetnika (8., 9., 10. u mesecu u 08:00) u tabeli scheduled_services.');
+  }
 }
 
 /**

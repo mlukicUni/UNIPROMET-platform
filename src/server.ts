@@ -342,6 +342,10 @@ async function startServer() {
     import('./services/unifiedSchedulerManager').then(({ initUnifiedScheduler }) => {
       initUnifiedScheduler();
     });
+    // DMS Analiza podataka: zakazani mailovi koje korisnici sami podešavaju
+    import('./services/dms/scheduledMailService').then(({ startScheduler }) => {
+      startScheduler();
+    });
   } else {
     console.log('[UnifiedScheduler] Isključen (SCHEDULER_ENABLED=false u .env)');
   }

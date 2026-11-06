@@ -34,6 +34,11 @@
     ai_agent_prototype: 'noleko.agent_prototip',
     ai_dev_plan: 'noleko.razvojni_plan',
     ai_phased_dev: 'noleko.fazni_razvoj',
+    dms_analytics: 'dms.izvestaji',
+    dms_users: 'dms.korisnici',
+    dms_reminder: 'dms.podsetnik',
+    dms_scheduled_mails: 'dms.mailovi',
+    dms_signatures: 'dms.potpisi',
     dashboard: 'server.pregled',
     scheduled_services: 'server.servisi',
     logs: 'server.logovi',
@@ -41,9 +46,9 @@
   };
 
   /** data-section atribut u meniju -> ključ sekcije u katalogu */
-  const NAV_SECTION = { mreza: 'mreza', evidencija: 'evidencija', video_nadzor: 'video', noleko_ai: 'noleko', server: 'server' };
+  const NAV_SECTION = { mreza: 'mreza', evidencija: 'evidencija', video_nadzor: 'video', noleko_ai: 'noleko', dms: 'dms', server: 'server' };
 
-  /** Tabovi samo za Super admina */
+  /** Tabovi samo za Super admina (Korisnici i role: i za članove DMS-Admins, ograničeno na DMS role) */
   const SUPER_ONLY_TABS = new Set(['access_roles']);
 
   /** Lične stranice: nivo "Pregled" je dovoljan i za izmenu sopstvenih podešavanja (bez oznake "samo pregled") */
@@ -65,6 +70,9 @@
     'btn-export-nodes-excel': { action: 'evidencija.cvorista:izvoz' },
     'btn-export-lines-excel': { action: 'evidencija.linije:izvoz' },
     'btn-export-mts-excel': { action: 'evidencija.mts:izvoz' },
+    'btnBrowseFiles': { action: 'dms.izvestaji:ucitavanje' },
+    'dmsUserNew': { edit: 'dms_users' },
+    'dms-btn-clear-all': { action: 'dms.izvestaji:ucitavanje' },
     'plan-btn-edit': { edit: 'ai_dev_plan' },
     'plan-btn-restore': { edit: 'ai_dev_plan' }
   };
@@ -76,6 +84,7 @@
     sections: {},
     actions: [],
     canManageRoles: false,
+    rolesScope: 'none',
     cameras: { all: { live: false, playback: false }, byId: {}, byIp: {} }
   };
 
@@ -84,7 +93,7 @@
 
   function level(tab) {
     if (!access) return 'edit';
-    if (SUPER_ONLY_TABS.has(tab)) return access.isSuperAdmin ? 'edit' : 'none';
+    if (SUPER_ONLY_TABS.has(tab)) return access.isSuperAdmin || access.canManageRoles ? 'edit' : 'none';
     if (access.isSuperAdmin) return 'edit';
     const key = TAB_ITEM[tab];
     if (!key) return 'none';
@@ -96,6 +105,8 @@
     get loaded() { return access !== null; },
     get isSuper() { return !access || access.isSuperAdmin; },
     get roles() { return access ? access.roles : []; },
+    /** 'all' = sve role (Super admin), 'dms' = samo dodela DMS rola (grupa DMS-Admins) */
+    get rolesScope() { return !access || access.isSuperAdmin ? 'all' : (access.rolesScope || 'none'); },
     level,
     canView(tab) { return level(tab) !== 'none'; },
     canEdit(tab) { return level(tab) === 'edit'; },
