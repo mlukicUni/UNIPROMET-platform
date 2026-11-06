@@ -5767,7 +5767,7 @@ let cctvSearchQuery = '';
 let cctvRecorderFilter = 'all';
 let cctvViewMode = 'table';
 let cctvCurrentPage = 1;
-let cctvPageSize = 12;
+let cctvPageSize = 26;
 let cctvLiveSubStreamEnabled = true;
 
 async function fetchCctvCameras() {
@@ -6174,7 +6174,7 @@ function goToCctvPage(page) {
 window.goToCctvPage = goToCctvPage;
 
 function changeCctvPageSize(newSize) {
-  cctvPageSize = parseInt(newSize, 10) || 12;
+  cctvPageSize = parseInt(newSize, 10) || 26;
   cctvCurrentPage = 1;
   document.querySelectorAll('#cctv-page-size-btns .btn-page-size').forEach(btn => {
     const s = parseInt(btn.getAttribute('data-size'), 10);

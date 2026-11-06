@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.1] - 2026-11-06
+- Video nadzor → Lista kamera: opcija „Po strani“ umesto 20 sada nudi 26, i 26 je podrazumevano (ranije 12)
+
 ## [1.3.0] - 2026-11-06
 - Korisnici i role: članovi AD grupe „DMS-Admins“ vide stranicu „Korisnici i role“, ali samo DMS role (obične role bez ijedne dozvole van sekcije DMS Analiza podataka i bez kamera). Mogu da ih prave, kopiraju, menjaju, brišu i dodeljuju korisnicima i AD grupama; u matrici dozvola vide samo sekciju DMS, a server odbija svaku dozvolu van nje. Pristup kamerama, grupe kamera, provera korisnika, evidencija i sve ostale role ostaju samo Super adminu. Ako Super admin DMS roli doda dozvolu van DMS-a, DMS administrator je više ne vidi
 - Osvežavanje grupa korisnika iz Microsoft Entra: spisak grupa se zamenjuje novim, pa grupa iz koje je korisnik uklonjen nestaje i sa njom prava (ranije su se grupe samo dodavale, a uklonjene ostajale do nove prijave)
