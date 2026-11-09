@@ -205,9 +205,12 @@ inventoryRouter.post('/cameras/probe', async (req: Request, res: Response) => {
 // POST /api/inventory/cameras - Add new camera to SQLite inventory
 inventoryRouter.post('/cameras', (req: Request, res: Response) => {
   try {
-    const { ip, name, recorder, position, type, subnet, note, isReserved } = req.body;
+    const { ip, name, recorder, position, type, subnet, note, isReserved, credProfile } = req.body;
     if (!ip || !ip.trim()) {
       return res.status(400).json({ error: 'IP adresa ili oznaka slota je obavezna' });
+    }
+    if (credProfile !== undefined && credProfile !== 1 && credProfile !== 2) {
+      return res.status(400).json({ error: 'Lozinka kamere mora biti 1 ili 2' });
     }
 
     const newItem = addCameraInventoryItem({
@@ -218,7 +221,8 @@ inventoryRouter.post('/cameras', (req: Request, res: Response) => {
       type: type || (ip.toLowerCase().includes('analog') ? 'Analogna' : 'IP Kamera'),
       subnet: subnet || (ip.includes('124.') ? '192.168.124.x' : ip.includes('125.') ? '192.168.125.x' : 'Ostalo'),
       note: note?.trim() || '',
-      isReserved: !!isReserved
+      isReserved: !!isReserved,
+      credProfile: credProfile === 2 ? 2 : 1
     });
 
     addServerLog('success', `Dodata nova kamera u SQLite bazu: ${newItem.name} (${newItem.ip})`, 'Inventory DB');
@@ -232,6 +236,10 @@ inventoryRouter.post('/cameras', (req: Request, res: Response) => {
 // PUT /api/inventory/cameras/:id - Update camera in SQLite inventory
 inventoryRouter.put('/cameras/:id', (req: Request, res: Response) => {
   try {
+    const credProfile = req.body?.credProfile;
+    if (credProfile !== undefined && credProfile !== 1 && credProfile !== 2) {
+      return res.status(400).json({ error: 'Lozinka kamere mora biti 1 ili 2' });
+    }
     const updated = updateCameraInventoryItem(req.params.id, req.body);
     if (!updated) {
       return res.status(404).json({ error: 'Camera record not found' });

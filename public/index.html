@@ -5386,6 +5386,32 @@
             </div>
           </div>
 
+          <!-- Section: Pristup kameri (koja od dve lozinke važi) -->
+          <div class="modal-section-badge">
+            <i data-lucide="key-round"></i>
+            <span>Pristup Kameri</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">
+              <i data-lucide="lock"></i>
+              <span>Lozinka koju kamera koristi <span class="text-danger">*</span></span>
+            </label>
+            <div class="sw-radio-pills-group" id="inv-camera-cred-group" role="radiogroup" aria-label="Lozinka kamere">
+              <label class="sw-radio-pill" data-cred="1" style="cursor: pointer;">
+                <input type="radio" name="inv-camera-cred" value="1">
+                <i data-lucide="key-round"></i>
+                <span>Lozinka 1</span>
+              </label>
+              <label class="sw-radio-pill" data-cred="2" style="cursor: pointer;">
+                <input type="radio" name="inv-camera-cred" value="2">
+                <i data-lucide="key-round"></i>
+                <span>Lozinka 2</span>
+              </label>
+            </div>
+            <span class="text-dim" style="display: block; margin-top: 6px; font-size: 0.76rem;">Platforma ovom lozinkom pristupa kameri za prikaz uživo i snimke. Ako je izbor pogrešan, kamera se neće prikazivati.</span>
+          </div>
+
           <!-- Section 2: Položaj u fabrici -->
           <div class="modal-section-badge">
             <i data-lucide="map-pin"></i>
@@ -6174,28 +6200,13 @@
                 <i data-lucide="scissors"></i>
                 <span>Preuzmi isečak snimka</span>
               </button>
-              <button type="button" class="btn-playback-action" id="btn-playback-copy-rtsp" title="Kopiraj RTSP Playback link za VLC player">
-                <i data-lucide="copy"></i>
-                <span>RTSP za VLC</span>
-              </button>
             </div>
           </div>
         </div>
 
       </div>
 
-      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; padding: 12px 20px;">
-        <div style="display: flex; gap: 8px; align-items: center;" id="live-footer-actions">
-          <button type="button" class="btn-sched-action btn-sched-edit" id="btn-live-copy-rtsp" title="Kopiraj puni RTSP link sa lozinkom za VLC">
-            <i data-lucide="copy"></i>
-            <span>Kopiraj RTSP za VLC</span>
-          </button>
-          <a href="#" target="_blank" rel="noopener" class="btn-sched-action btn-sched-run" id="link-live-web-portal" title="Otvori web portal kamere u novom tabu">
-            <i data-lucide="external-link"></i>
-            <span>Web Portal</span>
-          </a>
-        </div>
-
+      <div class="modal-footer" style="display: flex; justify-content: flex-end; align-items: center; padding: 12px 20px;">
         <button type="button" class="btn-modal-cancel" id="btn-cancel-live-modal">Zatvori</button>
       </div>
     </div>

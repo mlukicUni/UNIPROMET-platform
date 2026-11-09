@@ -12,6 +12,10 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.2] - 2026-11-09
+- Evidencija kamera (Mreža → Kamere): u formi za dodavanje i izmenu kamere novo polje „Lozinka koju kamera koristi“ (Lozinka 1 / Lozinka 2). Pri dodavanju nove kamere izbor je obavezan; pri izmeni je unapred izabrana trenutna lozinka i može da se promeni. Promena lozinke briše raniji rezultat provere pristupa
+- Video nadzor → pregled pojedinačne kamere: uklonjena dugmad „Kopiraj RTSP za VLC“ i „Web Portal“ iz donjeg dela prozora, kao i „RTSP za VLC“ u režimu snimaka
+
 ## [1.3.1] - 2026-11-06
 - Video nadzor → Lista kamera: opcija „Po strani“ umesto 20 sada nudi 26, i 26 je podrazumevano (ranije 12)
 

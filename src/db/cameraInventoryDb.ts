@@ -119,11 +119,13 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
   const cleanSubnet = item.subnet || (cleanIp.includes('124.') ? '192.168.124.x' : cleanIp.includes('125.') ? '192.168.125.x' : 'Ostalo');
   const cleanNote = item.note?.trim() || '';
   const isReserved = item.isReserved ? 1 : 0;
+  // Koja od dve lozinke za kamere važi za ovu kameru (1 ili 2)
+  const credProfile = item.credProfile === 2 ? 2 : 1;
 
   const stmt = db.prepare(`
     INSERT INTO cameras (
-      id, ip, name, recorder, position, type, subnet, note, is_reserved, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, ip, name, recorder, position, type, subnet, note, is_reserved, cred_profile, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -136,6 +138,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     cleanSubnet,
     cleanNote,
     isReserved,
+    credProfile,
     now,
     now
   );
@@ -150,6 +153,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     subnet: cleanSubnet,
     note: cleanNote,
     isReserved: !!item.isReserved,
+    credProfile,
     createdAt: now,
     updatedAt: now
   };
@@ -168,11 +172,15 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     id: existing.id,
     updatedAt: now
   };
+  merged.credProfile = merged.credProfile === 2 ? 2 : 1;
+  // Ručno promenjena lozinka: ranije zabeležen rezultat provere više ne važi
+  const profileChanged = merged.credProfile !== (existing.credProfile || 1);
+  if (profileChanged) merged.authStatus = 'untested';
 
   const stmt = db.prepare(`
     UPDATE cameras SET
       ip = ?, name = ?, recorder = ?, position = ?, type = ?,
-      subnet = ?, note = ?, is_reserved = ?, updated_at = ?
+      subnet = ?, note = ?, is_reserved = ?, cred_profile = ?, auth_status = ?, updated_at = ?
     WHERE id = ?
   `);
 
@@ -185,6 +193,8 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     merged.subnet.trim(),
     merged.note || '',
     merged.isReserved ? 1 : 0,
+    merged.credProfile,
+    merged.authStatus || 'untested',
     now,
     id
   );
