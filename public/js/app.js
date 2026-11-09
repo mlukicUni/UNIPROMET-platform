@@ -5287,6 +5287,21 @@ function goToInvPage(page) {
 }
 window.goToInvPage = goToInvPage;
 
+/** Izbor lozinke kamere (1 ili 2); null = ništa nije izabrano (obavezno pri dodavanju nove kamere) */
+function setCameraCredChoice(value) {
+  document.querySelectorAll('#inv-camera-cred-group .sw-radio-pill').forEach(pill => {
+    const input = pill.querySelector('input');
+    const on = value !== null && Number(pill.dataset.cred) === Number(value);
+    if (input) input.checked = on;
+    pill.classList.toggle('active-yes', on);
+  });
+}
+
+function getCameraCredChoice() {
+  const checked = document.querySelector('#inv-camera-cred-group input[name="inv-camera-cred"]:checked');
+  return checked ? Number(checked.value) : null;
+}
+
 function openAddCameraModal() {
   const modal = document.getElementById('modal-inv-camera');
   const title = document.getElementById('modal-inv-camera-title');
@@ -5304,6 +5319,7 @@ function openAddCameraModal() {
   if (posInput) posInput.value = '';
   if (recInput) recInput.value = '';
   if (noteInput) noteInput.value = '';
+  setCameraCredChoice(null);
 
   if (modal) modal.style.display = 'flex';
   if (window.lucide) window.lucide.createIcons();
@@ -5330,6 +5346,7 @@ function openEditCameraModal(id) {
   if (posInput) posInput.value = cam.position;
   if (recInput) recInput.value = cam.recorder;
   if (noteInput) noteInput.value = cam.note || '';
+  setCameraCredChoice(cam.credProfile === 2 ? 2 : 1);
 
   if (modal) modal.style.display = 'flex';
   if (window.lucide) window.lucide.createIcons();
@@ -5349,7 +5366,13 @@ async function handleCameraFormSubmit(e) {
     return;
   }
 
-  const payload = { ip, position, recorder, note };
+  const credProfile = getCameraCredChoice();
+  if (!credProfile) {
+    showToast('Izaberite koju lozinku kamera koristi (Lozinka 1 ili Lozinka 2)', 'error');
+    return;
+  }
+
+  const payload = { ip, position, recorder, note, credProfile };
 
   try {
     const url = id ? `/api/inventory/cameras/${id}` : '/api/inventory/cameras';
@@ -5519,6 +5542,7 @@ function setupInventoryCamerasEventListeners() {
     returnToUnrecordedCamerasList();
   });
   document.getElementById('form-inv-camera')?.addEventListener('submit', handleCameraFormSubmit);
+  document.getElementById('inv-camera-cred-group')?.addEventListener('change', () => setCameraCredChoice(getCameraCredChoice()));
 
   document.getElementById('btn-close-delete-inv-modal')?.addEventListener('click', () => {
     document.getElementById('modal-delete-inv-camera').style.display = 'none';
@@ -7684,13 +7708,6 @@ function openCameraLiveModal(ip, name, vendor) {
   document.getElementById('btn-stream-quality-sub')?.classList.add('active');
   document.getElementById('btn-stream-quality-main')?.classList.remove('active');
 
-  // Web portal link
-  const linkWeb = document.getElementById('link-live-web-portal');
-  if (linkWeb) {
-    linkWeb.href = `http://${ip}/`;
-    linkWeb.target = '_blank';
-  }
-
   // Loader state
   const loader = document.getElementById('live-stream-loader');
   if (loader) {
@@ -8091,7 +8108,6 @@ function setupLiveStreamEventListeners() {
   document.getElementById('btn-live-toggle-pause')?.addEventListener('click', toggleLiveStreamPause);
   document.getElementById('btn-live-take-snapshot')?.addEventListener('click', takeLiveSnapshotDownload);
   document.getElementById('btn-live-fullscreen')?.addEventListener('click', toggleLiveFullscreen);
-  document.getElementById('btn-live-copy-rtsp')?.addEventListener('click', copyLiveRtspUrl);
 
   // Esc key closes live modal if open
   document.addEventListener('keydown', (e) => {
@@ -8116,7 +8132,6 @@ let currentPlaybackSegments = [];
 let currentPlaybackDate = '';
 let currentPlaybackHour = 0; // 0..24
 let currentPlaybackSpeed = 1;
-let currentPlaybackRtsp = '';
 let currentPlaybackMp4Url = '';
 let isPlaybackNeedleDragging = false;
 let playbackBaseEpoch = 0;
@@ -8332,7 +8347,6 @@ async function startPlaybackAtIso(startTimeIso, endTimeIso) {
       throw new Error(data.error || 'Nije moguće pokrenuti playback strim');
     }
 
-    currentPlaybackRtsp = data.rtspUrl;
     currentPlaybackMp4Url = data.streamMp4Url;
 
     if (textPlay) textPlay.textContent = 'Pauza';
@@ -8643,16 +8657,6 @@ function setupPlaybackEventListeners() {
       const speed = parseFloat(pill.getAttribute('data-speed'));
       if (speed) setPlaybackSpeed(speed);
     });
-  });
-
-  // Copy RTSP Playback URL
-  document.getElementById('btn-playback-copy-rtsp')?.addEventListener('click', () => {
-    if (currentPlaybackRtsp) {
-      copyCustomUrl(currentPlaybackRtsp);
-      showToast('✓ RTSP Playback link kopiran u privremenu memoriju za VLC!', 'success');
-    } else {
-      showToast('Nema aktivnog RTSP playback linka', 'info');
-    }
   });
 
   // Clip Export Modal Controls
