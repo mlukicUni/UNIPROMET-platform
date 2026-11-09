@@ -751,3 +751,39 @@
   color: #38bdf8;
 }
 
+
+/* Greška video toka: objašnjenje i tačna poruka umesto kruga za učitavanje */
+.live-stream-loader.is-error .live-spinner-ring {
+  display: none;
+}
+
+.live-stream-loader.is-error #live-loader-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  max-width: 560px;
+  padding: 0 20px;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.live-error-title {
+  color: #f87171;
+  font-size: 0.95rem;
+}
+
+.live-error-explain {
+  color: #e2e8f0;
+}
+
+.live-error-raw {
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  padding: 6px 10px;
+  word-break: break-word;
+}

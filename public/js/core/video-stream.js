@@ -11,6 +11,8 @@ class VideoStream extends VideoRTC {
     }
 
     set divError(value) {
+        // Tačna poruka greške ide i spolja, pre filtriranja ispod (prozor pregleda kamere je prikazuje)
+        this.dispatchEvent(new CustomEvent('stream-error', { detail: { source: 'server', message: String(value || '') } }));
         const state = this.querySelector('.mode').innerText;
         if (state !== 'loading') return;
         if (value && (value.includes('DESCRIBE') || value.includes('453') || value.includes('400'))) {

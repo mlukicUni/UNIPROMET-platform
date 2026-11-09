@@ -7810,6 +7810,43 @@ function stopLiveStreamClock() {
   }
 }
 
+/**
+ * Objašnjenje greške video toka na srpskom; tačna poruka (sa servera ili iz pretraživača) se prikazuje ispod.
+ */
+function explainLiveStreamError(message, credProfile) {
+  const m = String(message || '');
+  if (/user\/pass|401|unauthori[sz]ed|wrong.*pass|password|auth/i.test(m)) {
+    return `Kamera je odbila lozinku (Lozinka ${credProfile === 2 ? 2 : 1}). U Mreža → Kamere proverite koju lozinku kamera koristi. Ako je lozinka tačna, kamera je možda privremeno zaključala adresu servera zbog ranijih pogrešnih pokušaja.`;
+  }
+  if (/codecs? not matched|h\.?265|hevc|SRC_NOT_SUPPORTED|MEDIA_ERR_DECODE|not supported/i.test(m)) {
+    return 'Pretraživač ne može da prikaže video format kamere (najčešće H.265). U podešavanjima kamere prebacite video na H.264.';
+  }
+  if (/timeout|timed out|dial tcp|connection refused|no route|unreachable|EOF|reset by peer/i.test(m)) {
+    return 'Kamera ne odgovara na video port (RTSP 554). Proverite da li je uključena i dostupna na mreži.';
+  }
+  if (/404|not found/i.test(m)) {
+    return 'Kamera nema traženi video tok (putanja ne postoji na kameri).';
+  }
+  return 'Greška pri povezivanju sa kamerom.';
+}
+
+/** Prikaz greške u prozoru pregleda: objašnjenje + tačna poruka koju je javila kamera / video server / pretraživač */
+function showLiveStreamError(ip, detail) {
+  if (!liveStreamActive || currentLiveCamIp !== ip) return;
+  const loader = document.getElementById('live-stream-loader');
+  const text = document.getElementById('live-loader-text');
+  if (!loader || !text) return;
+  const raw = (detail && detail.message) ? detail.message : 'Nepoznata greška';
+  const where = detail && detail.source === 'browser' ? 'Pretraživač' : 'Video server';
+  const credProfile = currentLiveCamInfo && currentLiveCamInfo.ip === ip ? currentLiveCamInfo.credProfile : 1;
+  loader.style.display = 'flex';
+  loader.classList.add('is-error');
+  text.innerHTML = `
+    <strong class="live-error-title">Kamera se ne može prikazati</strong>
+    <span class="live-error-explain">${escapeHtml(explainLiveStreamError(raw, credProfile))}</span>
+    <span class="live-error-raw">${escapeHtml(where)}: ${escapeHtml(raw)}${detail && detail.codecs ? ' (kodeci: ' + escapeHtml(detail.codecs) + ')' : ''}</span>`;
+}
+
 async function startLiveStreaming() {
   stopLiveStreaming();
   liveStreamActive = true;
@@ -7820,6 +7857,12 @@ async function startLiveStreaming() {
 
   const videoWrap = document.getElementById('live-camera-video-wrap');
   const loader = document.getElementById('live-stream-loader');
+  if (loader && loader.classList.contains('is-error')) {
+    // Novi pokušaj posle greške: vrati prikaz povezivanja
+    loader.classList.remove('is-error');
+    const loaderText = document.getElementById('live-loader-text');
+    if (loaderText) loaderText.textContent = `Povezivanje sa kamerom (${ip})...`;
+  }
   const osdLatency = document.getElementById('live-osd-latency');
   const osdFps = document.getElementById('live-osd-fps');
 
@@ -7832,6 +7875,8 @@ async function startLiveStreaming() {
       currentLiveCamInfo = liveInfo;
     } catch (e) {
       console.error('Failed to fetch camera live info:', e);
+      showLiveStreamError(ip, { source: 'server', message: `Podaci za prikaz kamere nisu učitani: ${e.message}` });
+      return;
     }
   }
 
@@ -7863,6 +7908,11 @@ async function startLiveStreaming() {
     videoStream.mode = 'webrtc,mse,mp4,mjpeg';
 
     const tStart = Date.now();
+
+    // Tačna greška video toka (lozinka, kodek, mreža) se prikazuje u prozoru
+    videoStream.addEventListener('stream-error', (e) => {
+      if (videoWrap.contains(videoStream)) showLiveStreamError(ip, e.detail);
+    });
 
     // First append to DOM so connectedCallback is invoked properly
     videoWrap.appendChild(videoStream);

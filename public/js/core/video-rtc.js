@@ -279,6 +279,13 @@ export class VideoRTC extends HTMLElement {
                 networkState: this.video.networkState,
                 currentTime: this.video.currentTime
             });
+            this.dispatchEvent(new CustomEvent('stream-error', {
+                detail: {
+                    source: 'browser',
+                    message: `${err ? MEDIA_ERRORS[err.code] : 'unknown'}${err && err.message ? ': ' + err.message : ''}`,
+                    codecs: this.mseCodecs || ''
+                }
+            }));
             if (this.ws) this.ws.close(); // run reconnect for broken MSE stream
         });
 
