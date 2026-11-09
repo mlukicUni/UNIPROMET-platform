@@ -4,7 +4,8 @@ import {
   getCameraInventoryById,
   addCameraInventoryItem,
   updateCameraInventoryItem,
-  deleteCameraInventoryItem
+  deleteCameraInventoryItem,
+  DuplicateCameraIpError
 } from '../db/cameraInventoryDb';
 import { getCameraCredentials } from '../services/cameraLiveService';
 import {
@@ -228,6 +229,9 @@ inventoryRouter.post('/cameras', (req: Request, res: Response) => {
     addServerLog('success', `Dodata nova kamera u SQLite bazu: ${newItem.name} (${newItem.ip})`, 'Inventory DB');
     res.status(201).json({ success: true, message: 'Kamera uspešno dodata u evidenciju', camera: newItem });
   } catch (err: any) {
+    if (err instanceof DuplicateCameraIpError) {
+      return res.status(409).json({ error: err.message, existingId: err.existing.id });
+    }
     console.error('Add camera error:', err);
     res.status(500).json({ error: 'Failed to add camera', details: err?.message });
   }
@@ -248,6 +252,9 @@ inventoryRouter.put('/cameras/:id', (req: Request, res: Response) => {
     addServerLog('info', `Ažurirani podaci o kameri: ${updated.name} (${updated.ip})`, 'Inventory DB');
     res.json({ success: true, message: 'Podaci o kameri uspešno ažurirani', camera: updated });
   } catch (err: any) {
+    if (err instanceof DuplicateCameraIpError) {
+      return res.status(409).json({ error: err.message, existingId: err.existing.id });
+    }
     console.error('Update camera error:', err);
     res.status(500).json({ error: 'Failed to update camera', details: err?.message });
   }

@@ -12,6 +12,10 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.3] - 2026-11-09
+- Pregled kamere uživo: kada kamera ne može da se prikaže, u prozoru se umesto beskonačnog „Povezivanje…“ prikazuje greška — objašnjenje na srpskom (odbijena lozinka, nepodržan video format npr. H.265, kamera ne odgovara na mreži, nepostojeći video tok) i tačna poruka koju je javio video server ili pretraživač
+- Evidencija kamera: ista kamera (ista IP adresa) više ne može biti upisana dva puta. Dodavanje kamere sa adresom koja je već u evidenciji, ili izmena adrese u adresu druge kamere, odbija se uz poruku koja kamera već koristi tu adresu
+
 ## [1.3.2] - 2026-11-09
 - Evidencija kamera (Mreža → Kamere): u formi za dodavanje i izmenu kamere novo polje „Lozinka koju kamera koristi“ (Lozinka 1 / Lozinka 2). Pri dodavanju nove kamere izbor je obavezan; pri izmeni je unapred izabrana trenutna lozinka i može da se promeni. Promena lozinke briše raniji rezultat provere pristupa
 - Video nadzor → pregled pojedinačne kamere: uklonjena dugmad „Kopiraj RTSP za VLC“ i „Web Portal“ iz donjeg dela prozora, kao i „RTSP za VLC“ u režimu snimaka

@@ -75,6 +75,25 @@ export function getCameraInventoryByIp(ip: string): CameraInventoryItem | undefi
   return row ? rowToItem(row) : undefined;
 }
 
+/**
+ * Druga kamera sa istom IP adresom (ili oznakom slota), bez obzira na razmake i velika/mala slova.
+ * excludeId: zapis koji se upravo menja (ne računa se kao duplikat samog sebe).
+ */
+export function findCameraWithSameIp(ip: string, excludeId?: string): CameraInventoryItem | undefined {
+  initSchema();
+  const row = getDb()
+    .prepare('SELECT * FROM cameras WHERE LOWER(TRIM(ip)) = LOWER(TRIM(?)) AND id <> ? LIMIT 1')
+    .get(ip || '', excludeId || '') as CameraRow | undefined;
+  return row ? rowToItem(row) : undefined;
+}
+
+export class DuplicateCameraIpError extends Error {
+  constructor(public existing: CameraInventoryItem) {
+    super(`Kamera sa IP adresom ${existing.ip} je već u evidenciji: ${existing.position || existing.name} (snimač: ${existing.recorder || 'nedodeljeno'}). Ista kamera ne može biti upisana dva puta.`);
+    this.name = 'DuplicateCameraIpError';
+  }
+}
+
 export function updateCameraAuthProfile(
   ip: string,
   credProfile: number,
@@ -112,6 +131,8 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
   const now = new Date().toISOString();
   const newId = `cam-${String(maxNum + 1).padStart(4, '0')}`;
   const cleanIp = item.ip.trim();
+  const duplicate = findCameraWithSameIp(cleanIp);
+  if (duplicate) throw new DuplicateCameraIpError(duplicate);
   const cleanName = item.name?.trim() || item.position?.trim() || `Kamera ${cleanIp}`;
   const cleanRecorder = item.recorder?.trim() || 'Nedodeljeno';
   const cleanPosition = item.position?.trim() || 'Pozicija kamere';
@@ -173,6 +194,8 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     updatedAt: now
   };
   merged.credProfile = merged.credProfile === 2 ? 2 : 1;
+  const duplicate = findCameraWithSameIp(merged.ip, existing.id);
+  if (duplicate) throw new DuplicateCameraIpError(duplicate);
   // Ručno promenjena lozinka: ranije zabeležen rezultat provere više ne važi
   const profileChanged = merged.credProfile !== (existing.credProfile || 1);
   if (profileChanged) merged.authStatus = 'untested';
