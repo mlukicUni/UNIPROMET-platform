@@ -824,3 +824,9 @@
     flex-wrap: wrap;
   }
 }
+
+/* Akcija uključena kroz nivo „Izmena“ za celu sekciju (DMS): prikaz, ne može da se isključi pojedinačno */
+.ar-chip.inh {
+  cursor: default;
+  opacity: 0.75;
+}

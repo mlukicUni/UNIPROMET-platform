@@ -77,6 +77,9 @@ const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
 /** AD grupa čiji članovi dodeljuju DMS role (poređenje po imenu, bez obzira na velika/mala slova) */
 export const DMS_ROLE_ADMIN_GROUP = 'DMS-Admins';
 
+/** Sekcije u kojima nivo "Izmena" na celoj sekciji uključuje sve posebne akcije */
+export const FULL_ACCESS_SECTIONS = new Set(['dms']);
+
 const inDmsSection = (key: string) => key === 'dms' || key.startsWith('dms.');
 
 /** Da li su sve dozvole (i posebne akcije) iz sekcije DMS */
@@ -177,6 +180,13 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
       p.actions.forEach(a => cur.actions.add(a));
     }
     p.actions.forEach(a => allActions.add(a));
+  }
+
+  // DMS: nivo "Izmena" na celoj sekciji znači punu kontrolu, pa uključuje i sve posebne akcije sekcije
+  // (učitavanje izveštaja, slanje mejlova, slanje podsetnika) bez posebnog štikliranja
+  for (const sec of PERMISSION_CATALOG.filter(x => FULL_ACCESS_SECTIONS.has(x.key))) {
+    if (levelRank(grants.get(sec.key)?.level || 'none') < levelRank('edit')) continue;
+    for (const item of sec.items) for (const act of item.actions) allActions.add(`${item.key}:${act.key}`);
   }
 
   const groupIds = [...new Set(camRules.filter(c => c.scope === 'group').map(c => c.targetId))];

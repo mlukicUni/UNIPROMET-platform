@@ -25,3 +25,6 @@ scratch/
 
 # Samostalna DMS aplikacija kolege (zip sadrzi .env i prave podatke): nikada u git
 DMS - analiza podataka*
+
+# Lična podešavanja Claude Code-a (ne idu u git)
+.claude/settings.local.json

@@ -457,8 +457,13 @@
         const eff = maxLvl(ownLvl, secLvl);
         const inh = rank(secLvl) > rank(ownLvl) ? secLvl : null;
 
+        // DMS: "Izmena" na celoj sekciji uključuje sve akcije (isto pravilo kao na serveru, FULL_ACCESS_SECTIONS)
+        const sectionFull = sec.key === 'dms' && secLvl === 'edit';
         const actionsHtml = item.actions.map(a => {
           const full = `${item.key}:${a.key}`;
+          if (sectionFull) {
+            return `<span class="ar-chip on inh" title="Uključeno: nivo Izmena za celu sekciju ${esc(sec.label)} daje sve akcije"><i data-lucide="check"></i>${esc(a.label)}</span>`;
+          }
           const on = !!own && own.actions.has(full);
           const disabled = eff === 'none';
           return `<button type="button" class="ar-chip ${on ? 'on' : ''} ${disabled ? 'disabled' : ''}" data-action-key="${esc(full)}" data-item-key="${esc(item.key)}" title="Posebna akcija: ${esc(a.label)}">${on ? '<i data-lucide="check"></i>' : ''}${esc(a.label)}</button>`;

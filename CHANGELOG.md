@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.4] - 2026-11-10
+- DMS Analiza podataka: rola sa nivoom „Izmena“ na celoj sekciji sada ima punu kontrolu, uključujući učitavanje i brisanje izveštaja, slanje mejlova i slanje podsetnika (ranije su se te akcije morale posebno štiklirati, pa korisnici sa punim pristupom nisu mogli da učitaju izveštaj). U editoru rola te akcije se tada prikazuju kao uključene. Nivo „Pregled“ i dalje ne dozvoljava učitavanje; ostale sekcije platforme su nepromenjene
+
 ## [1.3.3] - 2026-11-09
 - Pregled kamere uživo: kada kamera ne može da se prikaže, u prozoru se umesto beskonačnog „Povezivanje…“ prikazuje greška — objašnjenje na srpskom (odbijena lozinka, nepodržan video format npr. H.265, kamera ne odgovara na mreži, nepostojeći video tok) i tačna poruka koju je javio video server ili pretraživač
 - Evidencija kamera: ista kamera (ista IP adresa) više ne može biti upisana dva puta. Dodavanje kamere sa adresom koja je već u evidenciji, ili izmena adrese u adresu druge kamere, odbija se uz poruku koja kamera već koristi tu adresu
