@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.5] - 2026-11-13
+- DMS Analiza podataka → Zakazani mailovi: novi automatski servis „DMS: zakazani mailovi“ u sekciji SERVER → Automatski servisi. Kad je isključen, zakazani mailovi se ne šalju automatski po terminu. Dugme „Pokreni sada“ i dalje šalje mailove kojima je došao termin i javlja koliko ih je poslato
+
 ## [1.3.4] - 2026-11-10
 - DMS Analiza podataka: rola sa nivoom „Izmena“ na celoj sekciji sada ima punu kontrolu, uključujući učitavanje i brisanje izveštaja, slanje mejlova i slanje podsetnika (ranije su se te akcije morale posebno štiklirati, pa korisnici sa punim pristupom nisu mogli da učitaju izveštaj). U editoru rola te akcije se tada prikazuju kao uključene. Nivo „Pregled“ i dalje ne dozvoljava učitavanje; ostale sekcije platforme su nepromenjene
 

@@ -312,6 +312,46 @@ export function seedDefaultScheduledServices(): void {
 
     console.log('[SQLite] Inicijalizovan DMS servis podsetnika (8., 9., 10. u mesecu u 08:00) u tabeli scheduled_services.');
   }
+
+  // 9. DMS Analiza podataka: zakazani mailovi koje korisnici podešavaju (termini su u DMS sekciji, ne ovde)
+  const dmsMailsService = db.prepare("SELECT id FROM scheduled_services WHERE id = 'sched-dms-mails' OR service_key = 'dms_scheduled_mails'").get();
+  if (!dmsMailsService) {
+    const now = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO scheduled_services (
+        id, service_key, name, description, target_type, cron_times,
+        weekdays_only, is_enabled, recipients, last_run_at, last_run_status,
+        last_run_message, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      'sched-dms-mails',
+      'dms_scheduled_mails',
+      'DMS: zakazani mailovi (korisnički termini)',
+      'Svaki minut proverava zakazane DMS mailove i šalje one kojima je došao termin. Termini se podešavaju u sekciji DMS. Isključivanjem se zaustavlja slanje svih DMS zakazanih mailova.',
+      'custom',
+      JSON.stringify([]),
+      0,
+      1,
+      JSON.stringify([]),
+      null,
+      'Spremno',
+      'Proverava se svakog minuta',
+      now,
+      now
+    );
+
+    console.log('[SQLite] Inicijalizovan servis za DMS zakazane mailove u tabeli scheduled_services.');
+  }
+}
+
+/**
+ * Returns whether a scheduled service is enabled, looked up by its service_key.
+ * Returns null if the service row does not exist.
+ */
+export function isScheduledServiceEnabled(service_key: string): boolean | null {
+  const db = getDb();
+  const row = db.prepare('SELECT is_enabled FROM scheduled_services WHERE service_key = ?').get(service_key) as { is_enabled: number } | undefined;
+  return row ? row.is_enabled === 1 : null;
 }
 
 /**
