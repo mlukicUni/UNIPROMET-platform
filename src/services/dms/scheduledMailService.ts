@@ -4,6 +4,7 @@ import {
   listScheduledMails, getScheduledMail, saveScheduledMail, deleteScheduledMail
 } from '../../db/dmsDb';
 import { sendDmsMail, cleanRecipients } from './dmsMail';
+import { isScheduledServiceEnabled } from '../../db/scheduledServicesDb';
 
 /**
  * Zakazani mailovi koje korisnik sam podešava (vreme, naslov, sadržaj, primaoci).
@@ -134,9 +135,17 @@ export async function sendNow(id: string) {
   return { success: true, recipients: item.recipients };
 }
 
-/** Šalje sve zakazane mailove čiji je termin prošao */
-export async function runDue(): Promise<void> {
+/**
+ * Proverava i šalje zakazane mailove kojima je došao termin.
+ * Ako je servis "DMS: zakazani mailovi" isključen u sekciji SERVER > Automatski servisi, automatska provera se preskače.
+ * `manual: true` (dugme "Pokreni sada") radi i kada je servis isključen.
+ * Vraća broj poslatih mailova.
+ */
+export async function runDue(options: { manual?: boolean } = {}): Promise<number> {
+  if (!options.manual && isScheduledServiceEnabled('dms_scheduled_mails') === false) return 0;
+
   const now = new Date();
+  let sent = 0;
   for (const item of listScheduledMails()) {
     if (!item.enabled || busy.has(item.id)) continue;
     // Termin je "pao" ako je posle poslednjeg slanja (ili kreiranja), a već je prošao
@@ -147,6 +156,7 @@ export async function runDue(): Promise<void> {
     busy.add(item.id);
     try {
       await sendItem(item);
+      sent++;
       item.lastSentAt = now.toISOString();
       if (item.schedule.type === 'once') item.enabled = false;
       saveScheduledMail(item);
@@ -156,6 +166,7 @@ export async function runDue(): Promise<void> {
       busy.delete(item.id);
     }
   }
+  return sent;
 }
 
 export function startScheduler(): void {

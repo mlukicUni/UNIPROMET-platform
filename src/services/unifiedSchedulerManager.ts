@@ -20,6 +20,7 @@ import { checkAllRecordersStatus } from './recorderScanner';
 import { serverLogs } from '../routes/api';
 import { getAzureSecretExpiry, sendAzureSecretExpiryEmail } from './secretExpiryService';
 import { sendTaskReminder, isReminderDay } from './dms/reminderService';
+import { runDue as runDmsScheduledMails } from './dms/scheduledMailService';
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 const lastTriggeredKeys = new Set<string>();
@@ -284,6 +285,14 @@ export async function executeService(service: ScheduledServiceRecord, manual = f
       updateServiceLastRun(service.id, 'Podsetnik poslat (250 OK)', msg);
       serverLogs.push({ id: serverLogs.length + 1, timestamp: new Date().toISOString(), level: 'success', message: `${triggerPrefix} ${msg}`, source: 'Scheduler' });
       return { success: true, serviceName: service.name, details: result };
+    }
+
+    if (service.service_key === 'dms_scheduled_mails') {
+      // Automatska provera ide svakog minuta iz DMS modula (scheduledMailService); ovde se radi ručno pokretanje
+      const sent = await runDmsScheduledMails({ manual: true });
+      const msg = sent > 0 ? `Poslato DMS zakazanih mailova: ${sent}` : 'Nema DMS mailova kojima je došao termin.';
+      updateServiceLastRun(service.id, 'Izvršeno', msg);
+      return { success: true, serviceName: service.name, sent, message: msg };
     }
 
     // Default fallback
