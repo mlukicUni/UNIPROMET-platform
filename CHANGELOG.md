@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.6] - 2026-11-13
+- Korisnici i role: nova posebna akcija „Upravljanje DMS rolama“ (DMS Analiza podataka → Korisnici i službe). Rola sa ovom akcijom daje isto što i članstvo u AD grupi DMS-Admins: stranicu „Korisnici i role“ ograničenu na DMS role (pravljenje, izmena, brisanje, dodela). Akcija se mora izričito štiklirati; nivo „Izmena“ na celoj DMS sekciji je ne uključuje
+
 ## [1.3.5] - 2026-11-13
 - DMS Analiza podataka → Zakazani mailovi: novi automatski servis „DMS: zakazani mailovi“ u sekciji SERVER → Automatski servisi. Kad je isključen, zakazani mailovi se ne šalju automatski po terminu. Dugme „Pokreni sada“ i dalje šalje mailove kojima je došao termin i javlja koliko ih je poslato
 
