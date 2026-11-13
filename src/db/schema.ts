@@ -178,6 +178,12 @@ export function initSchema(): void {
     if (!colNames.has('nvr_track_id')) {
       db.exec("ALTER TABLE cameras ADD COLUMN nvr_track_id TEXT;");
     }
+    // Lokacija kamere je odvojena od snimača (kamera može biti na jednoj lokaciji, a vezana za snimač druge).
+    // Pri dodavanju kolone lokacija se jednom popunjava nazivom snimača; posle se menja nezavisno.
+    if (!colNames.has('location')) {
+      db.exec("ALTER TABLE cameras ADD COLUMN location TEXT;");
+      db.exec("UPDATE cameras SET location = recorder WHERE location IS NULL;");
+    }
   } catch (err) {
     console.warn('[DB Migration Warning] cameras schema update:', err);
   }

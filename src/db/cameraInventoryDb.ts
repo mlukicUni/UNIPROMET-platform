@@ -6,6 +6,8 @@ export interface CameraInventoryItem {
   ip: string;
   name: string;
   recorder: string;
+  /** Lokacija kamere (odvojeno od snimača); ako nije upisana, uzima se naziv snimača */
+  location?: string;
   position: string;
   type: 'IP Kamera' | 'Analogna';
   subnet: string;
@@ -23,6 +25,7 @@ interface CameraRow {
   ip: string;
   name: string;
   recorder: string | null;
+  location: string | null;
   position: string | null;
   type: string | null;
   subnet: string | null;
@@ -41,6 +44,7 @@ function rowToItem(row: CameraRow): CameraInventoryItem {
     ip: row.ip,
     name: row.name,
     recorder: row.recorder || 'Nedodeljeno',
+    location: row.location || row.recorder || 'Nedodeljeno',
     position: row.position || '',
     type: (row.type as 'IP Kamera' | 'Analogna') || 'IP Kamera',
     subnet: row.subnet || '',
@@ -135,6 +139,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
   if (duplicate) throw new DuplicateCameraIpError(duplicate);
   const cleanName = item.name?.trim() || item.position?.trim() || `Kamera ${cleanIp}`;
   const cleanRecorder = item.recorder?.trim() || 'Nedodeljeno';
+  const cleanLocation = item.location?.trim() || cleanRecorder;
   const cleanPosition = item.position?.trim() || 'Pozicija kamere';
   const cleanType = item.type || (cleanIp.toLowerCase().includes('analog') ? 'Analogna' : 'IP Kamera');
   const cleanSubnet = item.subnet || (cleanIp.includes('124.') ? '192.168.124.x' : cleanIp.includes('125.') ? '192.168.125.x' : 'Ostalo');
@@ -145,8 +150,8 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
 
   const stmt = db.prepare(`
     INSERT INTO cameras (
-      id, ip, name, recorder, position, type, subnet, note, is_reserved, cred_profile, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, ip, name, recorder, location, position, type, subnet, note, is_reserved, cred_profile, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -154,6 +159,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     cleanIp,
     cleanName,
     cleanRecorder,
+    cleanLocation,
     cleanPosition,
     cleanType,
     cleanSubnet,
@@ -169,6 +175,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     ip: cleanIp,
     name: cleanName,
     recorder: cleanRecorder,
+    location: cleanLocation,
     position: cleanPosition,
     type: cleanType as 'IP Kamera' | 'Analogna',
     subnet: cleanSubnet,
@@ -202,7 +209,7 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
 
   const stmt = db.prepare(`
     UPDATE cameras SET
-      ip = ?, name = ?, recorder = ?, position = ?, type = ?,
+      ip = ?, name = ?, recorder = ?, location = ?, position = ?, type = ?,
       subnet = ?, note = ?, is_reserved = ?, cred_profile = ?, auth_status = ?, updated_at = ?
     WHERE id = ?
   `);
@@ -211,6 +218,7 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     merged.ip.trim(),
     merged.name.trim(),
     merged.recorder.trim(),
+    (merged.location || '').trim() || merged.recorder.trim(),
     merged.position.trim(),
     merged.type,
     merged.subnet.trim(),
