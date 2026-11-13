@@ -20,6 +20,8 @@ export interface ItemDef {
   /** ID taba u interfejsu (data-tab) */
   tab: string;
   actions: ActionDef[];
+  /** Posebno pravo, ne stranica: ne nasleđuje se sa nivoa sekcije i ima samo Nema / Izmena */
+  explicitOnly?: boolean;
 }
 
 export interface SectionDef {
@@ -127,17 +129,15 @@ export const PERMISSION_CATALOG: SectionDef[] = [
           { key: 'mejl', label: 'Slanje mejlova korisnicima i službama' }
         ]
       },
-      {
-        key: 'dms.korisnici', label: 'Korisnici i službe', tab: 'dms_users',
-        // Stranica „Korisnici i role“ ograničena na DMS role (isto kao članstvo u AD grupi DMS-Admins)
-        actions: [{ key: 'role', label: 'Upravljanje DMS rolama' }]
-      },
+      { key: 'dms.korisnici', label: 'Korisnici i službe', tab: 'dms_users', actions: [] },
       {
         key: 'dms.podsetnik', label: 'Podsetnik za overu', tab: 'dms_reminder',
         actions: [{ key: 'slanje', label: 'Slanje podsetnika' }]
       },
       { key: 'dms.mailovi', label: 'Zakazani mailovi', tab: 'dms_scheduled_mails', actions: [] },
-      { key: 'dms.potpisi', label: 'Provera potpisa', tab: 'dms_signatures', actions: [] }
+      { key: 'dms.potpisi', label: 'Provera potpisa', tab: 'dms_signatures', actions: [] },
+      // Nije stranica DMS-a: stranica „Korisnici i role“ ograničena na DMS role (isto kao AD grupa DMS-Admins)
+      { key: 'dms.role', label: 'Upravljanje DMS rolama', tab: 'access_roles', actions: [], explicitOnly: true }
     ]
   },
   {
@@ -173,7 +173,7 @@ for (const section of PERMISSION_CATALOG) {
   for (const item of section.items) {
     itemIndex.set(item.key, item);
     itemSection.set(item.key, section.key);
-    tabToItemKey.set(item.tab, item.key);
+    if (!item.explicitOnly) tabToItemKey.set(item.tab, item.key);
     for (const a of item.actions) actionIndex.add(`${item.key}:${a.key}`);
   }
 }
@@ -193,6 +193,10 @@ export function isValidPermissionKey(key: string): boolean {
 
 export function isValidActionKey(key: string): boolean {
   return actionIndex.has(key);
+}
+
+export function isExplicitOnlyItem(itemKey: string): boolean {
+  return !!itemIndex.get(itemKey)?.explicitOnly;
 }
 
 export function getSectionOfItem(itemKey: string): string | undefined {
