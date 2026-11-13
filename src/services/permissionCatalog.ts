@@ -127,7 +127,11 @@ export const PERMISSION_CATALOG: SectionDef[] = [
           { key: 'mejl', label: 'Slanje mejlova korisnicima i službama' }
         ]
       },
-      { key: 'dms.korisnici', label: 'Korisnici i službe', tab: 'dms_users', actions: [] },
+      {
+        key: 'dms.korisnici', label: 'Korisnici i službe', tab: 'dms_users',
+        // Stranica „Korisnici i role“ ograničena na DMS role (isto kao članstvo u AD grupi DMS-Admins)
+        actions: [{ key: 'role', label: 'Upravljanje DMS rolama' }]
+      },
       {
         key: 'dms.podsetnik', label: 'Podsetnik za overu', tab: 'dms_reminder',
         actions: [{ key: 'slanje', label: 'Slanje podsetnika' }]

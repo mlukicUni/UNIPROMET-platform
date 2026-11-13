@@ -461,7 +461,8 @@
         const sectionFull = sec.key === 'dms' && secLvl === 'edit';
         const actionsHtml = item.actions.map(a => {
           const full = `${item.key}:${a.key}`;
-          if (sectionFull) {
+          // „Upravljanje DMS rolama“ se nikad ne uključuje samo od sebe (ni na serveru), uvek se štiklira
+          if (sectionFull && full !== 'dms.korisnici:role') {
             return `<span class="ar-chip on inh" title="Uključeno: nivo Izmena za celu sekciju ${esc(sec.label)} daje sve akcije"><i data-lucide="check"></i>${esc(a.label)}</span>`;
           }
           const on = !!own && own.actions.has(full);

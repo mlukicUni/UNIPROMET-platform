@@ -77,8 +77,13 @@ const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
 /** AD grupa čiji članovi dodeljuju DMS role (poređenje po imenu, bez obzira na velika/mala slova) */
 export const DMS_ROLE_ADMIN_GROUP = 'DMS-Admins';
 
+/** Akcija u rolama koja daje isto što i članstvo u DMS-Admins (upravljanje DMS rolama) */
+export const DMS_ROLE_ADMIN_ACTION = 'dms.korisnici:role';
+
 /** Sekcije u kojima nivo "Izmena" na celoj sekciji uključuje sve posebne akcije */
 export const FULL_ACCESS_SECTIONS = new Set(['dms']);
+/** Akcije koje se nikad ne uključuju same od sebe (preko nivoa Izmena), nego samo kad se izričito štikliraju */
+const EXPLICIT_ONLY_ACTIONS = new Set([DMS_ROLE_ADMIN_ACTION]);
 
 const inDmsSection = (key: string) => key === 'dms' || key.startsWith('dms.');
 
@@ -154,7 +159,6 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
   }
 
   const isSuperAdmin = roles.some(r => r.isSuperAdmin);
-  const isDmsRoleAdmin = !isSuperAdmin && groups.some(g => norm(g.name) === norm(DMS_ROLE_ADMIN_GROUP));
 
   const perms: PermDetail[] = [];
   const camRules: CamRuleDetail[] = [];
@@ -186,8 +190,16 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
   // (učitavanje izveštaja, slanje mejlova, slanje podsetnika) bez posebnog štikliranja
   for (const sec of PERMISSION_CATALOG.filter(x => FULL_ACCESS_SECTIONS.has(x.key))) {
     if (levelRank(grants.get(sec.key)?.level || 'none') < levelRank('edit')) continue;
-    for (const item of sec.items) for (const act of item.actions) allActions.add(`${item.key}:${act.key}`);
+    for (const item of sec.items) for (const act of item.actions) {
+      const full = `${item.key}:${act.key}`;
+      if (!EXPLICIT_ONLY_ACTIONS.has(full)) allActions.add(full);
+    }
   }
+
+  // Upravljanje DMS rolama: članstvo u AD grupi DMS-Admins ili izričito štiklirana akcija u nekoj roli
+  const isDmsRoleAdmin = !isSuperAdmin && (
+    groups.some(g => norm(g.name) === norm(DMS_ROLE_ADMIN_GROUP)) || allActions.has(DMS_ROLE_ADMIN_ACTION)
+  );
 
   const groupIds = [...new Set(camRules.filter(c => c.scope === 'group').map(c => c.targetId))];
   const groupMembers = getCameraGroupMembersMap(groupIds);
