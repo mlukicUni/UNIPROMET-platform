@@ -4929,6 +4929,11 @@ function populateInventoryLocationControls(recorders) {
   if (datalist) {
     datalist.innerHTML = recorders.map(r => `<option value="${escapeHtml(r)}">`).join('');
   }
+  const locList = document.getElementById('locations-datalist');
+  if (locList) {
+    const locations = [...new Set(allInventoryCameras.map(c => c.location).filter(Boolean))].sort();
+    locList.innerHTML = locations.map(l => `<option value="${escapeHtml(l)}">`).join('');
+  }
 
   if (pillsContainer) {
     let pillsHtml = `
@@ -4995,6 +5000,7 @@ function renderInventoryCamerasTab() {
         (c.name && c.name.toLowerCase().includes(q)) ||
         (c.position && c.position.toLowerCase().includes(q)) ||
         (c.recorder && c.recorder.toLowerCase().includes(q)) ||
+        (c.location && c.location.toLowerCase().includes(q)) ||
         (c.note && c.note.toLowerCase().includes(q));
       if (!match) return false;
     }
@@ -5044,7 +5050,7 @@ function renderInventoryCamerasTab() {
               <th style="width: 50px;">#</th>
               <th style="width: 175px;">IP / Mrežni Slot</th>
               <th>Položaj / Naziv Kamere</th>
-              <th style="width: 190px;">Snimač / Objekat</th>
+              <th style="width: 190px;">Snimač</th>
               <th style="width: 120px;">Tip Kamere</th>
               <th style="width: 135px;">Mrežni Opseg</th>
               <th style="width: 115px;">Status</th>
@@ -5079,7 +5085,7 @@ function renderInventoryCamerasTab() {
                       </div>
                       <div class="inv-pos-info">
                         <span class="inv-pos-name ${isReserved ? 'text-muted' : ''}">${escapeHtml(cam.position || cam.name || 'Neimenovana kamera')}</span>
-                        <span class="inv-pos-sub"><i data-lucide="map-pin" style="width: 10px; height: 10px; display: inline-block;"></i> ${escapeHtml(cam.recorder || 'Fabrika')}</span>
+                        <span class="inv-pos-sub" title="Lokacija kamere"><i data-lucide="map-pin" style="width: 10px; height: 10px; display: inline-block;"></i> ${escapeHtml(cam.location || cam.recorder || 'Fabrika')}</span>
                       </div>
                     </div>
                   </td>
@@ -5193,7 +5199,11 @@ function renderInventoryCamerasTab() {
             <div class="printer-meta-row" style="margin: 8px 0;">
               <div class="meta-item">
                 <i data-lucide="map-pin" class="meta-icon"></i>
-                <span class="meta-text location-highlight">${escapeHtml(cam.recorder || 'Fabrika')}</span>
+                <span class="meta-text location-highlight" title="Lokacija kamere">${escapeHtml(cam.location || cam.recorder || 'Fabrika')}</span>
+              </div>
+              <div class="meta-item">
+                <i data-lucide="hard-drive" class="meta-icon"></i>
+                <span class="meta-text" title="Snimač">${escapeHtml(cam.recorder || 'Nedodeljeno')}</span>
               </div>
               <div class="meta-item">
                 <i data-lucide="network" class="meta-icon"></i>
@@ -5319,6 +5329,11 @@ function openAddCameraModal() {
   if (posInput) posInput.value = '';
   if (recInput) recInput.value = '';
   if (noteInput) noteInput.value = '';
+  const locInput = document.getElementById('input-inv-camera-location');
+  if (locInput) {
+    locInput.value = '';
+    locInput.dataset.touched = ''; // dok korisnik ne upiše lokaciju, prati snimač
+  }
   setCameraCredChoice(null);
 
   if (modal) modal.style.display = 'flex';
@@ -5346,6 +5361,11 @@ function openEditCameraModal(id) {
   if (posInput) posInput.value = cam.position;
   if (recInput) recInput.value = cam.recorder;
   if (noteInput) noteInput.value = cam.note || '';
+  const locInput = document.getElementById('input-inv-camera-location');
+  if (locInput) {
+    locInput.value = cam.location || cam.recorder || '';
+    locInput.dataset.touched = '1'; // pri izmeni se lokacija ne menja sama kad se promeni snimač
+  }
   setCameraCredChoice(cam.credProfile === 2 ? 2 : 1);
 
   if (modal) modal.style.display = 'flex';
@@ -5372,7 +5392,9 @@ async function handleCameraFormSubmit(e) {
     return;
   }
 
-  const payload = { ip, position, recorder, note, credProfile };
+  // Lokacija: ako ostane prazna, ista je kao snimač
+  const location = document.getElementById('input-inv-camera-location')?.value.trim() || recorder;
+  const payload = { ip, position, recorder, location, note, credProfile };
 
   try {
     const url = id ? `/api/inventory/cameras/${id}` : '/api/inventory/cameras';
@@ -5411,7 +5433,7 @@ function openDeleteCameraModal(id) {
 
   if (nameEl) nameEl.textContent = cam.position;
   if (ipEl) ipEl.textContent = `IP Adresa: ${cam.ip}`;
-  if (recEl) recEl.textContent = `Snimač / Objekat: ${cam.recorder}`;
+  if (recEl) recEl.textContent = `Snimač: ${cam.recorder} · Lokacija: ${cam.location || cam.recorder}`;
 
   if (modal) modal.style.display = 'flex';
   if (window.lucide) window.lucide.createIcons();
@@ -5447,7 +5469,7 @@ function exportInventoryCamerasClipboard() {
   }
 
   const rows = [
-    ['ID', 'IP Adresa', 'Položaj / Pozicija', 'Snimač / Objekat', 'Tip', 'Mreža', 'Status', 'Napomena']
+    ['ID', 'IP Adresa', 'Položaj / Pozicija', 'Lokacija', 'Snimač', 'Tip', 'Mreža', 'Status', 'Napomena']
   ];
 
   allInventoryCameras.forEach(c => {
@@ -5455,6 +5477,7 @@ function exportInventoryCamerasClipboard() {
       c.id,
       c.ip,
       c.position,
+      c.location || c.recorder,
       c.recorder,
       c.type,
       c.subnet,
@@ -5542,6 +5565,13 @@ function setupInventoryCamerasEventListeners() {
     returnToUnrecordedCamerasList();
   });
   document.getElementById('form-inv-camera')?.addEventListener('submit', handleCameraFormSubmit);
+  document.getElementById('input-inv-camera-recorder')?.addEventListener('input', (e) => {
+    const loc = document.getElementById('input-inv-camera-location');
+    if (loc && !loc.dataset.touched) loc.value = e.target.value;
+  });
+  document.getElementById('input-inv-camera-location')?.addEventListener('input', (e) => {
+    e.target.dataset.touched = '1';
+  });
   document.getElementById('inv-camera-cred-group')?.addEventListener('change', () => setCameraCredChoice(getCameraCredChoice()));
 
   document.getElementById('btn-close-delete-inv-modal')?.addEventListener('click', () => {
@@ -5814,8 +5844,9 @@ async function fetchCctvCameras() {
       const bNavCopy = document.getElementById('badge-nav-cctv-copy-cameras');
       if (bNavCopy) bNavCopy.textContent = total;
 
-      const distinctRecorders = [...new Set(allCctvCameras.map(c => c.recorder).filter(Boolean))].sort();
-      populateCctvLocationControls(distinctRecorders);
+      // Filter „lokacija“ ide po stvarnoj lokaciji kamere, ne po snimaču
+      const distinctLocations = [...new Set(allCctvCameras.map(c => c.location || c.recorder).filter(Boolean))].sort();
+      populateCctvLocationControls(distinctLocations);
 
       renderCctvCamerasTab();
     } else {
@@ -5985,14 +6016,15 @@ function renderCctvCamerasTab() {
   unmountCctvSubStreams();
 
   let filtered = allCctvCameras.filter(c => {
-    if (cctvRecorderFilter !== 'all' && c.recorder !== cctvRecorderFilter) return false;
+    if (cctvRecorderFilter !== 'all' && (c.location || c.recorder) !== cctvRecorderFilter) return false;
     if (cctvSearchQuery) {
       const q = cctvSearchQuery.toLowerCase();
       const match = 
         (c.ip && c.ip.toLowerCase().includes(q)) ||
         (c.name && c.name.toLowerCase().includes(q)) ||
         (c.position && c.position.toLowerCase().includes(q)) ||
-        (c.recorder && c.recorder.toLowerCase().includes(q));
+        (c.recorder && c.recorder.toLowerCase().includes(q)) ||
+        (c.location && c.location.toLowerCase().includes(q));
       if (!match) return false;
     }
     return true;
@@ -6068,8 +6100,9 @@ function renderCctvCamerasTab() {
                     <div style="display: flex; flex-direction: column; gap: 4px;">
                       <span class="location-highlight" style="font-size: 0.86rem; font-weight: 600;">
                         <i data-lucide="map-pin" style="width: 13px; height: 13px; display: inline-block; vertical-align: middle; margin-right: 4px; color: #FFB800;"></i>
-                        ${escapeHtml(cam.recorder || 'Fabrika')}
+                        ${escapeHtml(cam.location || cam.recorder || 'Fabrika')}
                       </span>
+                      <span class="text-dim text-xs" style="margin-left: 17px;" title="Snimač">Snimač: ${escapeHtml(cam.recorder || 'Nedodeljeno')}</span>
                       <span class="font-mono text-dim text-xs" style="margin-left: 17px;">${escapeHtml(cam.subnet || '')}</span>
                     </div>
                   </td>
@@ -6136,9 +6169,9 @@ function renderCctvCamerasTab() {
               <i data-lucide="video" style="width: 15px; height: 15px; color: #FFB800; flex-shrink: 0;"></i>
               <strong class="text-white" style="font-size: 0.92rem;">${escapeHtml(cam.position || cam.name || '')}</strong>
             </div>
-            <span class="location-highlight" style="font-size: 0.78rem;">
+            <span class="location-highlight" style="font-size: 0.78rem;" title="Lokacija kamere · snimač: ${escapeHtml(cam.recorder || 'Nedodeljeno')}">
               <i data-lucide="map-pin" style="width: 11px; height: 11px; display: inline-block;"></i>
-              ${escapeHtml(cam.recorder || 'Fabrika')}
+              ${escapeHtml(cam.location || cam.recorder || 'Fabrika')}
             </span>
             <div class="cctv-cam-actions" style="margin-top: 10px;">
               <button type="button" class="cctv-ip-chip" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj IP adresu">

@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.8] - 2026-11-13
+- Evidencija kamera: lokacija kamere je odvojena od snimača (kamera može biti na jednoj lokaciji, a vezana za snimač druge). Pri prvom pokretanju nove verzije lokacija svih postojećih kamera se jednom popunjava nazivom snimača, a posle se menja nezavisno. U formi kamere su sada dva polja: „Snimač“ i „Lokacija kamere“ (ako ostane prazna, upisuje se snimač; pri dodavanju prati snimač dok se ne promeni ručno). Mreža → Kamere prikazuje lokaciju i snimač posebno (i u kopiranju za Excel); Video nadzor → Lista kamera prikazuje i filtrira po lokaciji, uz naziv snimača
+
 ## [1.3.7] - 2026-11-13
 - Korisnici i role: „Upravljanje DMS rolama“ je sada poseban red u sekciji DMS Analiza podataka (samo Nema / Izmena), umesto posebne akcije pod „Korisnici i službe“. Štikliranje akcije je usput uključivalo i stranicu „Korisnici i službe“, a novi red ne otvara nijednu DMS stranicu i ne nasleđuje se sa nivoa cele DMS sekcije. Role kojima je akcija već bila štiklirana automatski se prebacuju na novi red pri pokretanju servera (stranica „Korisnici i službe“ koju je akcija uključila ostaje kakva jeste i može ručno da se vrati na Nema)
 
