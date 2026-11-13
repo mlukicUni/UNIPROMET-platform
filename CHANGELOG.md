@@ -12,6 +12,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.7] - 2026-11-13
+- Korisnici i role: „Upravljanje DMS rolama“ je sada poseban red u sekciji DMS Analiza podataka (samo Nema / Izmena), umesto posebne akcije pod „Korisnici i službe“. Štikliranje akcije je usput uključivalo i stranicu „Korisnici i službe“, a novi red ne otvara nijednu DMS stranicu i ne nasleđuje se sa nivoa cele DMS sekcije. Role kojima je akcija već bila štiklirana automatski se prebacuju na novi red pri pokretanju servera (stranica „Korisnici i službe“ koju je akcija uključila ostaje kakva jeste i može ručno da se vrati na Nema)
+
 ## [1.3.6] - 2026-11-13
 - Korisnici i role: nova posebna akcija „Upravljanje DMS rolama“ (DMS Analiza podataka → Korisnici i službe). Rola sa ovom akcijom daje isto što i članstvo u AD grupi DMS-Admins: stranicu „Korisnici i role“ ograničenu na DMS role (pravljenje, izmena, brisanje, dodela). Akcija se mora izričito štiklirati; nivo „Izmena“ na celoj DMS sekciji je ne uključuje
 
