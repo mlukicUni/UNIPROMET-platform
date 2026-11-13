@@ -20,6 +20,7 @@ import {
   getItemsOfSection,
   getAllItemKeys,
   isItemKey,
+  isExplicitOnlyItem,
   ROLES_TAB
 } from './permissionCatalog';
 import { SessionUser, UserGroup, isUserAuthorized } from './authService';
@@ -77,13 +78,11 @@ const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
 /** AD grupa čiji članovi dodeljuju DMS role (poređenje po imenu, bez obzira na velika/mala slova) */
 export const DMS_ROLE_ADMIN_GROUP = 'DMS-Admins';
 
-/** Akcija u rolama koja daje isto što i članstvo u DMS-Admins (upravljanje DMS rolama) */
-export const DMS_ROLE_ADMIN_ACTION = 'dms.korisnici:role';
+/** Stavka u rolama koja daje isto što i članstvo u DMS-Admins (upravljanje DMS rolama); ne nasleđuje se sa sekcije */
+export const DMS_ROLE_ADMIN_ITEM = 'dms.role';
 
 /** Sekcije u kojima nivo "Izmena" na celoj sekciji uključuje sve posebne akcije */
 export const FULL_ACCESS_SECTIONS = new Set(['dms']);
-/** Akcije koje se nikad ne uključuju same od sebe (preko nivoa Izmena), nego samo kad se izričito štikliraju */
-const EXPLICIT_ONLY_ACTIONS = new Set([DMS_ROLE_ADMIN_ACTION]);
 
 const inDmsSection = (key: string) => key === 'dms' || key.startsWith('dms.');
 
@@ -190,15 +189,13 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
   // (učitavanje izveštaja, slanje mejlova, slanje podsetnika) bez posebnog štikliranja
   for (const sec of PERMISSION_CATALOG.filter(x => FULL_ACCESS_SECTIONS.has(x.key))) {
     if (levelRank(grants.get(sec.key)?.level || 'none') < levelRank('edit')) continue;
-    for (const item of sec.items) for (const act of item.actions) {
-      const full = `${item.key}:${act.key}`;
-      if (!EXPLICIT_ONLY_ACTIONS.has(full)) allActions.add(full);
-    }
+    for (const item of sec.items) for (const act of item.actions) allActions.add(`${item.key}:${act.key}`);
   }
 
-  // Upravljanje DMS rolama: članstvo u AD grupi DMS-Admins ili izričito štiklirana akcija u nekoj roli
+  // Upravljanje DMS rolama: članstvo u AD grupi DMS-Admins ili stavka „Upravljanje DMS rolama“ u nekoj roli
+  // (samo izričito podešena na stavci; nivo cele DMS sekcije je ne uključuje)
   const isDmsRoleAdmin = !isSuperAdmin && (
-    groups.some(g => norm(g.name) === norm(DMS_ROLE_ADMIN_GROUP)) || allActions.has(DMS_ROLE_ADMIN_ACTION)
+    groups.some(g => norm(g.name) === norm(DMS_ROLE_ADMIN_GROUP)) || grants.has(DMS_ROLE_ADMIN_ITEM)
   );
 
   const groupIds = [...new Set(camRules.filter(c => c.scope === 'group').map(c => c.targetId))];
@@ -264,6 +261,7 @@ export function isUserAllowed(user: SessionUser | null): boolean {
 export function levelFor(access: EffectiveAccess, itemKey: string): Level {
   if (access.isSuperAdmin) return 'edit';
   const own = access.grants.get(itemKey)?.level;
+  if (isExplicitOnlyItem(itemKey)) return own || 'none'; // posebno pravo, bez nasleđivanja sa sekcije
   const sectionKey = getSectionOfItem(itemKey) || (PERMISSION_CATALOG.some(s => s.key === itemKey) ? itemKey : '');
   const inherited = sectionKey ? access.grants.get(sectionKey)?.level : undefined;
   const best = levelRank(own || 'none') >= levelRank(inherited || 'none') ? own : inherited;
@@ -274,7 +272,8 @@ export function levelFor(access: EffectiveAccess, itemKey: string): Level {
 export function hasSectionAccess(access: EffectiveAccess, sectionKey: string, min: PermissionLevel = 'view'): boolean {
   if (access.isSuperAdmin) return true;
   if (levelRank(access.grants.get(sectionKey)?.level || 'none') >= levelRank(min)) return true;
-  return getItemsOfSection(sectionKey).some(i => levelRank(levelFor(access, i.key)) >= levelRank(min));
+  // Posebna prava (npr. Upravljanje DMS rolama) ne otvaraju stranice sekcije
+  return getItemsOfSection(sectionKey).some(i => !i.explicitOnly && levelRank(levelFor(access, i.key)) >= levelRank(min));
 }
 
 /** Podsekcija ili sekcija - ključ bilo kog tipa */

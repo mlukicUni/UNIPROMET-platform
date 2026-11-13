@@ -185,6 +185,33 @@ export function initRolesSchema(): void {
 
   schemaReady = true;
   seedDefaultRoles();
+  migrateDmsRoleAction();
+}
+
+/**
+ * Verzija 1.3.6 je „Upravljanje DMS rolama“ čuvala kao akciju `dms.korisnici:role`; od tada je to
+ * poseban red `dms.role`. Stara akcija se prebacuje u novi red (inače čuvanje te role javlja „Nepoznata akcija“).
+ */
+function migrateDmsRoleAction(): void {
+  const legacy = 'dms.korisnici:role';
+  const db = getDb();
+  const rows = db.prepare(`SELECT role_id, actions FROM role_permissions WHERE permission_key = 'dms.korisnici' AND actions LIKE ?`)
+    .all(`%${legacy}%`) as { role_id: string; actions: string }[];
+  if (rows.length === 0) return;
+
+  const tx = db.transaction(() => {
+    for (const r of rows) {
+      let actions: string[] = [];
+      try { actions = JSON.parse(r.actions || '[]'); } catch { actions = []; }
+      db.prepare(`UPDATE role_permissions SET actions = ? WHERE role_id = ? AND permission_key = 'dms.korisnici'`)
+        .run(JSON.stringify(actions.filter(a => a !== legacy)), r.role_id);
+      db.prepare(`DELETE FROM role_permissions WHERE role_id = ? AND permission_key = 'dms.role'`).run(r.role_id);
+      db.prepare(`INSERT INTO role_permissions (role_id, permission_key, level, actions) VALUES (?, 'dms.role', 'edit', '[]')`)
+        .run(r.role_id);
+    }
+  });
+  tx();
+  console.log(`[Roles] „Upravljanje DMS rolama“ prebačeno sa akcije na poseban red za ${rows.length} rola`);
 }
 
 function newId(prefix: string): string {

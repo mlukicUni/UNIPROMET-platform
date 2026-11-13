@@ -454,6 +454,20 @@
       const itemsHtml = sec.items.map(item => {
         const own = E.perms.get(item.key);
         const ownLvl = own ? own.level : 'none';
+
+        // Posebno pravo (npr. Upravljanje DMS rolama): nije stranica, ne nasleđuje se sa sekcije, samo Nema / Izmena
+        if (item.explicitOnly) {
+          return `
+          <div class="ar-item">
+            <div class="ar-item-label">
+              <span>${esc(item.label)}</span>
+              <span class="ar-inh" title="Ne zavisi od nivoa sekcije i ne otvara stranice sekcije">posebno pravo</span>
+            </div>
+            ${segHtml(item.key, ownLvl, ['none', 'edit'])}
+            <div class="ar-actions"></div>
+          </div>`;
+        }
+
         const eff = maxLvl(ownLvl, secLvl);
         const inh = rank(secLvl) > rank(ownLvl) ? secLvl : null;
 
@@ -461,8 +475,7 @@
         const sectionFull = sec.key === 'dms' && secLvl === 'edit';
         const actionsHtml = item.actions.map(a => {
           const full = `${item.key}:${a.key}`;
-          // „Upravljanje DMS rolama“ se nikad ne uključuje samo od sebe (ni na serveru), uvek se štiklira
-          if (sectionFull && full !== 'dms.korisnici:role') {
+          if (sectionFull) {
             return `<span class="ar-chip on inh" title="Uključeno: nivo Izmena za celu sekciju ${esc(sec.label)} daje sve akcije"><i data-lucide="check"></i>${esc(a.label)}</span>`;
           }
           const on = !!own && own.actions.has(full);
@@ -497,9 +510,9 @@
     icons();
   }
 
-  function segHtml(key, current) {
+  function segHtml(key, current, levels = ['none', 'view', 'edit']) {
     return `<div class="ar-seg" data-perm-key="${esc(key)}">
-      ${['none', 'view', 'edit'].map(l => `<button type="button" class="ar-seg-btn lvl-${l} ${current === l ? 'active' : ''}" data-level="${l}">${LEVEL_LABEL[l]}</button>`).join('')}
+      ${levels.map(l => `<button type="button" class="ar-seg-btn lvl-${l} ${current === l ? 'active' : ''}" data-level="${l}">${LEVEL_LABEL[l]}</button>`).join('')}
     </div>`;
   }
 
