@@ -12,6 +12,10 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.9] - 2026-11-16
+- Mreža → Kamere: sinhronizacija evidencije kamera i snimača između produkcije i dev servera (samo Super admin). Dugme „Sinhronizuj podatke sa dev serverom“ (na produkciji) odnosno „…sa main serverom“ (na dev-u) prvo prikazuje pregled razlika (dodato / izmenjeno / uklonjeno, upozorenja za Monitoring tabove, prava i grupe koje bi bile pogođene), a posle potvrde prepisuje kamere i snimače podacima sa drugog servera (uz automatsku rezervnu kopiju baze i upis u audit). Server preuzima podatke preko API-ja `GET /api/sync/cameras/export` koji štiti zajednički token (`SYNC_API_TOKEN`; bez tokena izvoz ne postoji). Lozinke kamera se ne prenose, a role, prava i Monitoring tabovi se ne diraju. Podešavanje u `.env`: `INSTANCE_ROLE`, `SYNC_PEER_URL`, `SYNC_API_TOKEN`, `SYNC_PEER_INSECURE_TLS` (primer u `deploy/env.production.example`)
+- Automatska provera kamera upisuje u log servera i spisak kamera koje je videla kao offline (naziv i IP), da se kasnije može proveriti šta je servis zaista video
+
 ## [1.3.8] - 2026-11-13
 - Evidencija kamera: lokacija kamere je odvojena od snimača (kamera može biti na jednoj lokaciji, a vezana za snimač druge). Pri prvom pokretanju nove verzije lokacija svih postojećih kamera se jednom popunjava nazivom snimača, a posle se menja nezavisno. U formi kamere su sada dva polja: „Snimač“ i „Lokacija kamere“ (ako ostane prazna, upisuje se snimač; pri dodavanju prati snimač dok se ne promeni ručno). Mreža → Kamere prikazuje lokaciju i snimač posebno (i u kopiranju za Excel); Video nadzor → Lista kamera prikazuje i filtrira po lokaciji, uz naziv snimača
 
