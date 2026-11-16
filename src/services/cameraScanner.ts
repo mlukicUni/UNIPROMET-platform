@@ -75,6 +75,17 @@ try {
   // Ignore pre-load error
 }
 
+/** Briše keš skeniranja (u memoriji i na disku), npr. posle prepisivanja evidencije kamera sa drugog servera */
+export function resetCameraScanCache(): void {
+  inMemoryCache = null;
+  lastScanTimestamp = 0;
+  try {
+    if (fs.existsSync(CACHE_FILE)) fs.unlinkSync(CACHE_FILE);
+  } catch {
+    // keš se svakako ponovo pravi pri sledećem skeniranju
+  }
+}
+
 /**
  * Fast synchronous lookup of cached offline cameras.
  * NEVER blocks or runs network scans.
@@ -560,6 +571,10 @@ export async function checkScheduledInventoryCameras(): Promise<{
   // Scheduled check waits for any running scan instead of reporting from a stale cache
   const result = await scanCameras(true, false, true);
   console.log(`[CameraScanner] ✓ Završena ciljana provera: ${result.totalCameras} online, ${result.offlineCount} offline od ukupno ${result.inventoryTotalCount} evidentiranih kamera.`);
+  // Koje su kamere offline (da se u logu kasnije vidi tačno šta je servis video)
+  if (result.offlineCameras.length > 0) {
+    console.log(`[CameraScanner]   Offline: ${result.offlineCameras.map(c => `${c.name} (${c.ip})`).join(', ')}`);
+  }
   return {
     offlineCameras: result.offlineCameras,
     offlineCount: result.offlineCount,

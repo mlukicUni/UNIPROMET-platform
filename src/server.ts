@@ -105,7 +105,7 @@ app.get('/access-denied', (req, res) => {
 // API Access Control Middleware
 app.use('/api', (req, res, next) => {
   // Allow auth endpoints and legacy webhook endpoints through without authorization gate
-  if (req.path.startsWith('/auth') || req.path.startsWith('/equipment/webhook')) {
+  if (req.path.startsWith('/auth') || req.path.startsWith('/equipment/webhook') || req.path === '/sync/cameras/export') {
     return next();
   }
 
