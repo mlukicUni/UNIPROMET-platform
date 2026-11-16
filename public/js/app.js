@@ -5592,6 +5592,14 @@ function setupInventoryCamerasEventListeners() {
   // Scan unrecorded cameras button
   document.getElementById('btn-scan-unrecorded-cameras')?.addEventListener('click', scanUnrecordedCamerasClient);
 
+  // Sinhronizacija evidencije kamera i snimača sa drugim serverom (samo Super admin)
+  document.getElementById('btn-sync-cameras-peer')?.addEventListener('click', openSyncCamerasModal);
+  document.getElementById('btn-apply-sync-cameras')?.addEventListener('click', applySyncCameras);
+  document.getElementById('btn-close-sync-cameras')?.addEventListener('click', closeSyncCamerasModal);
+  document.getElementById('btn-cancel-sync-cameras')?.addEventListener('click', closeSyncCamerasModal);
+  document.getElementById('sync-cameras-confirm')?.addEventListener('change', updateSyncApplyButton);
+  loadSyncCamerasStatus();
+
   // Add camera by IP address (no range scan)
   document.getElementById('btn-add-camera-by-ip')?.addEventListener('click', openFindCameraByIpModal);
   document.getElementById('btn-find-camera-ip')?.addEventListener('click', findCameraByIp);
@@ -5609,6 +5617,184 @@ function setupInventoryCamerasEventListeners() {
   document.getElementById('btn-cancel-unrecorded-modal')?.addEventListener('click', () => {
     document.getElementById('modal-unrecorded-cameras').style.display = 'none';
   });
+}
+
+/* ---------- Sinhronizacija kamera i snimača sa drugim serverom ---------- */
+let syncCamerasStatus = null;
+let syncCamerasPreview = null;
+let syncCamerasBusy = false;
+
+async function loadSyncCamerasStatus() {
+  try {
+    const res = await fetch('/api/sync/cameras/status');
+    if (!res.ok) return; // nije Super admin: dugme je ionako skriveno
+    const data = await res.json();
+    if (!data.success) return;
+    syncCamerasStatus = data;
+    const text = document.getElementById('btn-sync-cameras-peer-text');
+    if (text) text.textContent = data.buttonLabel;
+  } catch (e) {
+    // dugme ostaje sa opštim nazivom
+  }
+}
+
+function closeSyncCamerasModal() {
+  if (syncCamerasBusy) return;
+  const modal = document.getElementById('modal-sync-cameras');
+  if (modal) modal.style.display = 'none';
+}
+
+function updateSyncApplyButton() {
+  const btn = document.getElementById('btn-apply-sync-cameras');
+  const chk = document.getElementById('sync-cameras-confirm');
+  if (btn) btn.disabled = syncCamerasBusy || !syncCamerasPreview || !(chk && chk.checked);
+}
+
+function syncStat(label, added, changed, removed) {
+  const chip = (n, color, sign) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:0.78rem;font-weight:700;color:${n ? color : '#64748b'};border:1px solid ${n ? color + '55' : 'rgba(255,255,255,0.1)'};background:${n ? color + '14' : 'transparent'};">${sign}${n}</span>`;
+  return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
+    <strong style="color:#f1f5f9;font-size:0.88rem;">${label}</strong>
+    <span style="display:flex;gap:6px;">${chip(added, '#4ade80', '+')}${chip(changed, '#fbbf24', '~')}${chip(removed, '#f87171', '−')}</span>
+  </div>`;
+}
+
+function syncDetails(title, color, items, render) {
+  if (!items || !items.length) return '';
+  return `<details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;background:rgba(0,0,0,0.15);">
+    <summary style="cursor:pointer;color:${color};font-weight:700;font-size:0.82rem;">${title} (${items.length})</summary>
+    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:0.78rem;color:#cbd5e1;max-height:180px;overflow-y:auto;">${items.map(render).join('')}</div>
+  </details>`;
+}
+
+function renderSyncCamerasPreview(p) {
+  const body = document.getElementById('sync-cameras-body');
+  const peer = syncCamerasStatus ? syncCamerasStatus.peerLabel : 'drugim serverom';
+  const cam = p.cameras, rec = p.recorders, w = p.warnings;
+  const when = p.peer.exportedAt ? new Date(p.peer.exportedAt).toLocaleString('sr-RS') : '';
+  const li = (t) => `<div>• ${escapeHtml(t)}</div>`;
+  const fieldChange = (c) => `<div>• ${escapeHtml(c.label)} <span style="color:#94a3b8;">— ${c.changes.map(x => `${escapeHtml(x.field)}: ${escapeHtml(x.before ?? '∅')} → ${escapeHtml(x.after ?? '∅')}`).join('; ')}</span></div>`;
+
+  let html = `
+    <div style="font-size:0.85rem;color:#cbd5e1;line-height:1.5;">
+      Podaci sa servera <strong>${escapeHtml(p.peer.host)}</strong> (${p.peer.cameraCount} kamera, ${p.peer.recorderCount} snimača, izvezeno ${escapeHtml(when)}) prepisaće vašu evidenciju
+      (${p.local.cameraCount} kamera, ${p.local.recorderCount} snimača). Posle prepisivanja je vaša evidencija kamera i snimača ista kao na ${escapeHtml(peer)}.
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${syncStat('Kamere', cam.addedCount, cam.changedCount, cam.removedCount)}
+      ${syncStat('Snimači', rec.addedCount, rec.changedCount, rec.removedCount)}
+    </div>
+    <div style="font-size:0.74rem;color:#64748b;">+ dodato, ~ izmenjeno, − uklonjeno. Lozinke kamera se ne prenose (samo oznaka Lozinka 1/2). Role, prava i Monitoring tabovi se ne menjaju.</div>`;
+
+  if (w.identityChanged.length) {
+    html += `<div style="padding:10px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.45);background:rgba(245,158,11,0.1);font-size:0.82rem;color:#fde68a;line-height:1.45;">
+      <strong>Pažnja:</strong> ${w.identityChanged.length} kamera ima isti ID na oba servera, ali iza njega stoji <u>druga kamera</u>. Monitoring tabovi i prava koja se pozivaju na taj ID posle prepisivanja pokazivaće drugu kameru.
+      <div style="margin-top:6px;color:#fcd34d;max-height:110px;overflow-y:auto;">${w.identityChanged.map(i => `<div>• ${escapeHtml(i.id)}: ${escapeHtml(i.localLabel)} → ${escapeHtml(i.remoteLabel)}</div>`).join('')}</div>
+    </div>`;
+  }
+  const impact = [];
+  if (w.affectedTabs.count) impact.push(`<strong>${w.affectedTabs.count}</strong> Monitoring tabova koristi kamere koje se uklanjaju ili menjaju (${escapeHtml(w.affectedTabs.examples.join(', '))})`);
+  if (w.affectedCameraRules) impact.push(`<strong>${w.affectedCameraRules}</strong> prava rola po kameri`);
+  if (w.affectedRecorderRules) impact.push(`<strong>${w.affectedRecorderRules}</strong> prava rola po snimaču`);
+  if (w.affectedGroupMemberships) impact.push(`<strong>${w.affectedGroupMemberships}</strong> članstava u grupama kamera (brišu se sa uklonjenim kamerama)`);
+  if (impact.length) {
+    html += `<div style="padding:10px 12px;border-radius:8px;border:1px solid rgba(248,113,113,0.4);background:rgba(248,113,113,0.08);font-size:0.82rem;color:#fecaca;line-height:1.5;">
+      <strong>Pogođeno prepisivanjem:</strong><div style="margin-top:4px;">${impact.map(x => '• ' + x).join('<br>')}</div></div>`;
+  }
+
+  html += syncDetails('Kamere koje se dodaju', '#4ade80', cam.added, c => li(c.label + (c.location ? ' [' + c.location + ']' : '')));
+  html += syncDetails('Kamere koje se menjaju', '#fbbf24', cam.changed, fieldChange);
+  html += syncDetails('Kamere koje se uklanjaju', '#f87171', cam.removed, c => li(c.label));
+  html += syncDetails('Snimači koji se dodaju', '#4ade80', rec.added, c => li(c.label));
+  html += syncDetails('Snimači koji se menjaju', '#fbbf24', rec.changed, fieldChange);
+  html += syncDetails('Snimači koji se uklanjaju', '#f87171', rec.removed, c => li(c.label));
+
+  if (!p.totalChanges) {
+    html += `<div style="padding:12px;border-radius:8px;border:1px solid rgba(74,222,128,0.4);background:rgba(74,222,128,0.08);color:#bbf7d0;font-size:0.86rem;">✓ Evidencija kamera i snimača je već ista kao na ${escapeHtml(peer)}. Nema šta da se prepiše.</div>`;
+  } else {
+    html += `<div style="font-size:0.78rem;color:#94a3b8;">Pre prepisivanja se automatski pravi rezervna kopija cele baze.</div>`;
+  }
+  body.innerHTML = html;
+}
+
+async function openSyncCamerasModal() {
+  const modal = document.getElementById('modal-sync-cameras');
+  const body = document.getElementById('sync-cameras-body');
+  const applyBtn = document.getElementById('btn-apply-sync-cameras');
+  const confirmWrap = document.getElementById('sync-cameras-confirm-wrap');
+  const chk = document.getElementById('sync-cameras-confirm');
+  if (!modal || !body) return;
+
+  if (!syncCamerasStatus) await loadSyncCamerasStatus();
+  const st = syncCamerasStatus;
+  document.getElementById('sync-cameras-title').textContent = st ? st.buttonLabel : 'Sinhronizacija kamera i snimača';
+  document.getElementById('sync-cameras-subtitle').textContent = 'Pregled razlika pre prepisivanja';
+  syncCamerasPreview = null;
+  if (chk) chk.checked = false;
+  if (applyBtn) applyBtn.style.display = 'none';
+  if (confirmWrap) confirmWrap.style.display = 'none';
+  modal.style.display = 'flex';
+  if (window.lucide) window.lucide.createIcons();
+
+  if (st && !st.configured) {
+    body.innerHTML = `<div style="padding:12px;border-radius:8px;border:1px solid rgba(245,158,11,0.45);background:rgba(245,158,11,0.1);color:#fde68a;font-size:0.85rem;line-height:1.5;">
+      Sinhronizacija nije podešena na ovom serveru. U <code>.env</code> treba upisati <code>SYNC_PEER_URL</code> (adresa drugog servera) i <code>SYNC_API_TOKEN</code> (isti token na oba servera), pa restartovati server.</div>`;
+    return;
+  }
+
+  body.innerHTML = '<div style="display:flex;align-items:center;gap:10px;color:#cbd5e1;"><div class="live-spinner-ring" style="width:22px;height:22px;"></div><span>Preuzimam podatke sa drugog servera...</span></div>';
+  syncCamerasBusy = true;
+  try {
+    const res = await fetch('/api/sync/cameras/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Pregled nije uspeo');
+    syncCamerasPreview = data.preview;
+    renderSyncCamerasPreview(data.preview);
+    if (data.preview.totalChanges > 0) {
+      if (applyBtn) applyBtn.style.display = '';
+      if (confirmWrap) confirmWrap.style.display = 'flex';
+    }
+  } catch (err) {
+    body.innerHTML = `<div style="padding:12px;border-radius:8px;border:1px solid rgba(239,68,68,0.45);background:rgba(239,68,68,0.08);color:#fecaca;font-size:0.86rem;line-height:1.5;"><strong>Sinhronizacija nije moguća:</strong><br>${escapeHtml(err.message)}</div>`;
+  } finally {
+    syncCamerasBusy = false;
+    updateSyncApplyButton();
+  }
+}
+
+async function applySyncCameras() {
+  if (syncCamerasBusy || !syncCamerasPreview) return;
+  const body = document.getElementById('sync-cameras-body');
+  const applyBtn = document.getElementById('btn-apply-sync-cameras');
+  syncCamerasBusy = true;
+  if (applyBtn) applyBtn.disabled = true;
+  body.innerHTML = '<div style="display:flex;align-items:center;gap:10px;color:#cbd5e1;"><div class="live-spinner-ring" style="width:22px;height:22px;"></div><span>Prepisujem podatke...</span></div>';
+  try {
+    const res = await fetch('/api/sync/cameras/apply', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true, fingerprint: syncCamerasPreview.fingerprint })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || 'Prepisivanje nije uspelo');
+    const r = data.result;
+    if (applyBtn) applyBtn.style.display = 'none';
+    document.getElementById('sync-cameras-confirm-wrap').style.display = 'none';
+    body.innerHTML = `<div style="padding:14px;border-radius:8px;border:1px solid rgba(74,222,128,0.4);background:rgba(74,222,128,0.08);color:#bbf7d0;font-size:0.88rem;line-height:1.6;">
+      <strong>✓ Evidencija je prepisana.</strong><br>
+      Kamere: +${r.cameras.added} dodato, ~${r.cameras.changed} izmenjeno, −${r.cameras.removed} uklonjeno (ukupno ${r.cameras.total}).<br>
+      Snimači: +${r.recorders.added} dodato, ~${r.recorders.changed} izmenjeno, −${r.recorders.removed} uklonjeno (ukupno ${r.recorders.total}).<br>
+      <span style="color:#86efac;font-size:0.78rem;">Rezervna kopija baze: ${escapeHtml(r.backupPath)}</span></div>`;
+    syncCamerasPreview = null;
+    showToast('✓ Evidencija kamera i snimača je sinhronizovana', 'success');
+    fetchInventoryCameras();
+    if (typeof fetchInventoryRecorders === 'function') fetchInventoryRecorders();
+  } catch (err) {
+    body.innerHTML = `<div style="padding:12px;border-radius:8px;border:1px solid rgba(239,68,68,0.45);background:rgba(239,68,68,0.08);color:#fecaca;font-size:0.86rem;line-height:1.5;"><strong>Prepisivanje nije izvršeno:</strong><br>${escapeHtml(err.message)}<br><span style="color:#fca5a5;font-size:0.78rem;">Vaši podaci nisu menjani.</span></div>`;
+    syncCamerasPreview = null;
+  } finally {
+    syncCamerasBusy = false;
+    updateSyncApplyButton();
+  }
 }
 
 /* ---------- Dodavanje kamere po IP adresi ---------- */

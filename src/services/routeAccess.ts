@@ -74,6 +74,11 @@ const RULES: Rule[] = [
   /* ---------- Prijava ---------- */
   { m: '*', p: '/auth/**', spec: { noAuth: true } },
 
+  /* ---------- Sinhronizacija kamera između servera ---------- */
+  // Izvoz za drugi server: bez prijave korisnika, štiti ga zajednički token (proverava ruta)
+  { m: 'GET', p: '/sync/cameras/export', spec: { noAuth: true } },
+  { m: '*', p: '/sync/**', spec: { superOnly: true } },
+
   /* ---------- Upravljanje rolama ---------- */
   // Članovi AD grupe DMS-Admins: pravljenje, izmena, brisanje i dodela DMS rola (dozvole samo iz sekcije DMS,
   // proverava access.routes). Role van DMS-a za njih ne postoje.
