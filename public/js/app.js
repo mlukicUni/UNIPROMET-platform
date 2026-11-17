@@ -3018,6 +3018,8 @@ function formatTime(isoStr) {
 }
 
 function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  str = String(str);
   if (!str) return '';
   return str.replace(/[&<>"']/g, function(m) {
     return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[m];
@@ -5672,7 +5674,8 @@ function renderSyncCamerasPreview(p) {
   const cam = p.cameras, rec = p.recorders, w = p.warnings;
   const when = p.peer.exportedAt ? new Date(p.peer.exportedAt).toLocaleString('sr-RS') : '';
   const li = (t) => `<div>• ${escapeHtml(t)}</div>`;
-  const fieldChange = (c) => `<div>• ${escapeHtml(c.label)} <span style="color:#94a3b8;">— ${c.changes.map(x => `${escapeHtml(x.field)}: ${escapeHtml(x.before ?? '∅')} → ${escapeHtml(x.after ?? '∅')}`).join('; ')}</span></div>`;
+  const val = (v) => (v === null || v === undefined || v === '') ? '∅' : String(v);
+  const fieldChange = (c) => `<div>• ${escapeHtml(c.label)} <span style="color:#94a3b8;">— ${c.changes.map(x => `${escapeHtml(x.field)}: ${escapeHtml(val(x.before))} → ${escapeHtml(val(x.after))}`).join('; ')}</span></div>`;
 
   let html = `
     <div style="font-size:0.85rem;color:#cbd5e1;line-height:1.5;">
