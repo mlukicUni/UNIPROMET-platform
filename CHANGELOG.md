@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.9.2] - 2026-11-17
+- Sinhronizacija kamera i snimača: svaka pojedinačna promena u pregledu ima kvačicu i može da se odbaci (kamera ili snimač koji se ne dodaje, ne menja ili ne briše ostaje kakav je na ovom serveru), uz „Označi sve / Odbaci sve“ po grupi. Brojači i dugme „Prepiši izabrane promene (N)“ se menjaju uživo, a odbačene promene se pri sledećem pregledu ponovo nude. Odbačeni broj se upisuje u audit i prikazuje posle prepisivanja
+
 ## [1.3.9.1] - 2026-11-17
 - Ispravka: pregled sinhronizacije kamera je javljao „str.replace is not a function“ kada su se među izmenama nalazila brojčana polja (npr. broj kanala snimača); funkcija za prikaz teksta sada podnosi brojeve, a prazne vrednosti u pregledu se prikazuju kao „∅“
 
