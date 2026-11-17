@@ -5600,6 +5600,7 @@ function setupInventoryCamerasEventListeners() {
   document.getElementById('btn-close-sync-cameras')?.addEventListener('click', closeSyncCamerasModal);
   document.getElementById('btn-cancel-sync-cameras')?.addEventListener('click', closeSyncCamerasModal);
   document.getElementById('sync-cameras-confirm')?.addEventListener('change', updateSyncApplyButton);
+  bindSyncCamerasBodyEvents();
   loadSyncCamerasStatus();
 
   // Add camera by IP address (no range scan)
@@ -5625,6 +5626,18 @@ function setupInventoryCamerasEventListeners() {
 let syncCamerasStatus = null;
 let syncCamerasPreview = null;
 let syncCamerasBusy = false;
+// Promene koje je korisnik odbacio (po tabeli, ID-jevi): ostaju kakve jesu na ovom serveru
+let syncExcluded = { cameras: new Set(), recorders: new Set() };
+
+const SYNC_TABLES = [
+  { table: 'cameras', label: 'Kamere', titles: { added: 'Kamere koje se dodaju', changed: 'Kamere koje se menjaju', removed: 'Kamere koje se uklanjaju' } },
+  { table: 'recorders', label: 'Snimači', titles: { added: 'Snimači koji se dodaju', changed: 'Snimači koji se menjaju', removed: 'Snimači koji se uklanjaju' } }
+];
+const SYNC_KINDS = [
+  { kind: 'added', color: '#4ade80', sign: '+' },
+  { kind: 'changed', color: '#fbbf24', sign: '~' },
+  { kind: 'removed', color: '#f87171', sign: '−' }
+];
 
 async function loadSyncCamerasStatus() {
   try {
@@ -5646,47 +5659,125 @@ function closeSyncCamerasModal() {
   if (modal) modal.style.display = 'none';
 }
 
+/** Koliko je promena izabrano (nije odbačeno) u jednoj grupi */
+function syncSelected(p, table, kind) {
+  const items = p[table][kind];
+  const skipped = items.filter(i => syncExcluded[table].has(i.id)).length;
+  return p[table][kind + 'Count'] - skipped;
+}
+
+function syncSelectedTotal(p) {
+  let n = 0;
+  SYNC_TABLES.forEach(t => SYNC_KINDS.forEach(k => { n += syncSelected(p, t.table, k.kind); }));
+  return n;
+}
+
 function updateSyncApplyButton() {
   const btn = document.getElementById('btn-apply-sync-cameras');
   const chk = document.getElementById('sync-cameras-confirm');
-  if (btn) btn.disabled = syncCamerasBusy || !syncCamerasPreview || !(chk && chk.checked);
+  if (!btn) return;
+  const selected = syncCamerasPreview ? syncSelectedTotal(syncCamerasPreview) : 0;
+  btn.disabled = syncCamerasBusy || !syncCamerasPreview || !(chk && chk.checked) || selected === 0;
+  const label = btn.querySelector('span');
+  if (label) label.textContent = selected ? `Prepiši izabrane promene (${selected})` : 'Nema izabranih promena';
 }
 
-function syncStat(label, added, changed, removed) {
-  const chip = (n, color, sign) => `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:0.78rem;font-weight:700;color:${n ? color : '#64748b'};border:1px solid ${n ? color + '55' : 'rgba(255,255,255,0.1)'};background:${n ? color + '14' : 'transparent'};">${sign}${n}</span>`;
+/** Osvežava brojače (gore i u grupama) i dugme posle svake kvačice */
+function refreshSyncSelection() {
+  const p = syncCamerasPreview;
+  if (!p) return;
+  SYNC_TABLES.forEach(t => SYNC_KINDS.forEach(k => {
+    const sel = syncSelected(p, t.table, k.kind);
+    const chip = document.getElementById(`sync-stat-${t.table}-${k.kind}`);
+    if (chip) {
+      chip.textContent = `${k.sign}${sel}`;
+      chip.style.color = sel ? k.color : '#64748b';
+      chip.style.borderColor = sel ? k.color + '55' : 'rgba(255,255,255,0.1)';
+      chip.style.background = sel ? k.color + '14' : 'transparent';
+    }
+    const cnt = document.querySelector(`[data-sync-count="${t.table}:${k.kind}"]`);
+    if (cnt) cnt.textContent = `${sel}/${p[t.table][k.kind + 'Count']}`;
+  }));
+  updateSyncApplyButton();
+}
+
+function syncStatRow(t) {
+  const chip = (k) => `<span id="sync-stat-${t.table}-${k.kind}" style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:999px;font-size:0.78rem;font-weight:700;border:1px solid rgba(255,255,255,0.1);color:#64748b;"></span>`;
   return `<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);">
-    <strong style="color:#f1f5f9;font-size:0.88rem;">${label}</strong>
-    <span style="display:flex;gap:6px;">${chip(added, '#4ade80', '+')}${chip(changed, '#fbbf24', '~')}${chip(removed, '#f87171', '−')}</span>
+    <strong style="color:#f1f5f9;font-size:0.88rem;">${t.label}</strong>
+    <span style="display:flex;gap:6px;">${SYNC_KINDS.map(chip).join('')}</span>
   </div>`;
 }
 
-function syncDetails(title, color, items, render) {
-  if (!items || !items.length) return '';
+function syncChangeText(c) {
+  const val = (v) => (v === null || v === undefined || v === '') ? '∅' : String(v);
+  return `${escapeHtml(c.label)} <span style="color:#94a3b8;">— ${c.changes.map(x => `${escapeHtml(x.field)}: ${escapeHtml(val(x.before))} → ${escapeHtml(val(x.after))}`).join('; ')}</span>`;
+}
+
+/** Grupa promena: svaka ima svoju kvačicu (kvačica = primeni, bez kvačice = odbačeno) */
+function syncGroup(p, t, k) {
+  const items = p[t.table][k.kind];
+  if (!items.length) return '';
+  const total = p[t.table][k.kind + 'Count'];
+  const text = (i) => k.kind === 'changed' ? syncChangeText(i) : escapeHtml(i.label + (i.location && k.kind === 'added' ? ' [' + i.location + ']' : ''));
+  const rows = items.map(i => `
+    <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:2px 0;">
+      <input type="checkbox" checked data-sync-table="${t.table}" data-sync-kind="${k.kind}" data-sync-id="${escapeHtml(i.id)}" style="margin-top:2px;accent-color:${k.color};flex-shrink:0;">
+      <span>${text(i)}</span>
+    </label>`).join('');
+  const linkBtn = 'background:none;border:none;padding:0;color:#94a3b8;text-decoration:underline;cursor:pointer;font-size:0.74rem;';
   return `<details style="border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px 12px;background:rgba(0,0,0,0.15);">
-    <summary style="cursor:pointer;color:${color};font-weight:700;font-size:0.82rem;">${title} (${items.length})</summary>
-    <div style="margin-top:8px;display:flex;flex-direction:column;gap:4px;font-size:0.78rem;color:#cbd5e1;max-height:180px;overflow-y:auto;">${items.map(render).join('')}</div>
+    <summary style="cursor:pointer;color:${k.color};font-weight:700;font-size:0.82rem;">${t.titles[k.kind]} (<span data-sync-count="${t.table}:${k.kind}">${total}/${total}</span>)</summary>
+    <div style="display:flex;gap:12px;margin:8px 0 4px;">
+      <button type="button" style="${linkBtn}" data-sync-all="${t.table}:${k.kind}:1">Označi sve</button>
+      <button type="button" style="${linkBtn}" data-sync-all="${t.table}:${k.kind}:0">Odbaci sve</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:2px;font-size:0.78rem;color:#cbd5e1;max-height:220px;overflow-y:auto;">${rows}</div>
+    ${items.length < total ? `<div style="margin-top:6px;font-size:0.72rem;color:#fbbf24;">Prikazano je prvih ${items.length} od ${total}; ostale se uvek primenjuju.</div>` : ''}
   </details>`;
+}
+
+/** Kvačice i „označi/odbaci sve“ rade preko jednog slušaoca na telu prozora (vezuje se jednom) */
+function bindSyncCamerasBodyEvents() {
+  const body = document.getElementById('sync-cameras-body');
+  if (!body || body.dataset.bound) return;
+  body.dataset.bound = '1';
+  body.addEventListener('change', (e) => {
+    const cb = e.target.closest ? e.target.closest('input[data-sync-id]') : null;
+    if (!cb) return;
+    const set = syncExcluded[cb.dataset.syncTable];
+    if (cb.checked) set.delete(cb.dataset.syncId); else set.add(cb.dataset.syncId);
+    const row = cb.closest('label');
+    if (row) row.style.opacity = cb.checked ? '1' : '0.45';
+    refreshSyncSelection();
+  });
+  body.addEventListener('click', (e) => {
+    const btn = e.target.closest ? e.target.closest('[data-sync-all]') : null;
+    if (!btn) return;
+    const [table, kind, on] = btn.dataset.syncAll.split(':');
+    body.querySelectorAll(`input[data-sync-table="${table}"][data-sync-kind="${kind}"]`).forEach(cb => {
+      const want = on === '1';
+      if (cb.checked !== want) {
+        cb.checked = want;
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    });
+  });
 }
 
 function renderSyncCamerasPreview(p) {
   const body = document.getElementById('sync-cameras-body');
   const peer = syncCamerasStatus ? syncCamerasStatus.peerLabel : 'drugim serverom';
-  const cam = p.cameras, rec = p.recorders, w = p.warnings;
+  const w = p.warnings;
   const when = p.peer.exportedAt ? new Date(p.peer.exportedAt).toLocaleString('sr-RS') : '';
-  const li = (t) => `<div>• ${escapeHtml(t)}</div>`;
-  const val = (v) => (v === null || v === undefined || v === '') ? '∅' : String(v);
-  const fieldChange = (c) => `<div>• ${escapeHtml(c.label)} <span style="color:#94a3b8;">— ${c.changes.map(x => `${escapeHtml(x.field)}: ${escapeHtml(val(x.before))} → ${escapeHtml(val(x.after))}`).join('; ')}</span></div>`;
 
   let html = `
     <div style="font-size:0.85rem;color:#cbd5e1;line-height:1.5;">
       Podaci sa servera <strong>${escapeHtml(p.peer.host)}</strong> (${p.peer.cameraCount} kamera, ${p.peer.recorderCount} snimača, izvezeno ${escapeHtml(when)}) prepisaće vašu evidenciju
-      (${p.local.cameraCount} kamera, ${p.local.recorderCount} snimača). Posle prepisivanja je vaša evidencija kamera i snimača ista kao na ${escapeHtml(peer)}.
+      (${p.local.cameraCount} kamera, ${p.local.recorderCount} snimača). Posle prepisivanja je vaša evidencija kamera i snimača ista kao na ${escapeHtml(peer)}, osim promena koje odbacite.
     </div>
-    <div style="display:flex;flex-direction:column;gap:6px;">
-      ${syncStat('Kamere', cam.addedCount, cam.changedCount, cam.removedCount)}
-      ${syncStat('Snimači', rec.addedCount, rec.changedCount, rec.removedCount)}
-    </div>
-    <div style="font-size:0.74rem;color:#64748b;">+ dodato, ~ izmenjeno, − uklonjeno. Lozinke kamera se ne prenose (samo oznaka Lozinka 1/2). Role, prava i Monitoring tabovi se ne menjaju.</div>`;
+    <div style="display:flex;flex-direction:column;gap:6px;">${SYNC_TABLES.map(syncStatRow).join('')}</div>
+    <div style="font-size:0.74rem;color:#64748b;">+ dodato, ~ izmenjeno, − uklonjeno. Otvorite grupu i skinite kvačicu uz promenu koju ne želite: ona ostaje kakva je na ovom serveru. Lozinke kamera se ne prenose (samo oznaka Lozinka 1/2). Role, prava i Monitoring tabovi se ne menjaju.</div>`;
 
   if (w.identityChanged.length) {
     html += `<div style="padding:10px 12px;border-radius:8px;border:1px solid rgba(245,158,11,0.45);background:rgba(245,158,11,0.1);font-size:0.82rem;color:#fde68a;line-height:1.45;">
@@ -5701,15 +5792,10 @@ function renderSyncCamerasPreview(p) {
   if (w.affectedGroupMemberships) impact.push(`<strong>${w.affectedGroupMemberships}</strong> članstava u grupama kamera (brišu se sa uklonjenim kamerama)`);
   if (impact.length) {
     html += `<div style="padding:10px 12px;border-radius:8px;border:1px solid rgba(248,113,113,0.4);background:rgba(248,113,113,0.08);font-size:0.82rem;color:#fecaca;line-height:1.5;">
-      <strong>Pogođeno prepisivanjem:</strong><div style="margin-top:4px;">${impact.map(x => '• ' + x).join('<br>')}</div></div>`;
+      <strong>Pogođeno prepisivanjem</strong> <span style="color:#fca5a5;">(računato za sve promene; odbačene se ne primenjuju)</span>:<div style="margin-top:4px;">${impact.map(x => '• ' + x).join('<br>')}</div></div>`;
   }
 
-  html += syncDetails('Kamere koje se dodaju', '#4ade80', cam.added, c => li(c.label + (c.location ? ' [' + c.location + ']' : '')));
-  html += syncDetails('Kamere koje se menjaju', '#fbbf24', cam.changed, fieldChange);
-  html += syncDetails('Kamere koje se uklanjaju', '#f87171', cam.removed, c => li(c.label));
-  html += syncDetails('Snimači koji se dodaju', '#4ade80', rec.added, c => li(c.label));
-  html += syncDetails('Snimači koji se menjaju', '#fbbf24', rec.changed, fieldChange);
-  html += syncDetails('Snimači koji se uklanjaju', '#f87171', rec.removed, c => li(c.label));
+  SYNC_TABLES.forEach(t => SYNC_KINDS.forEach(k => { html += syncGroup(p, t, k); }));
 
   if (!p.totalChanges) {
     html += `<div style="padding:12px;border-radius:8px;border:1px solid rgba(74,222,128,0.4);background:rgba(74,222,128,0.08);color:#bbf7d0;font-size:0.86rem;">✓ Evidencija kamera i snimača je već ista kao na ${escapeHtml(peer)}. Nema šta da se prepiše.</div>`;
@@ -5717,6 +5803,8 @@ function renderSyncCamerasPreview(p) {
     html += `<div style="font-size:0.78rem;color:#94a3b8;">Pre prepisivanja se automatski pravi rezervna kopija cele baze.</div>`;
   }
   body.innerHTML = html;
+  bindSyncCamerasBodyEvents();
+  refreshSyncSelection();
 }
 
 async function openSyncCamerasModal() {
@@ -5732,6 +5820,7 @@ async function openSyncCamerasModal() {
   document.getElementById('sync-cameras-title').textContent = st ? st.buttonLabel : 'Sinhronizacija kamera i snimača';
   document.getElementById('sync-cameras-subtitle').textContent = 'Pregled razlika pre prepisivanja';
   syncCamerasPreview = null;
+  syncExcluded = { cameras: new Set(), recorders: new Set() };
   if (chk) chk.checked = false;
   if (applyBtn) applyBtn.style.display = 'none';
   if (confirmWrap) confirmWrap.style.display = 'none';
@@ -5775,20 +5864,26 @@ async function applySyncCameras() {
     const res = await fetch('/api/sync/cameras/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: true, fingerprint: syncCamerasPreview.fingerprint })
+      body: JSON.stringify({
+        confirm: true,
+        fingerprint: syncCamerasPreview.fingerprint,
+        excluded: { cameras: Array.from(syncExcluded.cameras), recorders: Array.from(syncExcluded.recorders) }
+      })
     });
     const data = await res.json();
     if (!res.ok || !data.success) throw new Error(data.error || 'Prepisivanje nije uspelo');
     const r = data.result;
+    const skipped = r.cameras.skipped + r.recorders.skipped;
     if (applyBtn) applyBtn.style.display = 'none';
     document.getElementById('sync-cameras-confirm-wrap').style.display = 'none';
     body.innerHTML = `<div style="padding:14px;border-radius:8px;border:1px solid rgba(74,222,128,0.4);background:rgba(74,222,128,0.08);color:#bbf7d0;font-size:0.88rem;line-height:1.6;">
       <strong>✓ Evidencija je prepisana.</strong><br>
       Kamere: +${r.cameras.added} dodato, ~${r.cameras.changed} izmenjeno, −${r.cameras.removed} uklonjeno (ukupno ${r.cameras.total}).<br>
       Snimači: +${r.recorders.added} dodato, ~${r.recorders.changed} izmenjeno, −${r.recorders.removed} uklonjeno (ukupno ${r.recorders.total}).<br>
+      ${skipped ? `<span style="color:#fde68a;">Odbačeno promena (ostale kakve su bile): kamere ${r.cameras.skipped}, snimači ${r.recorders.skipped}.</span><br>` : ''}
       <span style="color:#86efac;font-size:0.78rem;">Rezervna kopija baze: ${escapeHtml(r.backupPath)}</span></div>`;
     syncCamerasPreview = null;
-    showToast('✓ Evidencija kamera i snimača je sinhronizovana', 'success');
+    showToast(skipped ? `✓ Evidencija je sinhronizovana (odbačeno ${skipped} promena)` : '✓ Evidencija kamera i snimača je sinhronizovana', 'success');
     fetchInventoryCameras();
     if (typeof fetchInventoryRecorders === 'function') fetchInventoryRecorders();
   } catch (err) {
