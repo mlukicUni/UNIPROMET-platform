@@ -51,7 +51,7 @@ const SPECS: Record<'cameras' | 'recorders', TableSpec> = {
 };
 
 const MAX_EXPORT_BYTES = 20 * 1024 * 1024;
-const MAX_LISTED = 200;
+const MAX_LISTED = 2000;
 let syncRunning = false;
 
 /* ==========================================================================
@@ -367,33 +367,73 @@ export async function previewFromPeer(): Promise<SyncPreview> {
 /* ==========================================================================
    PRIMENA
    ========================================================================== */
+/** ID-jevi promena koje je korisnik odbacio: ostaju kakve jesu na ovom serveru (ne dodaju se, ne menjaju, ne brišu) */
+export interface SyncExclusions {
+  cameras?: unknown;
+  recorders?: unknown;
+}
+
+export interface TableResult { added: number; changed: number; removed: number; skipped: number; total: number }
+
 export interface SyncResult {
   backupPath: string;
-  cameras: { added: number; changed: number; removed: number; total: number };
-  recorders: { added: number; changed: number; removed: number; total: number };
+  cameras: TableResult;
+  recorders: TableResult;
   peerHost: string;
 }
 
-function applyTable(spec: TableSpec, remoteRows: Row[]): { added: number; changed: number; removed: number; total: number } {
+const MAX_EXCLUDED = 10000;
+
+function parseExclusions(raw: SyncExclusions | undefined): Record<'cameras' | 'recorders', Set<string>> {
+  const out = { cameras: new Set<string>(), recorders: new Set<string>() };
+  if (raw === undefined || raw === null) return out;
+  if (typeof raw !== 'object') throw new SyncError('Spisak odbačenih promena nije ispravan.', 400);
+  for (const key of ['cameras', 'recorders'] as const) {
+    const list = (raw as Record<string, unknown>)[key];
+    if (list === undefined || list === null) continue;
+    if (!Array.isArray(list) || list.length > MAX_EXCLUDED || list.some(v => typeof v !== 'string' || !v || v.length > 120)) {
+      throw new SyncError('Spisak odbačenih promena nije ispravan.', 400);
+    }
+    list.forEach(v => out[key].add(v as string));
+  }
+  return out;
+}
+
+function applyTable(spec: TableSpec, remoteRows: Row[], excluded: Set<string>): TableResult {
   const db = getDb();
-  const { diff, removedIds } = diffTable(spec, remoteRows);
+  const { removedIds, changedIds, addedIds } = diffTable(spec, remoteRows);
   const cols = localColumns(spec.table).filter(c => remoteRows.length && c in remoteRows[0]);
   const updates = cols.filter(c => c !== 'id').map(c => `${c} = excluded.${c}`).join(', ');
   const upsert = db.prepare(
     `INSERT INTO ${spec.table} (${cols.join(', ')}) VALUES (${cols.map(c => '@' + c).join(', ')}) ON CONFLICT(id) DO UPDATE SET ${updates}`
   );
   const del = db.prepare(`DELETE FROM ${spec.table} WHERE id = ?`);
-  // Brišu se samo kamere/snimači kojih nema na izvoru; ostali se prepisuju (ne briše se sve, da veze ostanu)
-  for (const id of removedIds) del.run(id);
+  // Brišu se samo kamere/snimači kojih nema na izvoru; ostali se prepisuju (ne briše se sve, da veze ostanu).
+  // Odbačene promene se preskaču u celini.
+  const toDelete = removedIds.filter(id => !excluded.has(id));
+  for (const id of toDelete) del.run(id);
   for (const r of remoteRows) {
+    if (excluded.has(String(r.id))) continue;
     const params: Record<string, unknown> = {};
     for (const c of cols) params[c] = norm(r[c]);
     upsert.run(params);
   }
-  return { added: diff.addedCount, changed: diff.changedCount, removed: diff.removedCount, total: remoteRows.length };
+  const skipped = [...addedIds, ...changedIds, ...removedIds].filter(id => excluded.has(id)).length;
+  return {
+    added: addedIds.filter(id => !excluded.has(id)).length,
+    changed: [...changedIds].filter(id => !excluded.has(id)).length,
+    removed: toDelete.length,
+    skipped,
+    total: (db.prepare(`SELECT COUNT(*) c FROM ${spec.table}`).get() as { c: number }).c
+  };
 }
 
-export async function applyFromPeer(expectedFingerprint: string, actor: { id?: string; name?: string; email?: string } | null): Promise<SyncResult> {
+export async function applyFromPeer(
+  expectedFingerprint: string,
+  actor: { id?: string; name?: string; email?: string } | null,
+  exclusions?: SyncExclusions
+): Promise<SyncResult> {
+  const excluded = parseExclusions(exclusions);
   if (syncRunning) throw new SyncError('Sinhronizacija je već u toku.', 409);
   syncRunning = true;
   try {
@@ -413,8 +453,8 @@ export async function applyFromPeer(expectedFingerprint: string, actor: { id?: s
 
     let result!: SyncResult;
     db.transaction(() => {
-      const recorders = applyTable(SPECS.recorders, remote.recorders);
-      const cameras = applyTable(SPECS.cameras, remote.cameras);
+      const recorders = applyTable(SPECS.recorders, remote.recorders, excluded.recorders);
+      const cameras = applyTable(SPECS.cameras, remote.cameras, excluded.cameras);
       result = { backupPath, cameras, recorders, peerHost: String(remote.source.host || '') };
     })();
 

@@ -78,9 +78,10 @@ syncRouter.post('/cameras/apply', async (req: Request, res: Response) => {
     if (req.body?.confirm !== true) {
       return res.status(400).json({ success: false, error: 'Prepisivanje mora biti potvrđeno.' });
     }
-    const result = await applyFromPeer(String(req.body?.fingerprint || ''), req.sessionUser || null);
+    const result = await applyFromPeer(String(req.body?.fingerprint || ''), req.sessionUser || null, req.body?.excluded);
     const c = result.cameras, r = result.recorders;
-    const details = `Evidencija kamera i snimača prepisana podacima sa servera ${result.peerHost}: kamere +${c.added} ~${c.changed} -${c.removed} (ukupno ${c.total}), snimači +${r.added} ~${r.changed} -${r.removed} (ukupno ${r.total}). Rezervna kopija: ${result.backupPath}`;
+    const skipped = c.skipped + r.skipped ? `, odbačeno promena: kamere ${c.skipped}, snimači ${r.skipped}` : '';
+    const details = `Evidencija kamera i snimača prepisana podacima sa servera ${result.peerHost}: kamere +${c.added} ~${c.changed} -${c.removed} (ukupno ${c.total}), snimači +${r.added} ~${r.changed} -${r.removed} (ukupno ${r.total})${skipped}. Rezervna kopija: ${result.backupPath}`;
     writeAudit(req.sessionUser || null, 'sync.cameras.apply', 'cameras', result.peerHost, details);
     addServerLog('success', details, 'Sync');
     res.json({ success: true, result });
