@@ -1,16 +1,20 @@
 # Istorija verzija - UNIPROMET platforma
 
 Svako puštanje na produkcijski server (spajanje `dev` → `main`) je nova verzija.
-Brojevi verzija: `GLAVNA.MANJA.ISPRAVKA` (npr. 1.2.3)
+Brojevi verzija: `GLAVNA.MANJA.ISPRAVKA` (npr. 1.2.3), uz četvrti broj za sitne dorade (npr. 1.3.9.1)
 
+- **DORADA** (1.3.9 → 1.3.9.1 → 1.3.9.2): sitne dorade i brze ispravke (od 2026-11-17), da ne troše broj ISPRAVKA
 - **ISPRAVKA** (1.0.0 → 1.0.1): ispravke grešaka i sitne izmene postojećih stranica
 - **MANJA** (1.0.1 → 1.1.0): nova funkcionalnost (nova stranica, novi modul, nova opcija)
 - **GLAVNA** (1.4.2 → 2.0.0): velike promene celog sistema, samo kad korisnik to odluči
 
-Verzija se vodi u `package.json`, a svaka puštena verzija ima git tag `vX.Y.Z` i GitHub Release.
+Verzija se vodi u `package.json`, a svaka puštena verzija ima git tag `vX.Y.Z` (ili `vX.Y.Z.W`) i GitHub Release.
 Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o sistemu) i u mejlu „Server ažuriran“.
 
 ## [Neobjavljeno]
+
+## [1.3.9.1] - 2026-11-17
+- Ispravka: pregled sinhronizacije kamera je javljao „str.replace is not a function“ kada su se među izmenama nalazila brojčana polja (npr. broj kanala snimača); funkcija za prikaz teksta sada podnosi brojeve, a prazne vrednosti u pregledu se prikazuju kao „∅“
 
 ## [1.3.9] - 2026-11-16
 - Mreža → Kamere: sinhronizacija evidencije kamera i snimača između produkcije i dev servera (samo Super admin). Dugme „Sinhronizuj podatke sa dev serverom“ (na produkciji) odnosno „…sa main serverom“ (na dev-u) prvo prikazuje pregled razlika (dodato / izmenjeno / uklonjeno, upozorenja za Monitoring tabove, prava i grupe koje bi bile pogođene), a posle potvrde prepisuje kamere i snimače podacima sa drugog servera (uz automatsku rezervnu kopiju baze i upis u audit). Server preuzima podatke preko API-ja `GET /api/sync/cameras/export` koji štiti zajednički token (`SYNC_API_TOKEN`; bez tokena izvoz ne postoji). Lozinke kamera se ne prenose, a role, prava i Monitoring tabovi se ne diraju. Podešavanje u `.env`: `INSTANCE_ROLE`, `SYNC_PEER_URL`, `SYNC_API_TOKEN`, `SYNC_PEER_INSECURE_TLS` (primer u `deploy/env.production.example`)
