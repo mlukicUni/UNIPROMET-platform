@@ -13,6 +13,14 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.10] - 2026-11-18
+- Analogne kamere preko snimača: na hibridnim snimačima (DVR) analogni kanali mogu da se prate uživo, u monitoringu i u arhivi kao i IP kamere. Novo dugme „Analogni kanali“ u Mreža → Kamere pročita sa izabranog snimača spisak analognih kanala (samo čitanje, po jedna slika sa svakog kanala), pokaže koji kanali daju signal i upiše izabrane u evidenciju sa nazivom koji se može izmeniti. Kanal se vodi kao kamera tipa „Analogna“ sa oznakom „<IP snimača>~ch<kanal>“ (prikazuje se kao „Analog 3“); tok i slika se uzimaju sa snimača (njegova adresa i lozinka), a pristup po rolama važi preko snimača. Analogni kanali se ne uključuju u proveru offline kamera niti u skeniranje mreže
+- Mreža → Kamere: lista kamera sada ima zasebnu kolonu „Lokacija“ pored kolone „Snimač“ (lokacija se više ne prikazuje ispod naziva kamere)
+- Video nadzor → Lista kamera: spisak se osvežava pri svakom ulasku u tab (nove kamere iz evidencije, npr. analogni kanali, vide se odmah bez osvežavanja stranice); analogne kamere imaju plavu oznaku „Analogna“ u tabeli i karticama
+- Video nadzor → Lista kamera: mini prikaz uživo više ne prikazuje traku za premotavanje, vreme ni dugmad video plejera
+- Podaci (dev): u evidenciju upisani analogni kanali sa signalom sa svih hibridnih snimača – Pogoni (kanali 11 i 15), KV Uprava stara (1–5), Ljubić (1–10), KV Plava Hala (1–14), KV blagajna (1–12), ukupno 43; nazivi su preuzeti sa snimača, a podrazumevani „Camera NN“ zamenjen sa „<snimač> - analog N“. Cinkara ima 16 analognih ulaza bez signala, ostali snimači nemaju analogne ulaze
+- Podaci (dev): snimač Održavanje – analogni kanali 1–8 preimenovani na snimaču i upisani u evidenciju (OD - garaza, OD - radionica 1–3, OD - kanc 1–4); kamere „nove kamere odrzavnje / nova kamera odrzavanje iza“ dobile nazive sa snimača (Camera O1–O10, OD - Napolju 6, Camera 01 Iza, Camera 02 Iza)
+
 ## [1.3.9.2] - 2026-11-17
 - Sinhronizacija kamera i snimača: svaka pojedinačna promena u pregledu ima kvačicu i može da se odbaci (kamera ili snimač koji se ne dodaje, ne menja ili ne briše ostaje kakav je na ovom serveru), uz „Označi sve / Odbaci sve“ po grupi. Brojači i dugme „Prepiši izabrane promene (N)“ se menjaju uživo, a odbačene promene se pri sledećem pregledu ponovo nude. Odbačeni broj se upisuje u audit i prikazuje posle prepisivanja
 
