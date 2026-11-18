@@ -1963,6 +1963,16 @@
     } catch (_) { /* dugme ostaje sakriveno */ }
   }
 
+  function setSyncApplyLabel(text) {
+    const span = $('mon-sync-apply').querySelector('span');
+    if (span) span.textContent = text;
+  }
+
+  /** Obaveštenje (plutajuća poruka platforme), uz rezervu ako ona nije dostupna */
+  function syncToast(message, type) {
+    if (typeof window.showToast === 'function') window.showToast(message, type);
+  }
+
   function updateSyncApply() {
     const picked = document.querySelectorAll('#mon-sync-body .mon-sync-pick:checked').length;
     $('mon-sync-apply').disabled = SYNC.busy || !SYNC.preview || !$('mon-sync-confirm').checked || picked === 0;
@@ -2084,7 +2094,9 @@
     if (!p) return;
     const selected = [...document.querySelectorAll('#mon-sync-body .mon-sync-pick:checked')].map(cb => cb.value);
     SYNC.busy = true;
+    setSyncApplyLabel('Preuzimanje u toku…');
     updateSyncApply();
+    syncToast('Preuzimanje tabova je pokrenuto…', 'info');
     try {
       const res = await fetch('/api/sync/monitoring/apply', {
         method: 'POST',
@@ -2094,18 +2106,21 @@
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Preuzimanje nije uspelo');
       const r = data.result;
-      const skipped = r.skipped.length ? ` Preskočeno: ${r.skipped.map(s => C.esc(s.name)).join(', ')}.` : '';
+      const skipped = r.skipped.length ? ` Preskočeno: ${r.skipped.map(s => `${C.esc(s.name)} (${C.esc(s.reason)})`).join(', ')}.` : '';
       const missing = r.missingCameras ? ` Kamera koje nedostaju (polja prazna): ${r.missingCameras}.` : '';
       $('mon-sync-subtitle').textContent = 'Preuzimanje završeno';
       $('mon-sync-body').innerHTML = `<p class="text-sm">Dodato: ${r.added}, zamenjeno: ${r.replaced}.${skipped}${missing}</p>
         <p class="text-dim text-xs">Rezervna kopija baze: <code>${C.esc(r.backupPath)}</code></p>`;
       SYNC.preview = null;
       $('mon-sync-confirm').checked = false;
+      syncToast(`Preuzimanje završeno: dodato ${r.added}, zamenjeno ${r.replaced}, preskočeno ${r.skipped.length}`, r.added || r.replaced ? 'success' : 'info');
       load();
     } catch (err) {
       $('mon-sync-body').innerHTML = `<p class="text-sm" style="color: #ef4444;">${C.esc(err.message)}</p>`;
+      syncToast(`Preuzimanje nije uspelo: ${err.message}`, 'error');
     } finally {
       SYNC.busy = false;
+      setSyncApplyLabel('Preuzmi izabrane');
       updateSyncApply();
     }
   }

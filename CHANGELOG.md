@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.10.2] - 2026-11-18
+- Video nadzor → Monitoring → „Povuci tabove“: dugme tokom preuzimanja piše „Preuzimanje u toku…“, a plutajuće poruke javljaju početak, rezultat (dodato / zamenjeno / preskočeno) ili grešku; uz preskočene tabove se navodi i razlog
+
 ## [1.3.10.1] - 2026-11-18
 - Privremeno: povlačenje Monitoring tabova sa drugog servera (produkcija ↔ dev). Dugme „Povuci tabove“ u Video nadzor → Monitoring (samo Super admin) pregleda tabove sa drugog servera (vlasnik, naziv, broj polja, koliko kamera nedostaje) i preuzima izabrane; postojeći tab istog vlasnika i naziva se preskače ili zamenjuje po izboru. Kamere se mapiraju po IP adresi (ne po ID-u), a kamere kojih nema na ovom serveru ostaju prazna polja uz upozorenje. Lokalni tabovi se ne brišu, pre upisa se pravi rezervna kopija, a upis ide u audit. Uključuje se sa MONITORING_SYNC_ENABLED=true u .env na oba servera (bez te promenljive dugme i izvoz su isključeni), pa se lako uklanja. Pri uvozu se za svakog vlasnika sa drugog servera bira korisnik na ovom serveru (ili se unosi drugi e-mail), pa ključevi vlasnika ostaju ispravni. Deljenja sa rolama i šabloni se ne prenose
 
