@@ -10,6 +10,14 @@ import {
 import { syncApiToken } from '../utils/appConfig';
 import { writeAudit } from '../db/rolesDb';
 import { addServerLog } from './system.routes';
+import {
+  buildMonitoringExport,
+  monitoringSyncEnabled,
+  previewMonitoringFromPeer,
+  applyMonitoringFromPeer,
+  normalizeOwnerMap
+} from '../services/monitoringSyncService';
+import { ownerKey } from '../db/monitoringDb';
 
 /**
  * Sinhronizacija evidencije kamera i snimača između dva servera.
@@ -41,6 +49,67 @@ syncRouter.get('/cameras/export', (req: Request, res: Response) => {
   addServerLog('info', `Izvoz evidencije kamera za sinhronizaciju: ${data.cameras.length} kamera, ${data.recorders.length} snimača`, 'Sync');
   res.setHeader('Cache-Control', 'no-store');
   res.json(data);
+});
+
+/* ---------- Monitoring tabovi (privremeno; uključuje se sa MONITORING_SYNC_ENABLED=true) ---------- */
+syncRouter.get('/monitoring/export', (req: Request, res: Response) => {
+  if (!monitoringSyncEnabled() || !syncApiToken()) return res.status(404).json({ error: 'Not found' });
+  if (!tokenMatches(String(req.header('x-sync-token') || ''))) {
+    const ip = req.ip || req.socket.remoteAddress || '';
+    const now = Date.now();
+    if (now - (deniedLogAt.get(`mon:${ip}`) || 0) > 60_000) {
+      deniedLogAt.set(`mon:${ip}`, now);
+      writeAudit(null, 'sync.monitoring.denied', 'monitoring', ip, `Pokušaj preuzimanja monitoring tabova sa pogrešnim tokenom (adresa ${ip})`, false);
+    }
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  const data = buildMonitoringExport();
+  addServerLog('info', `Izvoz monitoring tabova za sinhronizaciju: ${data.tabs.length} tabova`, 'Sync');
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(data);
+});
+
+syncRouter.get('/monitoring/status', (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req, res)) return;
+  const st = syncStatus();
+  res.json({ success: true, enabled: monitoringSyncEnabled(), configured: st.configured, role: st.role, peerHost: st.peerHost, peerLabel: st.peerLabel });
+});
+
+syncRouter.post('/monitoring/preview', async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req, res)) return;
+  if (!monitoringSyncEnabled()) return res.status(404).json({ success: false, error: 'Not found' });
+  try {
+    const ownerMap = normalizeOwnerMap(req.body?.ownerMap);
+    const currentOwner = ownerKey((req.sessionUser || {}) as { id?: string; email?: string });
+    res.json({ success: true, preview: await previewMonitoringFromPeer(ownerMap, currentOwner) });
+  } catch (err) {
+    fail(res, err);
+  }
+});
+
+syncRouter.post('/monitoring/apply', async (req: Request, res: Response) => {
+  if (!requireSuperAdmin(req, res)) return;
+  if (!monitoringSyncEnabled()) return res.status(404).json({ success: false, error: 'Not found' });
+  try {
+    if (req.body?.confirm !== true) {
+      return res.status(400).json({ success: false, error: 'Preuzimanje mora biti potvrđeno.' });
+    }
+    const result = await applyMonitoringFromPeer({
+      selected: req.body?.selected,
+      mode: req.body?.mode,
+      ownerMap: req.body?.ownerMap,
+      fingerprint: String(req.body?.fingerprint || ''),
+      actor: req.sessionUser || null
+    });
+    const skipped = result.skipped.length ? `, preskočeno: ${result.skipped.map(s => `${s.name} (${s.reason})`).join('; ')}` : '';
+    const missing = result.missingCameras ? `, kamera koje nedostaju na ovom serveru (polja prazna): ${result.missingCameras}` : '';
+    const details = `Monitoring tabovi sa servera ${result.peerHost}: dodato ${result.added}, zamenjeno ${result.replaced}${skipped}${missing}. Rezervna kopija: ${result.backupPath}`;
+    writeAudit(req.sessionUser || null, 'sync.monitoring.apply', 'monitoring', result.peerHost, details);
+    addServerLog('success', details, 'Sync');
+    res.json({ success: true, result });
+  } catch (err) {
+    fail(res, err);
+  }
 });
 
 /** Ostalo: samo Super admin (routeAccess to već traži; ovde je dodatna provera) */

@@ -1860,6 +1860,7 @@
     $('mon-btn-new-tab').addEventListener('click', (e) => { e.stopPropagation(); openNewTabMenu(e.currentTarget); });
     $('mon-btn-empty-new').addEventListener('click', (e) => { e.stopPropagation(); openNewTabMenu(e.currentTarget); });
     $('mon-btn-edit').addEventListener('click', () => { const t = activeTab(); if (t && !t.shared) openWizard('edit', t); });
+    bindSyncPeer();
     $('mon-btn-rotation').addEventListener('click', () => {
       if (S.rotation.timer) {
         stopRotation(true);
@@ -1932,6 +1933,181 @@
     S.activeId = id; // load() zadržava aktivni tab ako postoji
     if (S.visible) load();
     else if (typeof window.activateTab === 'function') window.activateTab('cctv_monitoring');
+  }
+
+  /* ==========================================================================
+     PRIVREMENO: povlačenje monitoring tabova sa drugog servera
+     Dugme se prikazuje samo kad je MONITORING_SYNC_ENABLED=true i podešena sinhronizacija.
+     ========================================================================== */
+  const SYNC = { status: null, preview: null, busy: false, ownerMap: {}, customOpen: new Set() };
+
+  function bindSyncPeer() {
+    $('mon-sync-confirm').addEventListener('change', updateSyncApply);
+    $('mon-sync-apply').addEventListener('click', applySync);
+    $('mon-btn-sync-peer').addEventListener('click', openSyncModal);
+    bindModalClose('modal-mon-sync');
+    loadSyncStatus();
+  }
+
+  async function loadSyncStatus() {
+    try {
+      const res = await fetch('/api/sync/monitoring/status', { cache: 'no-store' });
+      if (!res.ok) return;
+      const data = await res.json();
+      SYNC.status = data;
+      if (!data.enabled || !data.configured) return;
+      const btn = $('mon-btn-sync-peer');
+      btn.querySelector('span').textContent = `Povuci tabove sa ${data.peerLabel}`;
+      btn.style.display = '';
+      C.icons(btn);
+    } catch (_) { /* dugme ostaje sakriveno */ }
+  }
+
+  function updateSyncApply() {
+    const picked = document.querySelectorAll('#mon-sync-body .mon-sync-pick:checked').length;
+    $('mon-sync-apply').disabled = SYNC.busy || !SYNC.preview || !$('mon-sync-confirm').checked || picked === 0;
+  }
+
+  function openSyncModal() {
+    SYNC.preview = null;
+    SYNC.ownerMap = {};
+    SYNC.customOpen = new Set();
+    $('mon-sync-confirm').checked = false;
+    $('mon-sync-subtitle').textContent = 'Učitavanje sa drugog servera…';
+    $('mon-sync-body').innerHTML = '<p class="text-dim text-sm">Učitavanje…</p>';
+    updateSyncApply();
+    openModalEl('modal-mon-sync');
+    runSyncPreview();
+  }
+
+  async function runSyncPreview() {
+    const picked = new Set([...document.querySelectorAll('#mon-sync-body .mon-sync-pick:checked')].map(cb => cb.value));
+    try {
+      const res = await fetch('/api/sync/monitoring/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ownerMap: SYNC.ownerMap })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Pregled nije uspeo');
+      SYNC.preview = data.preview;
+      renderSyncPreview();
+      document.querySelectorAll('#mon-sync-body .mon-sync-pick').forEach(cb => { cb.checked = picked.has(cb.value); });
+    } catch (err) {
+      $('mon-sync-subtitle').textContent = 'Pregled nije uspeo';
+      $('mon-sync-body').innerHTML = `<p class="text-dim text-sm">${C.esc(err.message)}</p>`;
+    }
+    updateSyncApply();
+  }
+
+  /** Za svakog vlasnika sa drugog servera: izbor vlasnika na ovom serveru (ili drugi e-mail) */
+  function syncOwnerBlock(p) {
+    const sources = [...new Set(p.tabs.map(t => t.sourceOwner))];
+    if (!sources.length) return '';
+    const owners = [...new Set([...p.localOwners, ...sources])].sort();
+    const optionsFor = (selected) => owners.map(o => {
+      const note = p.localOwners.includes(o) ? '' : ' (nov na ovom serveru)';
+      return `<option value="${C.esc(o)}" ${o === selected ? 'selected' : ''}>${C.esc(o)}${note}</option>`;
+    }).join('') + `<option value="__custom__" ${selected === '__custom__' ? 'selected' : ''}>Drugi e-mail…</option>`;
+    const rows = sources.map(s => {
+      const target = SYNC.ownerMap[s] || s;
+      const custom = SYNC.customOpen.has(s) || !p.localOwners.includes(target);
+      const selected = custom ? '__custom__' : target;
+      return `
+        <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 6px;">
+          <span class="text-xs" style="min-width: 220px;">${C.esc(s)} →</span>
+          <select class="model-filter-select mon-sync-owner" data-source="${C.esc(s)}" aria-label="Vlasnik na ovom serveru za ${C.esc(s)}">${optionsFor(selected)}</select>
+          ${custom ? `<input type="email" class="printer-search-input mon-sync-owner-custom" data-source="${C.esc(s)}" value="${C.esc(target)}" placeholder="e-mail korisnika na ovom serveru" style="max-width: 280px;">` : ''}
+        </div>`;
+    }).join('');
+    return `
+      <div style="margin-bottom: 14px; padding: 10px 12px; border: 1px solid rgba(255, 184, 0, 0.25); border-radius: 10px;">
+        <p class="text-dim text-xs" style="margin-bottom: 8px;">Vlasnik tabova mora da bude isti korisnik kao ovde (e-mail). Izaberite za svakog vlasnika sa drugog servera kom korisniku ovde pripada:</p>
+        ${rows}
+      </div>`;
+  }
+
+  function onSyncOwnerSelect(e) {
+    const s = e.currentTarget.dataset.source;
+    const v = e.currentTarget.value;
+    if (v === '__custom__') {
+      SYNC.customOpen.add(s);
+      if (!SYNC.ownerMap[s]) SYNC.ownerMap[s] = s;
+      renderSyncPreview();
+      return;
+    }
+    SYNC.customOpen.delete(s);
+    if (v === s) delete SYNC.ownerMap[s];
+    else SYNC.ownerMap[s] = v;
+    runSyncPreview();
+  }
+
+  function onSyncOwnerCustom(e) {
+    const s = e.currentTarget.dataset.source;
+    const v = e.currentTarget.value.trim().toLowerCase();
+    if (!v) return;
+    SYNC.ownerMap[s] = v;
+    runSyncPreview();
+  }
+
+  function renderSyncPreview() {
+    const p = SYNC.preview;
+    const label = SYNC.status ? SYNC.status.peerLabel : 'drugom serveru';
+    $('mon-sync-subtitle').textContent = `Na ${label} (${p.peer.host || '?'}) ima ${p.peer.tabCount} tabova, na ovom serveru ${p.local.tabCount}.`;
+    if (!p.tabs.length) {
+      $('mon-sync-body').innerHTML = '<p class="text-dim text-sm">Drugi server nema nijedan monitoring tab.</p>';
+      return;
+    }
+    $('mon-sync-body').innerHTML = syncOwnerBlock(p) + p.tabs.map(t => {
+      const missing = t.missing.length
+        ? ` · <span style="color: #f59e0b;">nedostaje ${t.missing.length} kamera (polja ostaju prazna): ${t.missing.map(C.esc).join(', ')}</span>`
+        : '';
+      const status = t.status === 'new' ? 'Novi' : 'Postoji';
+      const tooMany = t.tooManyTabs ? ' · vlasnik već ima najviše tabova' : '';
+      return `
+        <label style="display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; margin-bottom: 8px;">
+          <input type="checkbox" class="mon-sync-pick" value="${C.esc(t.id)}" ${t.tooManyTabs ? 'disabled' : ''} style="margin-top: 4px;">
+          <div style="flex: 1; min-width: 0;">
+            <div><strong>${C.esc(t.name)}</strong> <span class="text-dim text-xs">· ${C.esc(t.owner)}</span></div>
+            <div class="text-dim text-xs">${t.cells} polja · ${t.cameras} kamera na ovom serveru${missing}${tooMany}</div>
+          </div>
+          <span class="status-pill ${t.status === 'new' ? 'active-pill' : ''}">${status}</span>
+        </label>`;
+    }).join('');
+    document.querySelectorAll('#mon-sync-body .mon-sync-pick').forEach(cb => cb.addEventListener('change', updateSyncApply));
+    document.querySelectorAll('#mon-sync-body .mon-sync-owner').forEach(el => el.addEventListener('change', onSyncOwnerSelect));
+    document.querySelectorAll('#mon-sync-body .mon-sync-owner-custom').forEach(el => el.addEventListener('change', onSyncOwnerCustom));
+  }
+
+  async function applySync() {
+    const p = SYNC.preview;
+    if (!p) return;
+    const selected = [...document.querySelectorAll('#mon-sync-body .mon-sync-pick:checked')].map(cb => cb.value);
+    SYNC.busy = true;
+    updateSyncApply();
+    try {
+      const res = await fetch('/api/sync/monitoring/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ selected, mode: $('mon-sync-mode').value, ownerMap: SYNC.ownerMap, fingerprint: p.fingerprint, confirm: true })
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Preuzimanje nije uspelo');
+      const r = data.result;
+      const skipped = r.skipped.length ? ` Preskočeno: ${r.skipped.map(s => C.esc(s.name)).join(', ')}.` : '';
+      const missing = r.missingCameras ? ` Kamera koje nedostaju (polja prazna): ${r.missingCameras}.` : '';
+      $('mon-sync-subtitle').textContent = 'Preuzimanje završeno';
+      $('mon-sync-body').innerHTML = `<p class="text-sm">Dodato: ${r.added}, zamenjeno: ${r.replaced}.${skipped}${missing}</p>
+        <p class="text-dim text-xs">Rezervna kopija baze: <code>${C.esc(r.backupPath)}</code></p>`;
+      SYNC.preview = null;
+      $('mon-sync-confirm').checked = false;
+      load();
+    } catch (err) {
+      $('mon-sync-body').innerHTML = `<p class="text-sm" style="color: #ef4444;">${C.esc(err.message)}</p>`;
+    } finally {
+      SYNC.busy = false;
+      updateSyncApply();
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);

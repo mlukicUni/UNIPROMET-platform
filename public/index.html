@@ -1422,6 +1422,7 @@
                   <span class="mon-shared-badge" id="mon-shared-badge" style="display: none;"><i data-lucide="share-2"></i><span></span></span>
                   <button type="button" class="mon-tool-btn mon-tool-icon" id="mon-btn-hidden" style="display: none;" title="Sakriveni deljeni tabovi"><i data-lucide="eye-off"></i></button>
                   <button type="button" class="mon-tool-btn" id="mon-btn-edit" title="Izmeni tab (naziv, šablon, kamere)"><i data-lucide="pencil"></i><span>Izmeni</span></button>
+                  <button type="button" class="mon-tool-btn" id="mon-btn-sync-peer" data-super-only style="display: none;" title="Privremeno: povuci monitoring tabove sa drugog servera"><i data-lucide="download-cloud"></i><span>Povuci tabove</span></button>
                   <button type="button" class="mon-tool-btn" id="mon-btn-share" style="display: none;" title="Podeli tab sa rolama"><i data-lucide="share-2"></i><span>Podeli</span></button>
                   <div class="mon-tool-group">
                     <button type="button" class="mon-tool-btn" id="mon-btn-rotation" title="Pokreni / zaustavi rotaciju tabova"><i data-lucide="repeat"></i><span>Rotacija</span></button>
@@ -5153,6 +5154,40 @@
       <div class="modal-bottom-actions" style="justify-content: flex-end; padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.2); gap: 10px;">
         <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
         <button type="button" class="btn-danger-solid-sm" id="mon-confirm-ok"><i data-lucide="trash-2"></i><span id="mon-confirm-ok-label">Obriši</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIVREMENO: povlačenje monitoring tabova sa drugog servera (MONITORING_SYNC_ENABLED) -->
+  <div class="modal-overlay" id="modal-mon-sync" style="display: none; z-index: 10200;">
+    <div class="modal-window modal-glass" style="max-width: 720px; width: 95vw;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle"><i data-lucide="download-cloud"></i></div>
+          <div>
+            <h3 class="modal-title">Povlačenje monitoring tabova</h3>
+            <p class="modal-subtitle" id="mon-sync-subtitle">Učitavanje…</p>
+          </div>
+        </div>
+        <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
+      </div>
+      <div style="padding: 18px 24px; max-height: 60vh; overflow-y: auto;">
+        <div id="mon-sync-body"></div>
+        <div style="display: flex; gap: 10px; align-items: center; margin-top: 14px; flex-wrap: wrap;">
+          <span class="text-dim text-xs">Ako tab istog vlasnika i naziva već postoji:</span>
+          <select id="mon-sync-mode" class="model-filter-select" aria-label="Postojeći tabovi">
+            <option value="skip">Preskoči ga</option>
+            <option value="replace">Zameni ga</option>
+          </select>
+        </div>
+        <label style="display: flex; gap: 8px; align-items: center; margin-top: 14px;">
+          <input type="checkbox" id="mon-sync-confirm">
+          <span class="text-xs">Razumem da se izabrani tabovi upisuju na ovaj server (lokalni tabovi se ne brišu)</span>
+        </label>
+      </div>
+      <div class="modal-bottom-actions" style="justify-content: flex-end; padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.2); gap: 10px;">
+        <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Zatvori</span></button>
+        <button type="button" class="btn-yellow-solid-sm" id="mon-sync-apply" disabled><i data-lucide="download"></i><span>Preuzmi izabrane</span></button>
       </div>
     </div>
   </div>
