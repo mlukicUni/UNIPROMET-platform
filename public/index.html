@@ -1175,6 +1175,10 @@
                   <i data-lucide="crosshair"></i>
                   <span>Dodaj po IP adresi</span>
                 </button>
+                <button class="btn-dark-outline-sm" id="btn-analog-channels" title="Pronađi analogne kamere priključene na snimače i dodaj ih u evidenciju (živi prikaz ide preko snimača)">
+                  <i data-lucide="tv"></i>
+                  <span>Analogni kanali</span>
+                </button>
                 <button class="btn-dark-outline-sm" id="btn-sync-cameras-peer" data-super-only title="Preuzima evidenciju kamera i snimača sa drugog servera i prepisuje je preko ove (prvo se prikazuje pregled)">
                   <i data-lucide="refresh-cw"></i>
                   <span id="btn-sync-cameras-peer-text">Sinhronizuj podatke</span>
@@ -1326,11 +1330,11 @@
                   <button class="btn-clear-search" id="btn-clear-search-cctv" style="display: none;" title="Poništi pretragu">&times;</button>
                 </div>
 
-                <!-- Location Filter (Snimač / Fabrika) -->
-                <div class="model-filter-dropdown-wrap" title="Filtriraj po fabrici / lokaciji / snimaču">
+                <!-- Filter po snimaču (lokacije se biraju pilulama iznad) -->
+                <div class="model-filter-dropdown-wrap" title="Filtriraj po snimaču">
                   <i data-lucide="hard-drive" class="model-filter-icon"></i>
-                  <select id="select-cctv-recorder-filter" class="model-filter-select" aria-label="Filtriraj po lokaciji">
-                    <option value="all">Sve Lokacije / Snimači</option>
+                  <select id="select-cctv-recorder-filter" class="model-filter-select" aria-label="Filtriraj po snimaču">
+                    <option value="all">Svi snimači</option>
                   </select>
                 </div>
 
@@ -5594,6 +5598,54 @@
 
       <div class="modal-footer" style="display: flex; justify-content: flex-end; padding: 14px 24px;">
         <button type="button" class="btn-modal-cancel" id="btn-cancel-find-ip-modal">Zatvori</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: ANALOGNI KANALI NA SNIMAČIMA                                       -->
+  <!-- ========================================================================= -->
+  <div class="modal-overlay" id="modal-analog-channels" style="display: none;">
+    <div class="modal-window modal-glass" style="max-width: 820px;">
+      <div class="modal-header">
+        <div class="modal-title-wrap">
+          <div class="modal-icon-circle" style="background: rgba(192, 132, 252, 0.15); border: 1px solid rgba(192, 132, 252, 0.35); color: #c084fc;">
+            <i data-lucide="tv"></i>
+          </div>
+          <div>
+            <h3 class="modal-title">Analogni kanali na snimačima</h3>
+            <p class="modal-subtitle">Analogne kamere nemaju svoju IP adresu, pa se prate preko snimača na koji su priključene</p>
+          </div>
+        </div>
+        <button class="modal-close-icon" id="btn-close-analog-modal" type="button" title="Zatvori">
+          <i data-lucide="x"></i>
+        </button>
+      </div>
+
+      <div class="modal-body-scroll" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="select-analog-recorder"><i data-lucide="hard-drive" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Snimač</label>
+          <div style="display: flex; gap: 10px; align-items: stretch;">
+            <select id="select-analog-recorder" class="glass-input" style="flex: 1;"></select>
+            <button type="button" class="btn-yellow-solid-sm" id="btn-scan-analog-channels">
+              <i data-lucide="search"></i>
+              <span>Pronađi kanale</span>
+            </button>
+          </div>
+          <p style="margin: 6px 0 0; font-size: 0.76rem; color: #94a3b8;">Samo se čita spisak kanala sa snimača i po jedna slika sa svakog kanala. Ništa se ne menja na snimaču.</p>
+        </div>
+        <div id="analog-channels-result"></div>
+      </div>
+
+      <div class="modal-footer" style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 24px;">
+        <span id="analog-channels-summary" style="font-size: 0.82rem; color: #94a3b8;"></span>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn-modal-cancel" id="btn-cancel-analog-modal">Zatvori</button>
+          <button type="button" class="btn-yellow-solid-sm" id="btn-import-analog-channels" disabled>
+            <i data-lucide="plus"></i>
+            <span>Dodaj izabrane</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

@@ -84,11 +84,13 @@ function sharedTabsFor(req: Request, key: string): MonitoringTab[] {
   return listSharedTabsForRoles(userRoleIds(req), key).map(t => ({ ...t, hidden: hidden.has(t.id) }));
 }
 
-/** Kamere koje korisnik sme da gleda uživo (samo IP kamere koje nisu rezervisane) */
+/** Kamere koje korisnik sme da gleda uživo (IP kamere i analogni kanali na snimačima, koje nisu rezervisane) */
 function liveCameras(access: EffectiveAccess): MonitoringCamera[] {
   const rows = getDb()
     .prepare(`SELECT id, ip, name, position, recorder, recorder_id FROM cameras
-              WHERE COALESCE(is_reserved, 0) = 0 AND type = 'IP Kamera' AND TRIM(COALESCE(ip, '')) <> ''
+              WHERE COALESCE(is_reserved, 0) = 0
+                AND (type = 'IP Kamera' OR (type = 'Analogna' AND ip LIKE '%~ch%'))
+                AND TRIM(COALESCE(ip, '')) <> ''
               ORDER BY recorder, position, name`)
     .all() as { id: string; ip: string; name: string; position: string | null; recorder: string | null; recorder_id: string | null }[];
 

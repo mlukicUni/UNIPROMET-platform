@@ -13,6 +13,7 @@ import { migrateLegacyJsonToSqlite } from './db/migrateFromJson';
 import { getOrCreateSslCertificate } from './services/sslService';
 import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
 import { getCameraCredentials } from './services/cameraLiveService';
+import { getRecorderEndpointByIp, analogRtspPath } from './services/analogChannels';
 import { isUserAllowed, getAccess, hasLevel } from './services/accessService';
 import { enforceRouteAccess, checkVideoGatewayAccess } from './services/routeAccess';
 import { initRolesSchema, writeAudit } from './db/rolesDb';
@@ -37,8 +38,15 @@ const HTTPS_PORT = parseInt(process.env.HTTPS_PORT || '3443', 10);
  * This completely shields camera credentials from the browser/frontend!
  */
 function resolveGatewayTargetPath(targetUrl: string): string {
-  return targetUrl.replace(/src=cam_([0-9_]+)_(main|sub)/g, (_, ipUnder, streamType) => {
+  return targetUrl.replace(/src=cam_([0-9_]+?)(?:~ch(\d{1,3}))?_(main|sub)(?![a-z0-9_])/g, (_, ipUnder, analogCh, streamType) => {
     const ip = ipUnder.replace(/_/g, '.');
+    if (analogCh) {
+      // Analogni kanal: tok se uzima sa snimača (njegova adresa, RTSP port, lozinka)
+      const rec = getRecorderEndpointByIp(ip);
+      const { user, pass } = getCameraCredentials(`${ip}~ch${analogCh}`);
+      const rtsp = `rtsp://${user}:${encodeURIComponent(pass)}@${ip}:${rec?.rtspPort || 554}${analogRtspPath(parseInt(analogCh, 10), streamType)}`;
+      return `src=${encodeURIComponent(rtsp)}`;
+    }
     const ch = streamType === 'main' ? '101' : '102';
     const { user, pass } = getCameraCredentials(ip);
     const rtsp = `rtsp://${user}:${encodeURIComponent(pass)}@${ip}:554/Streaming/Channels/${ch}`;
