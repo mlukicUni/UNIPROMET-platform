@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.10.1] - 2026-11-18
+- Privremeno: povlačenje Monitoring tabova sa drugog servera (produkcija ↔ dev). Dugme „Povuci tabove“ u Video nadzor → Monitoring (samo Super admin) pregleda tabove sa drugog servera (vlasnik, naziv, broj polja, koliko kamera nedostaje) i preuzima izabrane; postojeći tab istog vlasnika i naziva se preskače ili zamenjuje po izboru. Kamere se mapiraju po IP adresi (ne po ID-u), a kamere kojih nema na ovom serveru ostaju prazna polja uz upozorenje. Lokalni tabovi se ne brišu, pre upisa se pravi rezervna kopija, a upis ide u audit. Uključuje se sa MONITORING_SYNC_ENABLED=true u .env na oba servera (bez te promenljive dugme i izvoz su isključeni), pa se lako uklanja. Pri uvozu se za svakog vlasnika sa drugog servera bira korisnik na ovom serveru (ili se unosi drugi e-mail), pa ključevi vlasnika ostaju ispravni. Deljenja sa rolama i šabloni se ne prenose
+
 ## [1.3.10] - 2026-11-18
 - Analogne kamere preko snimača: na hibridnim snimačima (DVR) analogni kanali mogu da se prate uživo, u monitoringu i u arhivi kao i IP kamere. Novo dugme „Analogni kanali“ u Mreža → Kamere pročita sa izabranog snimača spisak analognih kanala (samo čitanje, po jedna slika sa svakog kanala), pokaže koji kanali daju signal i upiše izabrane u evidenciju sa nazivom koji se može izmeniti. Kanal se vodi kao kamera tipa „Analogna“ sa oznakom „<IP snimača>~ch<kanal>“ (prikazuje se kao „Analog 3“); tok i slika se uzimaju sa snimača (njegova adresa i lozinka), a pristup po rolama važi preko snimača. Analogni kanali se ne uključuju u proveru offline kamera niti u skeniranje mreže
 - Mreža → Kamere: lista kamera sada ima zasebnu kolonu „Lokacija“ pored kolone „Snimač“ (lokacija se više ne prikazuje ispod naziva kamere)

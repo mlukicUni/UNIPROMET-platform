@@ -102,11 +102,11 @@ export function syncStatus() {
   };
 }
 
-function requestPeer(): Promise<CameraSyncExport> {
+export function requestPeer<T = CameraSyncExport>(pathname = '/api/sync/cameras/export'): Promise<T> {
   const base = syncPeerUrl();
   let url: URL;
   try {
-    url = new URL('/api/sync/cameras/export', base);
+    url = new URL(pathname, base);
   } catch {
     throw new SyncError('Adresa drugog servera (SYNC_PEER_URL) nije ispravna.', 500);
   }
@@ -137,7 +137,7 @@ function requestPeer(): Promise<CameraSyncExport> {
         if (res.statusCode === 404) return reject(new SyncError('Drugi server nema uključen izvoz (nema SYNC_API_TOKEN ili ima stariju verziju platforme).', 502));
         if (res.statusCode !== 200) return reject(new SyncError(`Drugi server je vratio grešku ${res.statusCode}.`, 502));
         try {
-          resolve(JSON.parse(text) as CameraSyncExport);
+          resolve(JSON.parse(text) as T);
         } catch {
           reject(new SyncError('Drugi server nije vratio ispravan odgovor.'));
         }

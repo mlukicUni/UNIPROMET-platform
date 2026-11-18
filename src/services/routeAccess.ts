@@ -77,6 +77,7 @@ const RULES: Rule[] = [
   /* ---------- Sinhronizacija kamera između servera ---------- */
   // Izvoz za drugi server: bez prijave korisnika, štiti ga zajednički token (proverava ruta)
   { m: 'GET', p: '/sync/cameras/export', spec: { noAuth: true } },
+  { m: 'GET', p: '/sync/monitoring/export', spec: { noAuth: true } },
   { m: '*', p: '/sync/**', spec: { superOnly: true } },
 
   /* ---------- Upravljanje rolama ---------- */
