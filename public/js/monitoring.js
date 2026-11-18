@@ -1216,10 +1216,10 @@
       html += `<div class="mon-picker-group"><span>${esc(name)}</span><span>${items.length}</span></div>`;
       html += items.map(c => `
         <div class="mon-picker-cam ${used.has(c.id) ? 'is-used' : ''} ${c.isOffline ? 'is-offline' : ''}" data-cam="${esc(c.id)}" draggable="true"
-             title="${esc(C.cameraLabel(c))} · ${esc(c.ip)}${c.isOffline ? ' · offline' : ''}">
+             title="${esc(C.cameraLabel(c))} · ${esc(C.addressLabel(c))}${c.isOffline ? ' · offline' : ''}">
           <i data-lucide="${c.isOffline ? 'video-off' : 'video'}"></i>
           <span class="mon-picker-cam-name">${esc(C.cameraLabel(c))}</span>
-          ${used.has(c.id) ? `<span class="mon-picker-cam-badge">#${used.get(c.id)}</span>` : `<span class="mon-picker-cam-ip">${esc(c.ip)}</span>`}
+          ${used.has(c.id) ? `<span class="mon-picker-cam-badge">#${used.get(c.id)}</span>` : `<span class="mon-picker-cam-ip">${esc(C.addressLabel(c))}</span>`}
         </div>`).join('');
     });
     list.innerHTML = html;

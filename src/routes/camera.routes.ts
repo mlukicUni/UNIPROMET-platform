@@ -6,6 +6,7 @@ import { sendOfflineCamerasAlertEmail } from '../services/mailService';
 import { fetchCameraSnapshot, getCameraCredentials } from '../services/cameraLiveService';
 import { checkGatewayHealth, startVideoGateway } from '../services/videoGatewayService';
 import { getCameraInventoryByIp } from '../db/cameraInventoryDb';
+import { parseAnalogIp, analogRtspPath } from '../services/analogChannels';
 import { hasLevel, filterCamerasByAccess } from '../services/accessService';
 import {
   getCameraPlaybackInfo,
@@ -87,7 +88,8 @@ cameraRouter.post('/offline/email', async (req: Request, res: Response) => {
 cameraRouter.get('/:ip/ping', async (req: Request, res: Response) => {
   try {
     const { ip } = req.params;
-    const result = await pingCamera(ip);
+    // Analogni kanal: proverava se dostupnost snimača na kome je kanal
+    const result = await pingCamera(parseAnalogIp(ip)?.recorderIp || ip);
     res.json({ success: true, ip, ...result });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to ping camera', details: err?.message });
@@ -168,8 +170,13 @@ cameraRouter.get('/:ip/live-info', async (req: Request, res: Response) => {
   const credProfile = cam?.credProfile || 1;
   const authStatus = cam?.authStatus || 'untested';
 
-  const rtspMain = `rtsp://${user}:${encodeURIComponent(pass)}@${ip}:554/Streaming/Channels/101`;
-  const rtspSub = `rtsp://${user}:${encodeURIComponent(pass)}@${ip}:554/Streaming/Channels/102`;
+  // Analogni kanal: tok i web adresa su na snimaču (kanal u putanji)
+  const analog = parseAnalogIp(ip);
+  const hostIp = analog ? analog.recorderIp : ip;
+  const pathMain = analog ? analogRtspPath(analog.channel, 'main') : '/Streaming/Channels/101';
+  const pathSub = analog ? analogRtspPath(analog.channel, 'sub') : '/Streaming/Channels/102';
+  const rtspMain = `rtsp://${user}:${encodeURIComponent(pass)}@${hostIp}:554${pathMain}`;
+  const rtspSub = `rtsp://${user}:${encodeURIComponent(pass)}@${hostIp}:554${pathSub}`;
 
   const host = req.hostname || 'localhost';
   let gatewayHealthy = await checkGatewayHealth();
@@ -195,9 +202,9 @@ cameraRouter.get('/:ip/live-info', async (req: Request, res: Response) => {
     snapshotMainUrl: `/api/cameras/${ip}/snapshot?stream=main`,
     liveStreamSubUrl: `/api/cameras/${ip}/live-stream?stream=sub`,
     liveStreamMainUrl: `/api/cameras/${ip}/live-stream?stream=main`,
-    rtspMain: `rtsp://${ip}:554/Streaming/Channels/101`,
-    rtspSub: `rtsp://${ip}:554/Streaming/Channels/102`,
-    webUrl: `http://${ip}/`
+    rtspMain: `rtsp://${hostIp}:554${pathMain}`,
+    rtspSub: `rtsp://${hostIp}:554${pathSub}`,
+    webUrl: `http://${hostIp}/`
   });
 });
 

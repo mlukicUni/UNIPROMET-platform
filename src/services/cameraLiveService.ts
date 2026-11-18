@@ -1,6 +1,7 @@
 import http from 'http';
 import crypto from 'crypto';
 import { getCameraInventoryByIp } from '../db/cameraInventoryDb';
+import { parseAnalogIp, getRecorderEndpointByIp, recorderCredentials, analogSnapshotPath } from './analogChannels';
 
 const CAMERA_USER = process.env.CAMERA_USER || 'admin';
 const CAMERA_PASS_1 = process.env.CAMERA_PASS_1 || process.env.CAMERA_PASS || '';
@@ -8,6 +9,12 @@ const CAMERA_PASS_2 = process.env.CAMERA_PASS_2 || '';
 
 export function getCameraCredentials(ip: string): { user: string; pass: string } {
   try {
+    // Analogni kanal: važi lozinka snimača na kome je kanal
+    const analog = parseAnalogIp(ip);
+    if (analog) {
+      const rec = getRecorderEndpointByIp(analog.recorderIp);
+      return recorderCredentials(rec ? rec.credProfile : 1);
+    }
     const cam = getCameraInventoryByIp(ip);
     if (cam && cam.credProfile === 2) {
       return { user: CAMERA_USER, pass: CAMERA_PASS_2 };
@@ -77,7 +84,18 @@ export async function fetchCameraSnapshot(
   streamType: 'sub' | 'main' = 'sub'
 ): Promise<{ data: Buffer; contentType: string } | null> {
   const isSub = streamType === 'sub';
-  
+
+  // Analogni kanal: slika se uzima sa snimača (njegova adresa i port, kanal u putanji)
+  const analog = parseAnalogIp(ip);
+  if (analog) {
+    const rec = getRecorderEndpointByIp(analog.recorderIp);
+    try {
+      return await requestCameraFrame(ip, analogSnapshotPath(analog.channel, streamType), analog.recorderIp, rec?.httpPort || 80);
+    } catch {
+      return null;
+    }
+  }
+
   // Potential snapshot paths: Hikvision ISAPI first, then Dahua CGI
   const hikPath = isSub 
     ? '/ISAPI/Streaming/channels/102/picture' 
@@ -103,7 +121,9 @@ export async function fetchCameraSnapshot(
 
 function requestCameraFrame(
   ip: string,
-  path: string
+  path: string,
+  host: string = ip,
+  port: number = 80
 ): Promise<{ data: Buffer; contentType: string } | null> {
   return new Promise((resolve) => {
     const creds = getCameraCredentials(ip);
@@ -119,8 +139,8 @@ function requestCameraFrame(
 
     const makeRequest = (headerValue: string, isRetry = false) => {
       const req = http.request({
-        host: ip,
-        port: 80,
+        host,
+        port,
         path,
         method: 'GET',
         headers: {

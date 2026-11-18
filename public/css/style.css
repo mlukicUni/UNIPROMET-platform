@@ -5836,6 +5836,14 @@ button:disabled svg.spin-fast {
   display: none !important;
 }
 
+/* Mini live prikaz nema traku za premotavanje ni vreme (ni u listi ni na tabu) */
+.mini-preview-screen video-stream video::-webkit-media-controls,
+.mini-preview-screen video-stream video::-webkit-media-controls-enclosure,
+.cctv-preview-box video-stream video::-webkit-media-controls,
+.cctv-preview-box video-stream video::-webkit-media-controls-enclosure {
+  display: none !important;
+}
+
 .cctv-preview-box .cctv-preview-overlay {
   z-index: 5 !important;
   pointer-events: none;

@@ -184,6 +184,8 @@ const RULES: Rule[] = [
     }
   },
   { m: 'POST,PUT,PATCH,DELETE', p: '/inventory/cameras/**', spec: { key: 'mreza.kamere', level: 'edit' } },
+  // Analogni kanali sa snimača upisuju se u evidenciju kamera, pa važi pravo izmene kamera
+  { m: 'POST', p: '/inventory/recorders/:id/analog-channels/**', spec: { key: 'mreza.kamere', level: 'edit' } },
   { m: 'POST', p: '/inventory/recorders/check-status', spec: { key: 'mreza.snimaci', level: 'edit' } },
   { m: 'POST', p: '/inventory/recorders/:id/check-status', spec: { key: 'mreza.snimaci', level: 'edit' } },
   { m: 'GET', p: '/inventory/recorders/**', spec: { anyOf: ['mreza.snimaci', 'mreza.kamere', 'video'] } },
@@ -310,7 +312,7 @@ function hasVideoContext(access: EffectiveAccess): boolean {
 }
 
 const GATEWAY_ALLOWED_PATHS = new Set(['/ws', '/stream.mp4', '/frame.jpeg', '/frame.mp4', '/webrtc', '/stream.m3u8']);
-const STREAM_NAME_RE = /^(cam|playback|export)_(\d{1,3}(?:_\d{1,3}){3})(?:_(?:sub|main))?(?:_\d+)?$/;
+const STREAM_NAME_RE = /^(cam|playback|export)_(\d{1,3}(?:_\d{1,3}){3})(?:~ch(\d{1,3}))?(?:_(?:sub|main))?(?:_\d+)?$/;
 
 /**
  * Proverava da li korisnik sme da otvori stream kroz go2rtc gateway.
@@ -324,7 +326,8 @@ export function checkVideoGatewayAccess(access: EffectiveAccess, subPath: string
   for (const src of srcList) {
     const m = STREAM_NAME_RE.exec(src);
     if (!m) return false;
-    const ip = m[2].replace(/_/g, '.');
+    // Analogni kanal na snimaču: oznaka kamere je "<IP snimača>~ch<kanal>"
+    const ip = m[2].replace(/_/g, '.') + (m[3] ? `~ch${m[3]}` : '');
     const kind = m[1] === 'cam' ? 'live' : 'playback';
     if (!canAccessCameraIp(access, ip, kind)) return false;
   }

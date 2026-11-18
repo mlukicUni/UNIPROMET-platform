@@ -126,7 +126,7 @@
     Q.layout = null;
     Q.expanded = false;
     Q.newTemplateId = 'preset-1';
-    $('mqa-camera-info').textContent = [C.cameraLabel(cam), cam.ip, cam.recorder].filter(Boolean).join(' · ');
+    $('mqa-camera-info').textContent = [C.cameraLabel(cam), C.addressLabel(cam), cam.recorder].filter(Boolean).join(' · ');
     $('mqa-tab-name').value = C.cameraLabel(cam).slice(0, 60);
 
     const atLimit = Q.state.tabs.length >= Q.state.limits.maxTabs;

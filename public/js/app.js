@@ -566,11 +566,8 @@ function setupNavigationHandlers() {
     }
 
     if (tabId === 'cctv_cameras') {
-      if (allCctvCameras.length === 0) {
-        fetchCctvCameras();
-      } else {
-        renderCctvCamerasTab();
-      }
+      // Uvek osveži spisak pri ulasku u tab, da nove kamere iz evidencije (npr. analogni kanali) odmah budu vidljive
+      fetchCctvCameras();
     } else {
       if (typeof unmountCctvSubStreams === 'function') {
         unmountCctvSubStreams();
@@ -5052,6 +5049,7 @@ function renderInventoryCamerasTab() {
               <th style="width: 50px;">#</th>
               <th style="width: 175px;">IP / Mrežni Slot</th>
               <th>Položaj / Naziv Kamere</th>
+              <th style="width: 170px;">Lokacija</th>
               <th style="width: 190px;">Snimač</th>
               <th style="width: 120px;">Tip Kamere</th>
               <th style="width: 135px;">Mrežni Opseg</th>
@@ -5074,8 +5072,8 @@ function renderInventoryCamerasTab() {
                   <td>
                     <div class="inv-ip-pill ${isAnalog ? 'unrecorded' : (is124 ? 'subnet-124' : 'subnet-125')}">
                       <span class="chip-dot"></span>
-                      <span>${escapeHtml(cam.ip)}</span>
-                      <button class="btn-copy-chip-sm" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj adresu">
+                      <span>${escapeHtml(cameraAddressLabel(cam))}</span>
+                      <button class="btn-copy-chip-sm" onclick="copyCustomUrl('${escapeHtml(cameraAddressLabel(cam))}')" title="Kopiraj adresu">
                         <i data-lucide="copy" style="width: 11px; height: 11px;"></i>
                       </button>
                     </div>
@@ -5087,12 +5085,17 @@ function renderInventoryCamerasTab() {
                       </div>
                       <div class="inv-pos-info">
                         <span class="inv-pos-name ${isReserved ? 'text-muted' : ''}">${escapeHtml(cam.position || cam.name || 'Neimenovana kamera')}</span>
-                        <span class="inv-pos-sub" title="Lokacija kamere"><i data-lucide="map-pin" style="width: 10px; height: 10px; display: inline-block;"></i> ${escapeHtml(cam.location || cam.recorder || 'Fabrika')}</span>
                       </div>
                     </div>
                   </td>
                   <td>
-                    <span class="inv-rec-badge" style="border-color: rgba(255, 184, 0, 0.25); color: #cbd5e1;">
+                    <span class="inv-rec-badge" title="Lokacija kamere" style="border-color: rgba(56, 189, 248, 0.3); color: #cbd5e1;">
+                      <i data-lucide="map-pin" style="color: #38bdf8; width: 12px; height: 12px;"></i>
+                      ${escapeHtml(cam.location || cam.recorder || 'Nedodeljeno')}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="inv-rec-badge" title="Snimač" style="border-color: rgba(255, 184, 0, 0.25); color: #cbd5e1;">
                       <i data-lucide="hard-drive" style="color: var(--yellow-primary); width: 12px; height: 12px;"></i>
                       ${escapeHtml(cam.recorder || 'Fabrika')}
                     </span>
@@ -5133,7 +5136,7 @@ function renderInventoryCamerasTab() {
                   </td>
                   <td style="text-align: right;">
                     <div class="inv-actions-cell">
-                      ${(!isAnalog && cam.ip && cam.ip.startsWith('192.168.')) ? `
+                      ${(isAnalogChannelIp(cam.ip) || (!isAnalog && cam.ip && cam.ip.startsWith('192.168.'))) ? `
                         <button class="btn-inv-action btn-live" onclick="openCameraLiveModal('${escapeHtml(cam.ip)}', '${escapeHtml(cam.position || cam.name || '')}', '${escapeHtml(cam.recorder || '')}')" title="Pregled snimka uživo i arhive (Live & Playback)">
                           <i data-lucide="play" style="width: 13px; height: 13px; color: #22c55e;"></i>
                         </button>
@@ -5216,9 +5219,9 @@ function renderInventoryCamerasTab() {
             <div class="printer-ip-box">
               <div class="ip-details">
                 <span class="ip-label">${isAnalog ? 'ANALOGNI KANAL' : 'IP ADRESA'}</span>
-                <span class="ip-val font-mono" style="color: ${isAnalog ? '#c084fc' : (is124 ? '#38bdf8' : '#34d399')};">${escapeHtml(cam.ip)}</span>
+                <span class="ip-val font-mono" style="color: ${isAnalog ? '#c084fc' : (is124 ? '#38bdf8' : '#34d399')};">${escapeHtml(cameraAddressLabel(cam))}</span>
               </div>
-              <button class="btn-copy-chip" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj adresu">
+              <button class="btn-copy-chip" onclick="copyCustomUrl('${escapeHtml(cameraAddressLabel(cam))}')" title="Kopiraj adresu">
                 <i data-lucide="copy"></i>
               </button>
             </div>
@@ -5231,7 +5234,7 @@ function renderInventoryCamerasTab() {
           </div>
 
           <div class="printer-card-actions">
-            ${(!isAnalog && cam.ip && cam.ip.startsWith('192.168.')) ? `
+            ${(isAnalogChannelIp(cam.ip) || (!isAnalog && cam.ip && cam.ip.startsWith('192.168.'))) ? `
               <button class="btn-printer-action" onclick="openCameraLiveModal('${escapeHtml(cam.ip)}', '${escapeHtml(cam.position || cam.name || '')}', '${escapeHtml(cam.recorder || '')}')" title="Pregled snimka uživo i arhive">
                 <i data-lucide="play" style="color: #22c55e;"></i>
                 <span>Uživo</span>
@@ -5613,6 +5616,15 @@ function setupInventoryCamerasEventListeners() {
   document.getElementById('btn-close-find-ip-modal')?.addEventListener('click', closeFindCameraByIpModal);
   document.getElementById('btn-cancel-find-ip-modal')?.addEventListener('click', closeFindCameraByIpModal);
 
+  // Analogni kanali na snimačima
+  document.getElementById('btn-analog-channels')?.addEventListener('click', openAnalogChannelsModal);
+  document.getElementById('btn-scan-analog-channels')?.addEventListener('click', scanAnalogChannels);
+  document.getElementById('btn-import-analog-channels')?.addEventListener('click', importAnalogChannelsClient);
+  document.getElementById('btn-close-analog-modal')?.addEventListener('click', closeAnalogChannelsModal);
+  document.getElementById('btn-cancel-analog-modal')?.addEventListener('click', closeAnalogChannelsModal);
+  document.getElementById('select-analog-recorder')?.addEventListener('change', () => renderAnalogChannels(null));
+  document.getElementById('analog-channels-result')?.addEventListener('change', updateAnalogImportButton);
+
   // Unrecorded modal close
   document.getElementById('btn-close-unrecorded-modal')?.addEventListener('click', () => {
     document.getElementById('modal-unrecorded-cameras').style.display = 'none';
@@ -5895,6 +5907,172 @@ async function applySyncCameras() {
   }
 }
 
+/* ---------- Analogni kanali na snimačima ---------- */
+/** Analogni kanal se u evidenciji vodi pod oznakom "<IP snimača>~ch<kanal>" */
+function isAnalogChannelIp(ip) {
+  return /^\d{1,3}(\.\d{1,3}){3}~ch\d{1,3}$/.test(String(ip || '').trim());
+}
+
+/** Adresa za prikaz u listi: analogni kanal je "Analog 3", IP kamera ostaje IP adresa */
+function cameraAddressLabel(cam) {
+  const ip = String((cam && cam.ip) || '').trim();
+  const m = /~ch(\d+)$/.exec(ip);
+  return m ? `Analog ${m[1]}` : ip;
+}
+
+let analogScanResult = null;
+let analogBusy = false;
+
+async function openAnalogChannelsModal() {
+  const modal = document.getElementById('modal-analog-channels');
+  const select = document.getElementById('select-analog-recorder');
+  if (!modal || !select) return;
+  analogScanResult = null;
+  renderAnalogChannels(null);
+  modal.style.display = 'flex';
+  if (window.lucide) window.lucide.createIcons();
+  try {
+    const res = await fetch('/api/inventory/recorders');
+    const data = await res.json();
+    const recorders = (data.recorders || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'sr'));
+    select.innerHTML = recorders
+      .map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(r.name)} · ${escapeHtml(r.ip)}${r.model ? ' · ' + escapeHtml(r.model) : ''}</option>`)
+      .join('');
+  } catch (err) {
+    select.innerHTML = '';
+    renderAnalogChannels({ error: 'Spisak snimača nije učitan: ' + err.message });
+  }
+}
+
+function closeAnalogChannelsModal() {
+  const modal = document.getElementById('modal-analog-channels');
+  if (modal) modal.style.display = 'none';
+}
+
+function analogDefaultName(recorderName, ch) {
+  const dvr = String(ch.dvrName || '').trim();
+  // Podrazumevani naziv na snimaču ("Camera 06") ne govori ništa, pa se zamenjuje opisnim
+  if (!dvr || /^camera\s*\d+$/i.test(dvr)) return `${recorderName} - analog ${ch.channel}`;
+  return dvr;
+}
+
+function updateAnalogImportButton() {
+  const btn = document.getElementById('btn-import-analog-channels');
+  const summary = document.getElementById('analog-channels-summary');
+  const checked = document.querySelectorAll('#analog-channels-result input[data-analog-pick]:checked').length;
+  if (btn) btn.disabled = analogBusy || checked === 0;
+  const span = btn && btn.querySelector('span');
+  if (span) span.textContent = checked ? `Dodaj izabrane (${checked})` : 'Dodaj izabrane';
+  if (summary) {
+    if (!analogScanResult || !analogScanResult.supported) summary.textContent = '';
+    else {
+      const withSignal = analogScanResult.channels.filter(c => c.hasSignal).length;
+      summary.textContent = `Sa signalom: ${withSignal} od ${analogScanResult.channels.length} kanala`;
+    }
+  }
+}
+
+function renderAnalogChannels(result) {
+  const box = document.getElementById('analog-channels-result');
+  if (!box) return;
+  analogScanResult = result && result.channels ? result : null;
+  if (!result) {
+    box.innerHTML = '';
+    updateAnalogImportButton();
+    return;
+  }
+  const notice = (color, icon, html) => `<div style="display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:10px;border:1px solid ${color}55;background:${color}14;color:#e2e8f0;font-size:0.88rem;line-height:1.45;"><i data-lucide="${icon}" style="width:20px;height:20px;flex-shrink:0;color:${color};"></i><div>${html}</div></div>`;
+  if (result.loading) {
+    box.innerHTML = notice('#38bdf8', 'loader', `Čitam kanale sa snimača <strong>${escapeHtml(result.name)}</strong>... (oko pola sekunde po kanalu)`);
+  } else if (result.error) {
+    box.innerHTML = notice('#ef4444', 'video-off', escapeHtml(result.error));
+  } else if (!result.supported) {
+    box.innerHTML = notice('#f59e0b', 'info', escapeHtml(result.note || 'Snimač nema analogne kanale.'));
+  } else {
+    const recName = result.recorder.name;
+    const rows = result.channels.map(ch => {
+      const exists = !!ch.existingCameraId;
+      const disabled = exists || !ch.hasSignal;
+      const state = exists
+        ? `<span style="color:#fde68a;">Već u evidenciji: ${escapeHtml(ch.existingCameraName || ch.existingCameraId)}</span>`
+        : ch.hasSignal
+          ? '<span style="color:#4ade80;">Ima signal</span>'
+          : '<span style="color:#94a3b8;">Nema signala</span>';
+      return `<tr style="${disabled ? 'opacity:0.55;' : ''}">
+        <td style="padding:6px 8px;"><input type="checkbox" data-analog-pick="${ch.channel}" ${disabled ? 'disabled' : 'checked'}></td>
+        <td class="font-mono" style="padding:6px 8px;">Analog ${ch.channel}</td>
+        <td style="padding:6px 8px;color:#94a3b8;">${escapeHtml(ch.dvrName || '')}</td>
+        <td style="padding:6px 8px;">${state}</td>
+        <td style="padding:6px 8px;"><input type="text" class="glass-input" data-analog-name="${ch.channel}" maxlength="120" value="${escapeHtml(analogDefaultName(recName, ch))}" ${disabled ? 'disabled' : ''} style="width:100%;min-width:200px;"></td>
+      </tr>`;
+    }).join('');
+    box.innerHTML = `<div style="overflow:auto;max-height:46vh;border:1px solid rgba(255,255,255,0.08);border-radius:10px;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.84rem;">
+        <thead><tr style="text-align:left;color:#94a3b8;font-size:0.74rem;text-transform:uppercase;">
+          <th style="padding:8px;"></th><th style="padding:8px;">Kanal</th><th style="padding:8px;">Naziv na snimaču</th><th style="padding:8px;">Stanje</th><th style="padding:8px;">Naziv u evidenciji</th>
+        </tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  if (window.lucide) window.lucide.createIcons();
+  updateAnalogImportButton();
+}
+
+async function scanAnalogChannels() {
+  const select = document.getElementById('select-analog-recorder');
+  const btn = document.getElementById('btn-scan-analog-channels');
+  if (!select || !select.value || !btn || btn.disabled || analogBusy) return;
+  const name = select.options[select.selectedIndex]?.textContent || '';
+  analogBusy = true;
+  btn.disabled = true;
+  renderAnalogChannels({ loading: true, name: name.split(' · ')[0] });
+  try {
+    const res = await fetch(`/api/inventory/recorders/${encodeURIComponent(select.value)}/analog-channels/scan`, { method: 'POST' });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || data.details || 'Provera nije uspela');
+    renderAnalogChannels(data);
+  } catch (err) {
+    renderAnalogChannels({ error: err.message });
+  } finally {
+    analogBusy = false;
+    btn.disabled = false;
+    updateAnalogImportButton();
+  }
+}
+
+async function importAnalogChannelsClient() {
+  const select = document.getElementById('select-analog-recorder');
+  const btn = document.getElementById('btn-import-analog-channels');
+  if (!select || !btn || btn.disabled || analogBusy || !analogScanResult) return;
+  const picks = [...document.querySelectorAll('#analog-channels-result input[data-analog-pick]:checked')].map(el => {
+    const channel = Number(el.getAttribute('data-analog-pick'));
+    const nameInput = document.querySelector(`#analog-channels-result input[data-analog-name="${channel}"]`);
+    return { channel, name: nameInput ? nameInput.value.trim() : '' };
+  });
+  if (picks.length === 0) return;
+  analogBusy = true;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/api/inventory/recorders/${encodeURIComponent(select.value)}/analog-channels/import`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ channels: picks })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.success) throw new Error(data.error || data.details || 'Upis nije uspeo');
+    const added = (data.added || []).length;
+    const skipped = (data.skipped || []).length;
+    showToast(`✓ Dodato analognih kanala: ${added}${skipped ? ` (preskočeno ${skipped})` : ''}`, 'success');
+    closeAnalogChannelsModal();
+    fetchInventoryCameras();
+  } catch (err) {
+    showToast('Upis analognih kanala nije uspeo: ' + err.message, 'error');
+  } finally {
+    analogBusy = false;
+    updateAnalogImportButton();
+  }
+}
+
+window.openAnalogChannelsModal = openAnalogChannelsModal;
+
 /* ---------- Dodavanje kamere po IP adresi ---------- */
 const FIND_IP_REGEX = /^(\d{1,3})(\.\d{1,3}){3}$/;
 
@@ -6103,6 +6281,7 @@ window.openAddCameraModalWithData = openAddCameraModalWithData;
 let allCctvCameras = [];
 let cctvSearchQuery = '';
 let cctvRecorderFilter = 'all';
+let cctvLocationFilter = 'all';
 let cctvViewMode = 'table';
 let cctvCurrentPage = 1;
 let cctvPageSize = 26;
@@ -6117,7 +6296,8 @@ async function fetchCctvCameras() {
     if (res.ok && data.success) {
       // Filter strictly active digital IP cameras with valid positions
       allCctvCameras = (data.cameras || []).filter(c => {
-        if (c.type === 'Analogna' || (c.ip && c.ip.toLowerCase().includes('analog'))) return false;
+        // Analogni kanal sa snimača ("<IP snimača>~ch<kanal>") ima živi tok, pa ostaje u spisku
+        if (!isAnalogChannelIp(c.ip) && (c.type === 'Analogna' || (c.ip && c.ip.toLowerCase().includes('analog')))) return false;
         if (c.isReserved) return false;
         const pos = (c.position || '').toLowerCase();
         if (pos === 'zauzeto' || pos === 'nema' || pos === 'no video' || pos === 'slobodno' || pos === 'rezervisano') return false;
@@ -6130,7 +6310,8 @@ async function fetchCctvCameras() {
 
       // Filter „lokacija“ ide po stvarnoj lokaciji kamere, ne po snimaču
       const distinctLocations = [...new Set(allCctvCameras.map(c => c.location || c.recorder).filter(Boolean))].sort();
-      populateCctvLocationControls(distinctLocations);
+      const distinctRecorders = [...new Set(allCctvCameras.map(c => c.recorder).filter(Boolean))].sort();
+      populateCctvLocationControls(distinctLocations, distinctRecorders);
 
       renderCctvCamerasTab();
     } else {
@@ -6151,30 +6332,33 @@ async function fetchCctvCameras() {
 }
 window.fetchCctvCameras = fetchCctvCameras;
 
-function populateCctvLocationControls(recorders) {
+/** Pilule = filter po lokaciji; padajući meni = filter po snimaču. Filteri se kombinuju (I). */
+function populateCctvLocationControls(locations, recorders) {
   const select = document.getElementById('select-cctv-recorder-filter');
   const pillsContainer = document.getElementById('cctv-location-pills');
 
   if (select) {
-    const currentVal = select.value;
-    select.innerHTML = '<option value="all">Sve Lokacije / Objekti</option>' + 
+    select.innerHTML = '<option value="all">Svi snimači</option>' +
       recorders.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
-    select.value = currentVal || 'all';
+    select.value = recorders.includes(cctvRecorderFilter) ? cctvRecorderFilter : 'all';
+    cctvRecorderFilter = select.value;
   }
+
+  if (cctvLocationFilter !== 'all' && !locations.includes(cctvLocationFilter)) cctvLocationFilter = 'all';
 
   if (pillsContainer) {
     let pillsHtml = `
-      <button type="button" class="cctv-quick-pill ${cctvRecorderFilter === 'all' ? 'active' : ''}" data-rec="all" onclick="setCctvRecorderFilter('all')">
+      <button type="button" class="cctv-quick-pill ${cctvLocationFilter === 'all' ? 'active' : ''}" data-loc="all" onclick="setCctvLocationFilter('all')">
         <i data-lucide="layers" style="width: 13px; height: 13px;"></i>
-        <span>Sve Lokacije</span>
+        <span>Sve lokacije</span>
       </button>
     `;
-    recorders.forEach(rec => {
-      const activeClass = cctvRecorderFilter === rec ? 'active' : '';
+    locations.forEach(loc => {
+      const activeClass = cctvLocationFilter === loc ? 'active' : '';
       pillsHtml += `
-        <button type="button" class="cctv-quick-pill ${activeClass}" data-rec="${escapeHtml(rec)}" onclick="setCctvRecorderFilter('${escapeHtml(rec)}')">
+        <button type="button" class="cctv-quick-pill ${activeClass}" data-loc="${escapeHtml(loc)}" onclick="setCctvLocationFilter('${escapeHtml(loc)}')">
           <i data-lucide="map-pin" style="width: 12px; height: 12px;"></i>
-          <span>${escapeHtml(rec)}</span>
+          <span>${escapeHtml(loc)}</span>
         </button>
       `;
     });
@@ -6183,20 +6367,17 @@ function populateCctvLocationControls(recorders) {
   }
 }
 
-function setCctvRecorderFilter(rec) {
-  cctvRecorderFilter = rec;
-  const select = document.getElementById('select-cctv-recorder-filter');
-  if (select) select.value = rec;
-
+function setCctvLocationFilter(loc) {
+  cctvLocationFilter = loc;
   document.querySelectorAll('#cctv-location-pills .cctv-quick-pill').forEach(btn => {
-    if (btn.getAttribute('data-rec') === rec) btn.classList.add('active');
+    if (btn.getAttribute('data-loc') === loc) btn.classList.add('active');
     else btn.classList.remove('active');
   });
 
   cctvCurrentPage = 1;
   renderCctvCamerasTab();
 }
-window.setCctvRecorderFilter = setCctvRecorderFilter;
+window.setCctvLocationFilter = setCctvLocationFilter;
 
 let cctvMountTimeouts = [];
 let cctvCheckPlayIntervals = [];
@@ -6252,6 +6433,7 @@ function mountCctvSubStreams(pageItems) {
       // Monitor playback to smoothly transition from snapshot to live stream
       const checkPlay = setInterval(() => {
         const vid = vs.querySelector('video');
+        if (vid) { vid.controls = false; vid.removeAttribute('controls'); }
         if (vid && (vid.readyState >= 2 || vid.currentTime > 0)) {
           clearInterval(checkPlay);
           const fb = currentContainer.querySelector('.cctv-snapshot-fallback');
@@ -6293,6 +6475,12 @@ function toggleCctvSubStreams() {
 }
 window.toggleCctvSubStreams = toggleCctvSubStreams;
 
+/** Oznaka za analogni kanal sa snimača (u listi Lista kamera) */
+function cctvAnalogBadge(cam) {
+  if (!(isAnalogChannelIp(cam.ip) || cam.type === 'Analogna')) return '';
+  return '<span class="status-pill" style="font-size: 0.70rem; padding: 2px 8px; background: rgba(58, 160, 255, 0.15); color: #3aa0ff; border: 1px solid rgba(58, 160, 255, 0.45);" title="Analogna kamera sa hibridnog snimača">Analogna</span>';
+}
+
 function renderCctvCamerasTab() {
   const container = document.getElementById('cctv-cameras-container');
   if (!container) return;
@@ -6300,7 +6488,8 @@ function renderCctvCamerasTab() {
   unmountCctvSubStreams();
 
   let filtered = allCctvCameras.filter(c => {
-    if (cctvRecorderFilter !== 'all' && (c.location || c.recorder) !== cctvRecorderFilter) return false;
+    if (cctvLocationFilter !== 'all' && (c.location || c.recorder) !== cctvLocationFilter) return false;
+    if (cctvRecorderFilter !== 'all' && c.recorder !== cctvRecorderFilter) return false;
     if (cctvSearchQuery) {
       const q = cctvSearchQuery.toLowerCase();
       const match = 
@@ -6367,6 +6556,7 @@ function renderCctvCamerasTab() {
                       <div class="cctv-cam-title">
                         <span class="cctv-cam-icon"><i data-lucide="video"></i></span>
                         <strong>${escapeHtml(cam.position || cam.name || '')}</strong>
+                        ${cctvAnalogBadge(cam)}
                         <span class="status-pill active-pill" style="font-size: 0.70rem; padding: 2px 8px;">
                           <span class="status-dot"></span> Uživo
                         </span>
@@ -6452,6 +6642,7 @@ function renderCctvCamerasTab() {
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
               <i data-lucide="video" style="width: 15px; height: 15px; color: #FFB800; flex-shrink: 0;"></i>
               <strong class="text-white" style="font-size: 0.92rem;">${escapeHtml(cam.position || cam.name || '')}</strong>
+              ${cctvAnalogBadge(cam)}
             </div>
             <span class="location-highlight" style="font-size: 0.78rem;" title="Lokacija kamere · snimač: ${escapeHtml(cam.recorder || 'Nedodeljeno')}">
               <i data-lucide="map-pin" style="width: 11px; height: 11px; display: inline-block;"></i>
@@ -6561,10 +6752,6 @@ function setupCctvCamerasEventListeners() {
 
   selectRecorder?.addEventListener('change', (e) => {
     cctvRecorderFilter = e.target.value;
-    document.querySelectorAll('#cctv-location-pills .cctv-quick-pill').forEach(btn => {
-      if (btn.getAttribute('data-rec') === cctvRecorderFilter) btn.classList.add('active');
-      else btn.classList.remove('active');
-    });
     cctvCurrentPage = 1;
     renderCctvCamerasTab();
   });

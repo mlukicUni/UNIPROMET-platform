@@ -118,6 +118,13 @@
     return cam.position || cam.name || cam.ip || '';
   }
 
+  /** Adresa za prikaz: analogni kanal ("<IP snimača>~ch3") se prikazuje kao "Analog 3" */
+  function addressLabel(cam) {
+    const ip = String((cam && cam.ip) || '').trim();
+    const m = /~ch(\d+)$/.exec(ip);
+    return m ? `Analog ${m[1]}` : ip;
+  }
+
   function streamUrl(cam, quality) {
     const key = String(cam.ip || '').trim().replace(/\./g, '_');
     return `/api/video-gateway/ws?src=cam_${key}_${quality === 'main' ? 'main' : 'sub'}`;
@@ -405,6 +412,7 @@
     FIT_LABELS,
     miniLayoutHtml,
     cameraLabel,
+    addressLabel,
     snapshotUrl,
     remapCameras,
     countStreams,

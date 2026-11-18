@@ -8,6 +8,7 @@ import {
   DuplicateCameraIpError
 } from '../db/cameraInventoryDb';
 import { getCameraCredentials } from '../services/cameraLiveService';
+import { parseAnalogIp, discoverAnalogChannels, importAnalogChannels } from '../services/analogChannels';
 import {
   getRecordersInventory,
   addRecorder,
@@ -89,7 +90,8 @@ inventoryRouter.get('/cameras', async (req: Request, res: Response) => {
       const isOnline = !c.isReserved && c.type === 'IP Kamera' && !isOffline;
 
       let streamWsSubUrl: string | undefined;
-      if (c.ip && c.type === 'IP Kamera' && (!liveIds || liveIds.has(c.id))) {
+      const hasLiveSource = c.type === 'IP Kamera' || (c.type === 'Analogna' && !!parseAnalogIp(c.ip));
+      if (c.ip && hasLiveSource && (!liveIds || liveIds.has(c.id))) {
         const streamKey = `cam_${ip.replace(/\./g, '_')}_sub`;
         streamWsSubUrl = `/api/video-gateway/ws?src=${streamKey}`;
       }
@@ -274,6 +276,52 @@ inventoryRouter.delete('/cameras/:id', (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Delete camera error:', err);
     res.status(500).json({ error: 'Failed to delete camera', details: err?.message });
+  }
+});
+
+// ============================================================================
+// ANALOGNI KANALI NA SNIMAČIMA
+// ============================================================================
+
+// POST /api/inventory/recorders/:id/analog-channels/scan - Pročita analogne kanale sa snimača (samo čitanje)
+inventoryRouter.post('/recorders/:id/analog-channels/scan', async (req: Request, res: Response) => {
+  try {
+    const result = await discoverAnalogChannels(req.params.id);
+    if (!result) return res.status(404).json({ error: 'Snimač nije pronađen u evidenciji' });
+    addServerLog(
+      'info',
+      `Provera analognih kanala na snimaču ${result.recorder.name}: ${result.supported ? result.channels.filter(c => c.hasSignal).length + ' sa signalom od ' + result.channels.length : 'nema analognih kanala'}`,
+      'Inventory DB'
+    );
+    res.json({ success: true, ...result });
+  } catch (err: any) {
+    console.error('Analog channel scan error:', err);
+    res.status(500).json({ error: 'Provera analognih kanala nije uspela', details: err?.message });
+  }
+});
+
+// POST /api/inventory/recorders/:id/analog-channels/import - Upis izabranih analognih kanala u evidenciju kamera
+inventoryRouter.post('/recorders/:id/analog-channels/import', (req: Request, res: Response) => {
+  try {
+    const raw = req.body?.channels;
+    if (!Array.isArray(raw) || raw.length === 0 || raw.length > 64) {
+      return res.status(400).json({ error: 'Izaberite bar jedan analogni kanal.' });
+    }
+    const items = raw.map((c: any) => ({
+      channel: Number(c?.channel),
+      name: typeof c?.name === 'string' ? c.name.slice(0, 120) : '',
+      location: typeof c?.location === 'string' ? c.location.slice(0, 120) : ''
+    }));
+    const result = importAnalogChannels(req.params.id, items);
+    if (!result) return res.status(404).json({ error: 'Snimač nije pronađen u evidenciji' });
+    addServerLog('success', `Dodato analognih kanala u evidenciju: ${result.added.length} (preskočeno ${result.skipped.length})`, 'Inventory DB');
+    res.status(201).json({ success: true, ...result });
+  } catch (err: any) {
+    if (err instanceof DuplicateCameraIpError) {
+      return res.status(409).json({ error: err.message, existingId: err.existing.id });
+    }
+    console.error('Analog channel import error:', err);
+    res.status(500).json({ error: 'Upis analognih kanala nije uspeo', details: err?.message });
   }
 });
 

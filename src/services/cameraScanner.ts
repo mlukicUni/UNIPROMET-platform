@@ -296,7 +296,8 @@ export async function getOfflineCamerasFromInventory(discoveredCameras?: CameraD
   offlineCount: number;
   inventoryTotalCount: number;
 }> {
-  const allDbCameras = getAllCameraInventory().filter(c => !c.isReserved);
+  // Analogni kanali nemaju svoju IP adresu (vode se preko snimača), pa se ovde ne proveravaju
+  const allDbCameras = getAllCameraInventory().filter(c => !c.isReserved && c.type !== 'Analogna');
   const now = new Date().toISOString();
 
   // If discoveredCameras not passed, use current memory or disk cache
@@ -430,7 +431,7 @@ export async function scanCameras(force = false, deepScan = false, waitIfBusy = 
       const targets125 = new Set<string>();
 
       allDbCameras.forEach(c => {
-        if (!c.ip) return;
+        if (!c.ip || c.type === 'Analogna') return;
         const ip = c.ip.trim();
         if (ip.includes('.124.')) targets124.add(ip);
         else if (ip.includes('.125.')) targets125.add(ip);

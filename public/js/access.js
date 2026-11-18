@@ -58,6 +58,7 @@
   const GATED_ELEMENTS = {
     'btn-scan-unrecorded-cameras': { action: 'mreza.kamere:skeniranje' },
     'btn-add-camera-by-ip': { edit: 'inventory_cameras' },
+    'btn-analog-channels': { edit: 'inventory_cameras' },
     'btn-sync-wifi-aps': { action: 'mreza.wifi:sinhronizacija' },
     'btn-playback-sync-nvrs': { action: 'mreza.snimaci:sinhronizacija' },
     'btn-open-generate-report': { action: 'mreza.stampaci:izvestaji' },
