@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.11.1] - 2026-11-20
+- Video nadzor → Monitoring: vlasnik taba može direktno u prikazu taba da prevuče kameru na drugo polje (i na prazno) i tako zameni mesta kamerama; novi raspored se odmah čuva u bazi, bez otvaranja izmene taba. Strimovi se pri zameni ne prekidaju (polja samo menjaju položaj). Polje na koje se spušta je označeno („Zameni mesta“), prevlačenje je isključeno dok je kamera uvećana, a tuđi deljeni tabovi i zaseban prozor ostaju samo za gledanje. Ako čuvanje ne uspe, javlja se greška i raspored se vraća sa servera
+
 ## [1.3.11] - 2026-11-20
 - Mreža → Kamere: novo dugme „Izvezi u Excel“ izvozi trenutni prikaz liste kamera (sa primenjenim filterima, pretragom i svim stranama) u .xlsx. Dokument je u stilu platforme (tamno zaglavlje, zlatna linija, zebra redovi, obojen status) i ima logotip kompanije, uz opis filtera i datum izvoza
 - Pretraga kamera (Mreža → Kamere, Video nadzor → Lista kamera, Monitoring → izbor kamera): kucanje „analog“ sada pronalazi sve analogne kamere (i one bez te reči u nazivu, npr. „Camera 01 Iza“ sa snimača); pretraga po „analogni kanal“ i „Analog 3“ takođe radi
