@@ -1188,7 +1188,7 @@
     return S.cameras.filter(c => {
       if (rec && c.recorder !== rec) return false;
       if (!q) return true;
-      return [c.name, c.position, c.ip, c.recorder].some(v => String(v || '').toLowerCase().includes(q));
+      return window.cameraMatchesSearch ? window.cameraMatchesSearch(c, q) : [c.name, c.position, c.ip, c.recorder].some(v => String(v || '').toLowerCase().includes(q));
     });
   }
 

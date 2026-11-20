@@ -1,4 +1,7 @@
 import { Router, Request, Response } from 'express';
+import ExcelJS from 'exceljs';
+import fs from 'fs';
+import path from 'path';
 import {
   getAllCameraInventory,
   getCameraInventoryById,
@@ -48,6 +51,173 @@ export const inventoryRouter = Router();
 // ============================================================================
 // EVIDENCIJA KAMERA (CAMERAS INVENTORY)
 // ============================================================================
+
+/* ==========================================================================
+   IZVOZ TRENUTNOG PRIKAZA LISTE KAMERA (Excel, stil platforme)
+   Klijent šalje redove koje trenutno prikazuje (filtri i pretraga primenjeni) i opis filtera.
+   ========================================================================== */
+const cleanCell = (v: unknown, max = 300): string => String(v ?? '').replace(/[\r\n]+/g, ' ').slice(0, max);
+
+const CAMERA_EXPORT_COLUMNS = [
+  { header: '#', width: 6 },
+  { header: 'IP / Mrežni slot', width: 20 },
+  { header: 'Položaj / Naziv kamere', width: 34 },
+  { header: 'Lokacija', width: 24 },
+  { header: 'Snimač', width: 26 },
+  { header: 'Tip kamere', width: 16 },
+  { header: 'Mrežni opseg', width: 18 },
+  { header: 'Status', width: 16 },
+  { header: 'Napomena', width: 36 }
+];
+
+const STATUS_COLORS: Record<string, string> = {
+  Online: 'FF047857',
+  Offline: 'FFB91C1C',
+  Analogna: 'FF1D4ED8',
+  Rezervisano: 'FF64748B'
+};
+
+inventoryRouter.post('/cameras/export/excel', async (req: Request, res: Response) => {
+  try {
+    const raw = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    if (raw.length === 0) return res.status(400).json({ success: false, error: 'Nema kamera za izvoz u trenutnom prikazu.' });
+
+    const rows = raw.slice(0, 5000).map((r: any) => ({
+      address: cleanCell(r?.address, 120),
+      name: cleanCell(r?.name),
+      location: cleanCell(r?.location),
+      recorder: cleanCell(r?.recorder),
+      type: cleanCell(r?.type, 60),
+      subnet: cleanCell(r?.subnet, 60),
+      status: cleanCell(r?.status, 40),
+      note: cleanCell(r?.note)
+    }));
+    const filterText = (Array.isArray(req.body?.filters) ? req.body.filters : [])
+      .slice(0, 10)
+      .map((f: unknown) => cleanCell(f, 160))
+      .filter(Boolean)
+      .join('   |   ');
+
+    const now = new Date();
+    const dateStr = now.toISOString().slice(0, 10);
+    const dateFormatted = now.toLocaleDateString('sr-RS');
+    const timeFormatted = now.toLocaleTimeString('sr-RS', { hour: '2-digit', minute: '2-digit' });
+
+    const wb = new ExcelJS.Workbook();
+    wb.creator = 'UNIPROMET DOO ČAČAK';
+    wb.lastModifiedBy = 'UNIPROMET Centralni IT Admin Panel';
+    wb.created = now;
+    const ws = wb.addWorksheet('Kamere', {
+      views: [{ state: 'frozen', xSplit: 0, ySplit: 4, showGridLines: true }]
+    });
+    const lastCol = CAMERA_EXPORT_COLUMNS.length;
+    const lastLetter = String.fromCharCode(64 + lastCol);
+
+    // Red 1: tamna traka (kao na platformi) sa belim logotipom levo i naslovom desno; zlatna linija ispod
+    const titleRow = ws.addRow(new Array(lastCol).fill(''));
+    titleRow.height = 46;
+    for (let c = 1; c <= lastCol; c++) {
+      const bandCell = titleRow.getCell(c);
+      bandCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+      bandCell.border = { bottom: { style: 'medium', color: { argb: 'FFF59E0B' } } };
+    }
+    const logoPath = path.join(process.cwd(), 'public', 'assets', 'unipromet_logo.png');
+    if (fs.existsSync(logoPath)) {
+      const imageId = wb.addImage({ buffer: fs.readFileSync(logoPath) as any, extension: 'png' });
+      ws.addImage(imageId, { tl: { col: 0.03, row: 0.2 }, ext: { width: 178, height: 38 } });
+    }
+
+    // Naslov u istoj traci, desno od logotipa
+    ws.mergeCells(`C1:${lastLetter}1`);
+    const titleCell = ws.getCell('C1');
+    titleCell.value = 'UNIPROMET DOO ČAČAK — EVIDENCIJA KAMERA (VIDEO NADZOR)';
+    titleCell.font = { name: 'Segoe UI', size: 13, bold: true, color: { argb: 'FFFFFFFF' } };
+    titleCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+    // Red 2: podnaslov sa datumom, brojem stavki i filterima
+    const subtitleRow = ws.addRow([
+      `Datum izvoza: ${dateFormatted} u ${timeFormatted}   |   Ukupno kamera: ${rows.length}${filterText ? `   |   ${filterText}` : ''}`
+    ]);
+    ws.mergeCells(`A2:${lastLetter}2`);
+    subtitleRow.height = 22;
+    const subCell = subtitleRow.getCell(1);
+    subCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFF59E0B' } };
+    subCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+    subCell.alignment = { vertical: 'middle', horizontal: 'left', indent: 1 };
+
+    // Red 4: razmak
+    const sepRow = ws.addRow([]);
+    sepRow.height = 8;
+
+    // Red 5: zaglavlja
+    const headerRow = ws.addRow(CAMERA_EXPORT_COLUMNS.map(c => c.header));
+    headerRow.height = 28;
+    headerRow.eachCell((cell, colIdx) => {
+      cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFFFFFFF' } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF334155' } },
+        bottom: { style: 'medium', color: { argb: 'FFF59E0B' } },
+        left: { style: 'thin', color: { argb: 'FF334155' } },
+        right: { style: 'thin', color: { argb: 'FF334155' } }
+      };
+      cell.alignment = { vertical: 'middle', horizontal: colIdx === 1 || colIdx === 6 || colIdx === 8 ? 'center' : 'left', indent: colIdx === 1 || colIdx === 6 || colIdx === 8 ? 0 : 1 };
+    });
+
+    // Podaci sa zebra prikazom
+    rows.forEach((r: any, index: number) => {
+      const isOnline = r.status === 'Online';
+      const dataRow = ws.addRow([
+        index + 1,
+        r.address,
+        r.name,
+        r.location,
+        r.recorder,
+        r.type,
+        r.subnet,
+        r.status,
+        r.note
+      ]);
+      dataRow.height = 22;
+      const bg = index % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFC';
+      dataRow.eachCell((cell, colIdx) => {
+        cell.font = { name: 'Segoe UI', size: 10, color: { argb: 'FF0F172A' } };
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } };
+        cell.border = {
+          top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+          right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: colIdx === 1 || colIdx === 6 || colIdx === 8 ? 'center' : 'left', indent: colIdx === 1 || colIdx === 6 || colIdx === 8 ? 0 : 1 };
+        if (colIdx === 8 && STATUS_COLORS[r.status]) {
+          cell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: STATUS_COLORS[r.status] } };
+        }
+        if (colIdx === 2 && !isOnline) cell.font = { name: 'Consolas', size: 10, color: { argb: 'FF0F172A' } };
+      });
+    });
+
+    // Širine kolona: najmanje zadate, a dovoljno za najduži tekst
+    ws.columns.forEach((col, idx) => {
+      let maxLen = 0;
+      col.eachCell?.({ includeEmpty: false }, (cell, rowNumber) => {
+        if (rowNumber >= 4) maxLen = Math.max(maxLen, cell.value ? String(cell.value).length : 0);
+      });
+      const min = CAMERA_EXPORT_COLUMNS[idx]?.width || 16;
+      col.width = Math.min(Math.max(maxLen + 4, min), 55);
+    });
+
+    ws.autoFilter = { from: 'A4', to: `${lastLetter}4` };
+
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Unipromet_Kamere_${dateStr}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
+  } catch (err: any) {
+    console.error('[Inventory] Greška pri izvozu kamera u Excel:', err);
+    res.status(500).json({ success: false, error: 'Greška pri generisanju Excel datoteke: ' + err.message });
+  }
+});
 
 // GET /api/inventory/cameras - List all registered cameras
 inventoryRouter.get('/cameras', async (req: Request, res: Response) => {

@@ -13,6 +13,13 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.11] - 2026-11-20
+- Mreža → Kamere: novo dugme „Izvezi u Excel“ izvozi trenutni prikaz liste kamera (sa primenjenim filterima, pretragom i svim stranama) u .xlsx. Dokument je u stilu platforme (tamno zaglavlje, zlatna linija, zebra redovi, obojen status) i ima logotip kompanije, uz opis filtera i datum izvoza
+- Pretraga kamera (Mreža → Kamere, Video nadzor → Lista kamera, Monitoring → izbor kamera): kucanje „analog“ sada pronalazi sve analogne kamere (i one bez te reči u nazivu, npr. „Camera 01 Iza“ sa snimača); pretraga po „analogni kanal“ i „Analog 3“ takođe radi
+- Mreža → Kamere: kartice iznad liste rade kao brzi filteri. „Ukupno u bazi“ uklanja sve filtere i pretragu, „Opseg 192.168.124.X“ i „Opseg 192.168.125.X“ prikazuju samo kamere iz tog opsega, a nova kartica „Analogne kamere“ samo analogne; ponovni klik na istu karticu vraća sve. Aktivna kartica je obeležena okvirom u svojoj boji, a filter važi i za izvoz u Excel
+- Mreža → Kamere: pilule lokacija više nisu ograničene na jednu. Klik na pilulu je dodaje u izbor (može se izabrati više lokacija odjednom), ponovni klik je uklanja, a „Sve Lokacije“ poništava izbor. Padajuća lista snimača i dalje bira jedan snimač, a kad je izabrano više, prikazuje „Izabrano snimača: N“; izabrane lokacije se navode i u Excel izvozu
+- Mreža → Kamere: zaglavlje Excel izvoza ima tamnu traku sa belim logotipom levo i naslovom desno (kao na platformi); logotip je ranije bio beo na beloj pozadini i nije se video
+
 ## [1.3.10.2] - 2026-11-18
 - Video nadzor → Monitoring → „Povuci tabove“: dugme tokom preuzimanja piše „Preuzimanje u toku…“, a plutajuće poruke javljaju početak, rezultat (dodato / zamenjeno / preskočeno) ili grešku; uz preskočene tabove se navodi i razlog
 
