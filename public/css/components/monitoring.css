@@ -318,6 +318,42 @@
   container-type: inline-size;
 }
 
+/* Prevlačenje kamera (vlasnik taba): polje koje se nosi i polje na koje se spušta */
+.mon-grid.can-rearrange .mon-cell[draggable="true"] {
+  cursor: grab;
+}
+
+.mon-grid.can-rearrange .mon-cell[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.mon-grid.is-rearranging .mon-cell {
+  transition: outline-color 0.12s ease, opacity 0.12s ease;
+}
+
+.mon-cell.is-dragging {
+  opacity: 0.45;
+}
+
+.mon-cell.is-drop-target {
+  outline: 2px solid var(--yellow-primary, #f59e0b);
+  outline-offset: -2px;
+  z-index: 2;
+}
+
+.mon-cell.is-drop-target::after {
+  content: 'Zameni mesta';
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-align: center;
+  color: #0f172a;
+  background: rgba(245, 158, 11, 0.9);
+  pointer-events: none;
+}
+
 /* Mala polja: samo tačka statusa i kraći natpis, da se ništa ne preklapa */
 @container (max-width: 200px) {
   .mon-cell-state .mon-state-text,

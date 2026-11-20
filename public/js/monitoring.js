@@ -258,6 +258,9 @@
     if (!S.player) {
       S.player = new C.GridPlayer($('mon-grid-host'), {
         fit: currentFit(),
+        // Samo vlasnik taba menja raspored prevlačenjem; deljeni (tuđi) tab je samo za gledanje
+        canRearrange: (t) => !!t && !t.shared,
+        onSwap: (from, to) => swapCameras(from, to),
         onOpenRecordings: (cam) => {
           if (C.isFullscreen()) C.toggleFullscreen($('mon-stage'));
           if (typeof window.openCameraLiveModal === 'function') {
@@ -271,6 +274,31 @@
       return;
     }
     S.player.render(tab, S.camById);
+  }
+
+  /**
+   * Zamena mesta dve kamere prevlačenjem u gridu: prikaz se menja odmah (strimovi ostaju),
+   * a raspored se čuva u bazi. Čuvanja idu redom, pa brze uzastopne zamene ne pregaze jedna drugu.
+   * Ako čuvanje ne uspe, stanje se ponovo učitava sa servera.
+   */
+  function swapCameras(from, to) {
+    const tab = activeTab();
+    if (!tab || tab.shared || !S.player) return;
+    const cams = tab.cameras;
+    if (from < 0 || to < 0 || from >= cams.length || to >= cams.length || from === to) return;
+    if (!S.player.swapCells(from, to)) return;
+    [cams[from], cams[to]] = [cams[to], cams[from]];
+
+    const id = tab.id;
+    const name = tab.name;
+    const snapshot = cams.slice();
+    S.saveChain = (S.saveChain || Promise.resolve())
+      .then(() => api(`${API}/tabs/${encodeURIComponent(id)}`, 'PUT', { cameras: snapshot }))
+      .then(() => notify(`Raspored kamera u tabu „${name}“ je sačuvan`, 'success'))
+      .catch((err) => {
+        notify(`Raspored nije sačuvan: ${err.message}`, 'error');
+        load();
+      });
   }
 
   function updateStreamWarning(tab) {
