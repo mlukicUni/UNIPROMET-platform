@@ -4835,7 +4835,7 @@ let allInventoryCameras = [];
 let invSearchQuery = '';
 let invTypeFilter = 'all';
 let invSubnetFilter = 'all';
-let invRecorderFilter = 'all';
+const invRecorderSelected = new Set(); // izabrani snimači/lokacije (pilule se mogu kombinovati); prazno = svi
 let invStatusFilter = 'all';
 let invViewMode = 'table';
 let invCurrentPage = 1;
@@ -4867,6 +4867,8 @@ async function fetchInventoryCameras() {
       const kRecorders = document.getElementById('kpi-inv-recorders');
       const kOffline = document.getElementById('kpi-inv-offline');
       const kOfflineSub = document.getElementById('kpi-inv-offline-sub');
+      const kAnalog = document.getElementById('kpi-inv-analog');
+      const analogCount = allInventoryCameras.filter(isAnalogCamera).length;
       const bNav = document.getElementById('badge-nav-inventory-cameras');
       const bOffline = document.getElementById('badge-inv-offline-count');
 
@@ -4875,6 +4877,7 @@ async function fetchInventoryCameras() {
       if (k125) k125.textContent = sub125Count;
       if (kRecorders) kRecorders.textContent = distinctRecorders.length;
       if (kOffline) kOffline.textContent = offlineCount;
+      if (kAnalog) kAnalog.textContent = analogCount;
       if (kOfflineSub) {
         if (data.lastOfflineCheckTime) {
           const d = new Date(data.lastOfflineCheckTime);
@@ -4918,11 +4921,13 @@ function populateInventoryLocationControls(recorders) {
   const datalist = document.getElementById('recorders-datalist');
   const pillsContainer = document.getElementById('inv-location-pills');
 
+  // Izabrani snimač koji više ne postoji ispada iz izbora
+  [...invRecorderSelected].forEach(name => { if (!recorders.includes(name)) invRecorderSelected.delete(name); });
+
   if (select) {
-    const currentVal = select.value;
-    select.innerHTML = '<option value="all">Svi snimači (15 lokacija)</option>' + 
+    select.innerHTML = '<option value="all">Svi snimači (15 lokacija)</option>' +
+      '<option value="__multi__" hidden disabled></option>' +
       recorders.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
-    select.value = currentVal || 'all';
   }
 
   if (datalist) {
@@ -4936,15 +4941,15 @@ function populateInventoryLocationControls(recorders) {
 
   if (pillsContainer) {
     let pillsHtml = `
-      <button type="button" class="inv-quick-pill ${invRecorderFilter === 'all' ? 'active' : ''}" data-rec="all" onclick="setInvRecorderFilter('all')">
+      <button type="button" class="inv-quick-pill ${invRecorderSelected.size === 0 ? 'active' : ''}" data-rec="all" aria-pressed="${invRecorderSelected.size === 0}" onclick="setInvRecorderFilter('all')" title="Prikaži kamere sa svih lokacija">
         <i data-lucide="layers" style="width: 13px; height: 13px;"></i>
         <span>Sve Lokacije</span>
       </button>
     `;
     recorders.forEach(rec => {
-      const activeClass = invRecorderFilter === rec ? 'active' : '';
+      const activeClass = invRecorderSelected.has(rec) ? 'active' : '';
       pillsHtml += `
-        <button type="button" class="inv-quick-pill ${activeClass}" data-rec="${escapeHtml(rec)}" onclick="setInvRecorderFilter('${escapeHtml(rec)}')">
+        <button type="button" class="inv-quick-pill ${activeClass}" data-rec="${escapeHtml(rec)}" aria-pressed="${invRecorderSelected.has(rec)}" onclick="setInvRecorderFilter(this.dataset.rec)" title="Klikom birate više lokacija odjednom; ponovni klik uklanja lokaciju iz izbora">
           <i data-lucide="map-pin" style="width: 12px; height: 12px;"></i>
           <span>${escapeHtml(rec)}</span>
         </button>
@@ -4953,29 +4958,122 @@ function populateInventoryLocationControls(recorders) {
     pillsContainer.innerHTML = pillsHtml;
     if (window.lucide) window.lucide.createIcons();
   }
+  syncInvRecorderControls();
 }
 
-function setInvRecorderFilter(rec) {
-  invRecorderFilter = rec;
-  const select = document.getElementById('select-inv-recorder-filter');
-  if (select) select.value = rec;
-
+/** Usklađuje pilule lokacija i padajuću listu snimača sa trenutnim izborom (jedan, više ili svi) */
+function syncInvRecorderControls() {
+  const none = invRecorderSelected.size === 0;
   document.querySelectorAll('#inv-location-pills .inv-quick-pill').forEach(btn => {
-    if (btn.getAttribute('data-rec') === rec) btn.classList.add('active');
-    else btn.classList.remove('active');
+    const rec = btn.getAttribute('data-rec');
+    const active = rec === 'all' ? none : invRecorderSelected.has(rec);
+    btn.classList.toggle('active', active);
+    btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 
+  const select = document.getElementById('select-inv-recorder-filter');
+  if (select) {
+    const multi = select.querySelector('option[value="__multi__"]');
+    if (invRecorderSelected.size > 1) {
+      if (multi) multi.textContent = `Izabrano snimača: ${invRecorderSelected.size}`;
+      select.value = '__multi__';
+    } else {
+      select.value = none ? 'all' : [...invRecorderSelected][0];
+    }
+  }
+}
+
+/** Klik na pilulu lokacije: dodaje je u izbor ili je uklanja iz njega; "Sve Lokacije" poništava izbor */
+function setInvRecorderFilter(rec) {
+  if (rec === 'all') invRecorderSelected.clear();
+  else if (invRecorderSelected.has(rec)) invRecorderSelected.delete(rec);
+  else invRecorderSelected.add(rec);
+
+  syncInvRecorderControls();
   invCurrentPage = 1;
   renderInventoryCamerasTab();
 }
 window.setInvRecorderFilter = setInvRecorderFilter;
 
-function renderInventoryCamerasTab() {
-  const container = document.getElementById('inv-cameras-container');
-  if (!container) return;
+/** Postavlja tačno navedene snimače kao izbor (npr. iz padajuće liste ili sa spiska snimača) */
+function setInvRecorderSelection(names) {
+  invRecorderSelected.clear();
+  (names || []).filter(Boolean).forEach(n => invRecorderSelected.add(n));
+  syncInvRecorderControls();
+  invCurrentPage = 1;
+  renderInventoryCamerasTab();
+}
 
-  // Filter items
-  let filtered = allInventoryCameras.filter(c => {
+/** Izvoz trenutnog prikaza liste kamera u Excel (filteri i pretraga primenjeni, sve strane) */
+async function exportInventoryCamerasExcel() {
+  const list = getFilteredInventoryCameras();
+  if (!list.length) {
+    showToast('Nema kamera za izvoz u trenutnom prikazu.', 'error');
+    return;
+  }
+  const typeLabel = { all: 'Svi tipovi', 'IP Kamera': 'IP kamere', Analogna: 'Analogne' };
+  const statusLabel = { all: 'Svi statusi', active: 'Aktivne', online: 'Online', offline: 'Offline', reserved: 'Rezervisane' };
+  const filters = [
+    `Tip: ${typeLabel[invTypeFilter] || invTypeFilter}`,
+    `Mrežni opseg: ${invSubnetFilter === 'all' ? 'Svi' : invSubnetFilter}`,
+    `Snimač: ${invRecorderSelected.size === 0 ? 'Svi' : [...invRecorderSelected].join(', ')}`,
+    `Status: ${statusLabel[invStatusFilter] || invStatusFilter}`,
+    invSearchQuery ? `Pretraga: "${invSearchQuery}"` : ''
+  ].filter(f => !/: (Svi|Svi tipovi|Svi statusi)$/.test(f));
+
+  const rows = list.map(c => {
+    const isAnalog = c.type === 'Analogna';
+    let status = '';
+    if (c.isReserved) status = 'Rezervisano';
+    else if (isAnalog) status = 'Analogna';
+    else if (c.isOffline) status = 'Offline';
+    else if (c.isOnline) status = 'Online';
+    return {
+      address: cameraAddressLabel(c),
+      name: c.position || c.name || '',
+      location: c.location || '',
+      recorder: c.recorder || '',
+      type: c.type || '',
+      subnet: c.subnet || '',
+      status,
+      note: c.note || ''
+    };
+  });
+
+  const btn = document.getElementById('btn-export-cameras-excel');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch('/api/inventory/cameras/export/excel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows, filters })
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || 'Izvoz nije uspeo');
+    }
+    const blob = await res.blob();
+    const disp = res.headers.get('Content-Disposition') || '';
+    const name = (/filename="([^"]+)"/.exec(disp) || [])[1] || 'Unipromet_Kamere.xlsx';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(`Izvezeno ${rows.length} kamera u Excel.`, 'success');
+  } catch (err) {
+    showToast(`Izvoz nije uspeo: ${err.message}`, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/** Kamere koje trenutno puštaju filteri i pretraga (sve strane, ne samo tekuća) */
+function getFilteredInventoryCameras() {
+  return allInventoryCameras.filter(c => {
     // Type filter
     if (invTypeFilter !== 'all' && c.type !== invTypeFilter) return false;
 
@@ -4983,7 +5081,7 @@ function renderInventoryCamerasTab() {
     if (invSubnetFilter !== 'all' && c.subnet !== invSubnetFilter) return false;
 
     // Recorder filter
-    if (invRecorderFilter !== 'all' && c.recorder !== invRecorderFilter) return false;
+    if (invRecorderSelected.size > 0 && !invRecorderSelected.has(c.recorder)) return false;
 
     // Status filter
     if (invStatusFilter === 'active' && c.isReserved) return false;
@@ -4992,20 +5090,68 @@ function renderInventoryCamerasTab() {
     if (invStatusFilter === 'reserved' && !c.isReserved) return false;
 
     // Text search query
-    if (invSearchQuery) {
-      const q = invSearchQuery.toLowerCase();
-      const match = 
-        (c.ip && c.ip.toLowerCase().includes(q)) ||
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.position && c.position.toLowerCase().includes(q)) ||
-        (c.recorder && c.recorder.toLowerCase().includes(q)) ||
-        (c.location && c.location.toLowerCase().includes(q)) ||
-        (c.note && c.note.toLowerCase().includes(q));
-      if (!match) return false;
-    }
+    if (invSearchQuery && !cameraMatchesSearch(c, invSearchQuery)) return false;
 
     return true;
   });
+}
+
+/** Osvežava kartice iznad liste: aktivna je ona čiji je filter trenutno uključen */
+function updateInvKpiCards() {
+  const noFilters = !invSearchQuery && invTypeFilter === 'all' && invSubnetFilter === 'all' &&
+    invRecorderSelected.size === 0 && invStatusFilter === 'all';
+  const states = {
+    'kpi-card-inv-total': noFilters,
+    'kpi-card-inv-124': invSubnetFilter === '192.168.124.x',
+    'kpi-card-inv-125': invSubnetFilter === '192.168.125.x',
+    'kpi-card-inv-analog': invTypeFilter === 'Analogna'
+  };
+  Object.entries(states).forEach(([id, active]) => {
+    const card = document.getElementById(id);
+    if (!card) return;
+    card.classList.toggle('kpi-card-active', active);
+    card.setAttribute('aria-pressed', active ? 'true' : 'false');
+  });
+}
+
+/** Kartica "Ukupno u bazi": uklanja sve filtere i pretragu, pa lista prikazuje sve kamere */
+function resetInventoryFilters() {
+  invSearchQuery = '';
+  invTypeFilter = 'all';
+  invSubnetFilter = 'all';
+  invRecorderSelected.clear();
+  invStatusFilter = 'all';
+  invCurrentPage = 1;
+
+  const search = document.getElementById('search-inv-cameras');
+  if (search) search.value = '';
+  const clearBtn = document.getElementById('btn-clear-search-inv');
+  if (clearBtn) clearBtn.style.display = 'none';
+  ['select-inv-status-filter', 'select-inv-subnet-filter'].forEach(id => {
+    const sel = document.getElementById(id);
+    if (sel) sel.value = 'all';
+  });
+  syncInvRecorderControls();
+  renderInventoryCamerasTab();
+}
+
+/** Kartice opsega 124 / 125: filtriraju listu po mrežnom opsegu, ponovni klik vraća sve opsege */
+function toggleInvSubnetFilter(subnet) {
+  invSubnetFilter = invSubnetFilter === subnet ? 'all' : subnet;
+  const sel = document.getElementById('select-inv-subnet-filter');
+  if (sel) sel.value = invSubnetFilter;
+  invCurrentPage = 1;
+  renderInventoryCamerasTab();
+}
+
+function renderInventoryCamerasTab() {
+  const container = document.getElementById('inv-cameras-container');
+  if (!container) return;
+
+  updateInvKpiCards();
+
+  // Filter items
+  let filtered = getFilteredInventoryCameras();
 
   // Pagination calculation
   const totalItems = filtered.length;
@@ -5533,11 +5679,27 @@ function setupInventoryCamerasEventListeners() {
   });
 
   selectRecorder?.addEventListener('change', (e) => {
-    invRecorderFilter = e.target.value;
-    document.querySelectorAll('#inv-location-pills .inv-quick-pill').forEach(btn => {
-      if (btn.getAttribute('data-rec') === invRecorderFilter) btn.classList.add('active');
-      else btn.classList.remove('active');
+    // Padajuća lista bira jedan snimač (ili sve); više lokacija se kombinuje pilulama
+    const v = e.target.value;
+    setInvRecorderSelection(v === 'all' || v === '__multi__' ? [] : [v]);
+  });
+
+  // Brzi filteri: kartice iznad liste (klik filtrira, ponovni klik na istu karticu vraća sve)
+  const bindKpiFilterCard = (id, action) => {
+    const card = document.getElementById(id);
+    card?.addEventListener('click', action);
+    card?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        action();
+      }
     });
+  };
+  bindKpiFilterCard('kpi-card-inv-total', resetInventoryFilters);
+  bindKpiFilterCard('kpi-card-inv-124', () => toggleInvSubnetFilter('192.168.124.x'));
+  bindKpiFilterCard('kpi-card-inv-125', () => toggleInvSubnetFilter('192.168.125.x'));
+  bindKpiFilterCard('kpi-card-inv-analog', () => {
+    invTypeFilter = invTypeFilter === 'Analogna' ? 'all' : 'Analogna';
     invCurrentPage = 1;
     renderInventoryCamerasTab();
   });
@@ -5618,6 +5780,7 @@ function setupInventoryCamerasEventListeners() {
 
   // Analogni kanali na snimačima
   document.getElementById('btn-analog-channels')?.addEventListener('click', openAnalogChannelsModal);
+  document.getElementById('btn-export-cameras-excel')?.addEventListener('click', exportInventoryCamerasExcel);
   document.getElementById('btn-scan-analog-channels')?.addEventListener('click', scanAnalogChannels);
   document.getElementById('btn-import-analog-channels')?.addEventListener('click', importAnalogChannelsClient);
   document.getElementById('btn-close-analog-modal')?.addEventListener('click', closeAnalogChannelsModal);
@@ -5919,6 +6082,26 @@ function cameraAddressLabel(cam) {
   const m = /~ch(\d+)$/.exec(ip);
   return m ? `Analog ${m[1]}` : ip;
 }
+
+/** Analogna kamera: tip "Analogna" u evidenciji ili oznaka kanala "<IP snimača>~ch<N>" */
+function isAnalogCamera(cam) {
+  return !!cam && (cam.type === 'Analogna' || isAnalogChannelIp(cam.ip));
+}
+
+/**
+ * Pretraga kamera po poljima liste (ip, naziv, pozicija, snimač, lokacija, napomena, adresa).
+ * Analogne kamere se pronalaze i po "analog" / "analogna" / "analogni kanal", jer se u listi
+ * vode kao "Analog 3" i nemaju IP adresu u tekstu.
+ */
+function cameraMatchesSearch(cam, query) {
+  const q = String(query || '').trim().toLowerCase();
+  if (!q || !cam) return true;
+  const fields = [cam.ip, cam.name, cam.position, cam.recorder, cam.location, cam.note, cameraAddressLabel(cam)];
+  if (isAnalogCamera(cam)) fields.push('analogna', 'analogni kanal');
+  return fields.some(v => v && String(v).toLowerCase().includes(q));
+}
+window.cameraMatchesSearch = cameraMatchesSearch;
+window.isAnalogCamera = isAnalogCamera;
 
 let analogScanResult = null;
 let analogBusy = false;
@@ -6490,16 +6673,7 @@ function renderCctvCamerasTab() {
   let filtered = allCctvCameras.filter(c => {
     if (cctvLocationFilter !== 'all' && (c.location || c.recorder) !== cctvLocationFilter) return false;
     if (cctvRecorderFilter !== 'all' && c.recorder !== cctvRecorderFilter) return false;
-    if (cctvSearchQuery) {
-      const q = cctvSearchQuery.toLowerCase();
-      const match = 
-        (c.ip && c.ip.toLowerCase().includes(q)) ||
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.position && c.position.toLowerCase().includes(q)) ||
-        (c.recorder && c.recorder.toLowerCase().includes(q)) ||
-        (c.location && c.location.toLowerCase().includes(q));
-      if (!match) return false;
-    }
+    if (cctvSearchQuery && !cameraMatchesSearch(c, cctvSearchQuery)) return false;
     return true;
   });
 
@@ -7201,15 +7375,7 @@ window.renderInventoryRecordersTab = renderInventoryRecordersTab;
 // Helper: Jump from recorder to its cameras
 window.viewCamerasForRecorder = function(recorderName) {
   if (window.switchTab) window.switchTab('inventory_cameras');
-  invRecorderFilter = recorderName;
-  const select = document.getElementById('select-inv-recorder-filter');
-  if (select) select.value = recorderName;
-  document.querySelectorAll('#inv-location-pills .inv-quick-pill').forEach(btn => {
-    if (btn.getAttribute('data-rec') === recorderName) btn.classList.add('active');
-    else btn.classList.remove('active');
-  });
-  invCurrentPage = 1;
-  renderInventoryCamerasTab();
+  setInvRecorderSelection([recorderName]);
   showToast(`Prikazuju se kamere za lokaciju: ${recorderName}`, 'info');
 };
 

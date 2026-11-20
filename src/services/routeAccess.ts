@@ -184,6 +184,7 @@ const RULES: Rule[] = [
         canAccessCamera(access, lookupCameraById(params.id), 'playback')
     }
   },
+  { m: 'POST', p: '/inventory/cameras/export/excel', spec: { key: 'mreza.kamere', level: 'view' } },
   { m: 'POST,PUT,PATCH,DELETE', p: '/inventory/cameras/**', spec: { key: 'mreza.kamere', level: 'edit' } },
   // Analogni kanali sa snimača upisuju se u evidenciju kamera, pa važi pravo izmene kamera
   { m: 'POST', p: '/inventory/recorders/:id/analog-channels/**', spec: { key: 'mreza.kamere', level: 'edit' } },

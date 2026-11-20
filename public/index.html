@@ -1175,6 +1175,10 @@
                   <i data-lucide="crosshair"></i>
                   <span>Dodaj po IP adresi</span>
                 </button>
+                <button class="btn-dark-outline-sm" id="btn-export-cameras-excel" title="Izvezi trenutni prikaz liste kamera (sa filterima i pretragom) u Excel">
+                  <i data-lucide="file-spreadsheet"></i>
+                  <span>Izvezi u Excel</span>
+                </button>
                 <button class="btn-dark-outline-sm" id="btn-analog-channels" title="Pronađi analogne kamere priključene na snimače i dodaj ih u evidenciju (živi prikaz ide preko snimača)">
                   <i data-lucide="tv"></i>
                   <span>Analogni kanali</span>
@@ -1190,7 +1194,7 @@
               
               <!-- Top Summary Banner: 4 High-Impact KPI Cards -->
               <div class="network-kpi-banner" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
-                <div class="net-kpi-card">
+                <div class="net-kpi-card kpi-card-clickable kpi-card-filter" id="kpi-card-inv-total" role="button" tabindex="0" aria-pressed="false" style="--kpi-accent: #fbbf24; --kpi-glow: rgba(251, 191, 36, 0.25);" title="Kliknite da prikažete sve kamere iz baze (uklanja sve filtere i pretragu)">
                   <div class="kpi-icon-square text-yellow"><i data-lucide="video"></i></div>
                   <div class="kpi-text-block">
                     <span class="kpi-label">UKUPNO U BAZI</span>
@@ -1199,7 +1203,7 @@
                   </div>
                 </div>
 
-                <div class="net-kpi-card">
+                <div class="net-kpi-card kpi-card-clickable kpi-card-filter" id="kpi-card-inv-124" role="button" tabindex="0" aria-pressed="false" style="--kpi-accent: #38bdf8; --kpi-glow: rgba(56, 189, 248, 0.25);" title="Kliknite da prikažete samo kamere iz opsega 192.168.124.x. Ponovni klik vraća sve opsege">
                   <div class="kpi-icon-square" style="color: #38bdf8; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.25);"><i data-lucide="network"></i></div>
                   <div class="kpi-text-block">
                     <span class="kpi-label">OPSEG 192.168.124.X</span>
@@ -1208,7 +1212,7 @@
                   </div>
                 </div>
 
-                <div class="net-kpi-card">
+                <div class="net-kpi-card kpi-card-clickable kpi-card-filter" id="kpi-card-inv-125" role="button" tabindex="0" aria-pressed="false" style="--kpi-accent: #10b981; --kpi-glow: rgba(16, 185, 129, 0.25);" title="Kliknite da prikažete samo kamere iz opsega 192.168.125.x. Ponovni klik vraća sve opsege">
                   <div class="kpi-icon-square text-success" style="background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.25);"><i data-lucide="server"></i></div>
                   <div class="kpi-text-block">
                     <span class="kpi-label">OPSEG 192.168.125.X</span>
@@ -1224,6 +1228,15 @@
                     <span class="kpi-label">NEDOSTUPNE (OFFLINE)</span>
                     <strong class="kpi-val text-danger" id="kpi-inv-offline">0</strong>
                     <span class="kpi-sub" id="kpi-inv-offline-sub" style="font-size: 0.72rem; opacity: 0.9;">Provera: --</span>
+                  </div>
+                </div>
+
+                <div class="net-kpi-card kpi-card-clickable kpi-card-filter" id="kpi-card-inv-analog" role="button" tabindex="0" aria-pressed="false" style="--kpi-accent: #c084fc; --kpi-glow: rgba(192, 132, 252, 0.25);" title="Kliknite da prikažete samo analogne kamere (sa hibridnih snimača). Ponovni klik vraća sve kamere">
+                  <div class="kpi-icon-square" style="color: #c084fc; background: rgba(192, 132, 252, 0.12); border: 1px solid rgba(192, 132, 252, 0.3);"><i data-lucide="tv"></i></div>
+                  <div class="kpi-text-block">
+                    <span class="kpi-label">ANALOGNE KAMERE</span>
+                    <strong class="kpi-val" style="color: #c084fc;" id="kpi-inv-analog">0</strong>
+                    <span class="kpi-sub">Klikni za filter analognih &gt;</span>
                   </div>
                 </div>
               </div>
@@ -8459,7 +8472,7 @@
   <script src="/js/dms/signatures.js?v=20261105"></script>
   <script src="/js/dms/table-fullscreen.js?v=20261105"></script>
   <script src="/js/dms/paging.js?v=20261106"></script>
-  <script src="/js/app.js?v=20261023_1000"></script>
+  <script src="/js/app.js?v=20261120_filters"></script>
 </body>
 
 </html>

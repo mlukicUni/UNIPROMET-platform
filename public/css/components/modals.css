@@ -471,3 +471,19 @@
   box-shadow: 0 4px 20px rgba(239, 68, 68, 0.25);
 }
 
+/* Kartice koje rade kao brzi filter: boja kartice (--kpi-accent / --kpi-glow) na prelazak i dok je filter uključen */
+.kpi-card-filter:hover {
+  border-color: var(--kpi-accent, #fbbf24) !important;
+  box-shadow: 0 4px 20px var(--kpi-glow, rgba(251, 191, 36, 0.25));
+}
+
+.kpi-card-filter.kpi-card-active {
+  border-color: var(--kpi-accent, #fbbf24) !important;
+  box-shadow: 0 0 0 1px var(--kpi-accent, #fbbf24), 0 4px 20px var(--kpi-glow, rgba(251, 191, 36, 0.25));
+}
+
+.kpi-card-filter:focus-visible {
+  outline: 2px solid var(--kpi-accent, #fbbf24);
+  outline-offset: 2px;
+}
+
