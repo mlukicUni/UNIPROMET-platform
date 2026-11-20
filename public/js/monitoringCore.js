@@ -219,6 +219,8 @@
     }
 
     const layout = tab.layout;
+    // Vlasnik taba može prevlačenjem da zameni mesta kamerama (opcija canRearrange)
+    const rearrange = !!(this.opts.canRearrange && this.opts.canRearrange(tab));
     const html = layout.cells.map((cell, i) => {
       const camId = tab.cameras[i];
       const cam = camId ? this.camerasById.get(camId) : null;
@@ -229,7 +231,7 @@
         inner = `<div class="mon-cell-empty is-denied"><i data-lucide="shield-off"></i><span>Nema pristupa kameri</span></div>`;
       } else {
         inner = `
-          <img class="mon-cell-snap" src="${esc(snapshotUrl(cam))}" alt="" loading="lazy" onerror="this.style.display='none'">
+          <img class="mon-cell-snap" src="${esc(snapshotUrl(cam))}" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'">
           <div class="mon-cell-video"></div>
           <div class="mon-cell-osd">
             <span class="mon-cell-name" title="${esc(cameraLabel(cam))}">${esc(cameraLabel(cam))}</span>
@@ -244,13 +246,15 @@
             <button type="button" class="mon-cell-btn" data-act="maximize" title="Uvećaj (dvoklik)"><i data-lucide="maximize-2"></i></button>
           </div>`;
       }
-      return `<div class="mon-cell ${cam ? 'has-camera' : ''}" data-index="${i}" style="${cellStyle(cell)}">${inner}</div>`;
+      const drag = rearrange && camId ? ' draggable="true" title="Prevucite na drugo polje da zamenite mesta kamerama"' : '';
+      return `<div class="mon-cell ${cam ? 'has-camera' : ''}" data-index="${i}" style="${cellStyle(cell)}"${drag}>${inner}</div>`;
     }).join('');
 
-    this.container.innerHTML = `<div class="mon-grid fit-${this.fit}" style="${gridStyle(layout)}">${html}</div>`;
+    this.container.innerHTML = `<div class="mon-grid fit-${this.fit} ${rearrange ? 'can-rearrange' : ''}" style="${gridStyle(layout)}">${html}</div>`;
     icons(this.container);
 
     const grid = this.container.querySelector('.mon-grid');
+    if (rearrange) this.bindRearrange(grid);
     grid.addEventListener('dblclick', (e) => {
       const cellEl = e.target.closest('.mon-cell.has-camera');
       if (!cellEl) return;
@@ -269,6 +273,80 @@
     });
 
     this.mountAll();
+  };
+
+  /**
+   * Prevlačenje polja: kamera se prevlači na drugo polje (i na prazno), a opts.onSwap(od, do)
+   * menja podatke i čuva ih. Dok je kamera uvećana, prevlačenje je isključeno.
+   */
+  GridPlayer.prototype.bindRearrange = function (grid) {
+    let from = -1;
+    const cellOf = (e) => (e.target && e.target.closest ? e.target.closest('.mon-cell') : null);
+    const clear = () => grid.querySelectorAll('.is-drop-target, .is-dragging')
+      .forEach(el => el.classList.remove('is-drop-target', 'is-dragging'));
+
+    grid.addEventListener('dragstart', (e) => {
+      const el = cellOf(e);
+      const idx = el ? Number(el.dataset.index) : -1;
+      if (idx < 0 || this.maxIndex >= 0 || !this.tab || !this.tab.cameras[idx]) {
+        e.preventDefault();
+        return;
+      }
+      from = idx;
+      el.classList.add('is-dragging');
+      grid.classList.add('is-rearranging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', String(idx)); } catch (err) { /* ignorisano */ }
+    });
+
+    grid.addEventListener('dragover', (e) => {
+      if (from < 0) return;
+      const el = cellOf(e);
+      if (!el) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      grid.querySelectorAll('.is-drop-target').forEach(x => { if (x !== el) x.classList.remove('is-drop-target'); });
+      if (Number(el.dataset.index) !== from) el.classList.add('is-drop-target');
+    });
+
+    grid.addEventListener('dragleave', (e) => {
+      const el = cellOf(e);
+      if (el && !el.contains(e.relatedTarget)) el.classList.remove('is-drop-target');
+    });
+
+    grid.addEventListener('drop', (e) => {
+      if (from < 0) return;
+      e.preventDefault();
+      const el = cellOf(e);
+      const to = el ? Number(el.dataset.index) : -1;
+      const src = from;
+      from = -1;
+      clear();
+      grid.classList.remove('is-rearranging');
+      if (to >= 0 && to !== src && this.opts.onSwap) this.opts.onSwap(src, to);
+    });
+
+    grid.addEventListener('dragend', () => {
+      from = -1;
+      clear();
+      grid.classList.remove('is-rearranging');
+    });
+  };
+
+  /**
+   * Zamena mesta dva polja bez prekida strimova: polja zadržavaju svoj video, a menjaju
+   * samo položaj u gridu i redni broj. Podatke taba (tab.cameras) menja pozivalac.
+   */
+  GridPlayer.prototype.swapCells = function (a, b) {
+    const elA = this.container.querySelector(`.mon-cell[data-index="${a}"]`);
+    const elB = this.container.querySelector(`.mon-cell[data-index="${b}"]`);
+    if (!elA || !elB) return false;
+    const styleA = elA.getAttribute('style') || '';
+    elA.setAttribute('style', elB.getAttribute('style') || '');
+    elB.setAttribute('style', styleA);
+    elA.dataset.index = String(b);
+    elB.dataset.index = String(a);
+    return true;
   };
 
   /** Postepeno pokretanje strimova (100 ms razmaka) da se gateway ne zaguši */
