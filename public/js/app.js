@@ -4824,7 +4824,8 @@ let allInventoryCameras = [];
 let invSearchQuery = '';
 let invTypeFilter = 'all';
 let invSubnetFilter = 'all';
-const invRecorderSelected = new Set(); // izabrani snimači/lokacije (pilule se mogu kombinovati); prazno = svi
+const invRecorderSelected = new Set(); // izabrani snimač iz padajuće liste; prazno = svi
+const invLocationSelected = new Set(); // izabrane lokacije (pilule se mogu kombinovati); prazno = sve
 let invStatusFilter = 'all';
 let invViewMode = 'table';
 let invCurrentPage = 1;
@@ -4914,7 +4915,7 @@ function populateInventoryLocationControls(recorders) {
   [...invRecorderSelected].forEach(name => { if (!recorders.includes(name)) invRecorderSelected.delete(name); });
 
   if (select) {
-    select.innerHTML = '<option value="all">Svi snimači (15 lokacija)</option>' +
+    select.innerHTML = `<option value="all">Svi snimači (${recorders.length})</option>` +
       '<option value="__multi__" hidden disabled></option>' +
       recorders.map(r => `<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join('');
   }
@@ -4922,25 +4923,30 @@ function populateInventoryLocationControls(recorders) {
   if (datalist) {
     datalist.innerHTML = recorders.map(r => `<option value="${escapeHtml(r)}">`).join('');
   }
+  const locations = [...new Set(allInventoryCameras.map(c => c.location).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b, 'sr'));
+  // Izabrana lokacija koja više ne postoji ispada iz izbora
+  [...invLocationSelected].forEach(loc => { if (!locations.includes(loc)) invLocationSelected.delete(loc); });
+
   const locList = document.getElementById('locations-datalist');
   if (locList) {
-    const locations = [...new Set(allInventoryCameras.map(c => c.location).filter(Boolean))].sort();
     locList.innerHTML = locations.map(l => `<option value="${escapeHtml(l)}">`).join('');
   }
 
   if (pillsContainer) {
     let pillsHtml = `
-      <button type="button" class="inv-quick-pill ${invRecorderSelected.size === 0 ? 'active' : ''}" data-rec="all" aria-pressed="${invRecorderSelected.size === 0}" onclick="setInvRecorderFilter('all')" title="Prikaži kamere sa svih lokacija">
+      <button type="button" class="inv-quick-pill ${invLocationSelected.size === 0 ? 'active' : ''}" data-loc="all" aria-pressed="${invLocationSelected.size === 0}" onclick="setInvLocationFilter('all')" title="Prikaži kamere sa svih lokacija">
         <i data-lucide="layers" style="width: 13px; height: 13px;"></i>
         <span>Sve Lokacije</span>
       </button>
     `;
-    recorders.forEach(rec => {
-      const activeClass = invRecorderSelected.has(rec) ? 'active' : '';
+    locations.forEach(loc => {
+      const count = allInventoryCameras.filter(c => c.location === loc).length;
+      const activeClass = invLocationSelected.has(loc) ? 'active' : '';
       pillsHtml += `
-        <button type="button" class="inv-quick-pill ${activeClass}" data-rec="${escapeHtml(rec)}" aria-pressed="${invRecorderSelected.has(rec)}" onclick="setInvRecorderFilter(this.dataset.rec)" title="Klikom birate više lokacija odjednom; ponovni klik uklanja lokaciju iz izbora">
+        <button type="button" class="inv-quick-pill ${activeClass}" data-loc="${escapeHtml(loc)}" aria-pressed="${invLocationSelected.has(loc)}" onclick="setInvLocationFilter(this.dataset.loc)" title="Lokacija ${escapeHtml(loc)}: ${count} kamera. Klikom birate više lokacija odjednom; ponovni klik uklanja lokaciju iz izbora">
           <i data-lucide="map-pin" style="width: 12px; height: 12px;"></i>
-          <span>${escapeHtml(rec)}</span>
+          <span>${escapeHtml(loc)}</span>
         </button>
       `;
     });
@@ -4950,16 +4956,17 @@ function populateInventoryLocationControls(recorders) {
   syncInvRecorderControls();
 }
 
-/** Usklađuje pilule lokacija i padajuću listu snimača sa trenutnim izborom (jedan, više ili svi) */
+/** Usklađuje pilule lokacija (filter po lokaciji) i padajuću listu snimača (filter po snimaču) sa trenutnim izborom */
 function syncInvRecorderControls() {
-  const none = invRecorderSelected.size === 0;
+  const noLoc = invLocationSelected.size === 0;
   document.querySelectorAll('#inv-location-pills .inv-quick-pill').forEach(btn => {
-    const rec = btn.getAttribute('data-rec');
-    const active = rec === 'all' ? none : invRecorderSelected.has(rec);
+    const loc = btn.getAttribute('data-loc');
+    const active = loc === 'all' ? noLoc : invLocationSelected.has(loc);
     btn.classList.toggle('active', active);
     btn.setAttribute('aria-pressed', active ? 'true' : 'false');
   });
 
+  const none = invRecorderSelected.size === 0;
   const select = document.getElementById('select-inv-recorder-filter');
   if (select) {
     const multi = select.querySelector('option[value="__multi__"]');
@@ -4973,16 +4980,16 @@ function syncInvRecorderControls() {
 }
 
 /** Klik na pilulu lokacije: dodaje je u izbor ili je uklanja iz njega; "Sve Lokacije" poništava izbor */
-function setInvRecorderFilter(rec) {
-  if (rec === 'all') invRecorderSelected.clear();
-  else if (invRecorderSelected.has(rec)) invRecorderSelected.delete(rec);
-  else invRecorderSelected.add(rec);
+function setInvLocationFilter(loc) {
+  if (loc === 'all') invLocationSelected.clear();
+  else if (invLocationSelected.has(loc)) invLocationSelected.delete(loc);
+  else invLocationSelected.add(loc);
 
   syncInvRecorderControls();
   invCurrentPage = 1;
   renderInventoryCamerasTab();
 }
-window.setInvRecorderFilter = setInvRecorderFilter;
+window.setInvLocationFilter = setInvLocationFilter;
 
 /** Postavlja tačno navedene snimače kao izbor (npr. iz padajuće liste ili sa spiska snimača) */
 function setInvRecorderSelection(names) {
@@ -5005,6 +5012,7 @@ async function exportInventoryCamerasExcel() {
   const filters = [
     `Tip: ${typeLabel[invTypeFilter] || invTypeFilter}`,
     `Mrežni opseg: ${invSubnetFilter === 'all' ? 'Svi' : invSubnetFilter}`,
+    `Lokacija: ${invLocationSelected.size === 0 ? 'Svi' : [...invLocationSelected].join(', ')}`,
     `Snimač: ${invRecorderSelected.size === 0 ? 'Svi' : [...invRecorderSelected].join(', ')}`,
     `Status: ${statusLabel[invStatusFilter] || invStatusFilter}`,
     invSearchQuery ? `Pretraga: "${invSearchQuery}"` : ''
@@ -5072,6 +5080,9 @@ function getFilteredInventoryCameras() {
     // Recorder filter
     if (invRecorderSelected.size > 0 && !invRecorderSelected.has(c.recorder)) return false;
 
+    // Location filter (pilule)
+    if (invLocationSelected.size > 0 && !invLocationSelected.has(c.location)) return false;
+
     // Status filter
     if (invStatusFilter === 'active' && c.isReserved) return false;
     if (invStatusFilter === 'online' && (!c.isOnline || c.isReserved)) return false;
@@ -5088,7 +5099,7 @@ function getFilteredInventoryCameras() {
 /** Osvežava kartice iznad liste: aktivna je ona čiji je filter trenutno uključen */
 function updateInvKpiCards() {
   const noFilters = !invSearchQuery && invTypeFilter === 'all' && invSubnetFilter === 'all' &&
-    invRecorderSelected.size === 0 && invStatusFilter === 'all';
+    invRecorderSelected.size === 0 && invLocationSelected.size === 0 && invStatusFilter === 'all';
   const states = {
     'kpi-card-inv-total': noFilters,
     'kpi-card-inv-124': invSubnetFilter === '192.168.124.x',
@@ -5109,6 +5120,7 @@ function resetInventoryFilters() {
   invTypeFilter = 'all';
   invSubnetFilter = 'all';
   invRecorderSelected.clear();
+  invLocationSelected.clear();
   invStatusFilter = 'all';
   invCurrentPage = 1;
 
@@ -7356,8 +7368,9 @@ window.renderInventoryRecordersTab = renderInventoryRecordersTab;
 // Helper: Jump from recorder to its cameras
 window.viewCamerasForRecorder = function(recorderName) {
   if (window.switchTab) window.switchTab('inventory_cameras');
+  invLocationSelected.clear(); // sve kamere snimača, bez obzira na lokaciju
   setInvRecorderSelection([recorderName]);
-  showToast(`Prikazuju se kamere za lokaciju: ${recorderName}`, 'info');
+  showToast(`Prikazuju se kamere sa snimača: ${recorderName}`, 'info');
 };
 
 function openAddRecorderModal() {
