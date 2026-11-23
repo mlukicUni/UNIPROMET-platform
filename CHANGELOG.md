@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.13] - 2026-11-23
+- Mreža → Kamere: pilule iznad liste sada filtriraju po **lokaciji** kamere (ranije su filtrirale po snimaču, iako su se zvale lokacije, pa je npr. „Cinkara“ pokazivala kamere sa snimača Cinkara, a ne sa lokacije Cinkara). Može se izabrati više lokacija odjednom; prelazak mišem preko pilule pokazuje broj kamera na toj lokaciji. Filter po snimaču ostaje u padajućem meniju i kombinuje se sa pilulama. Izvoz u Excel navodi i izabrane lokacije, a „Prikaži kamere“ sa spiska snimača poništava izbor lokacija da bi se videle sve kamere tog snimača
+
 ## [1.3.12.1] - 2026-11-23
 - Bočni meni: otvaranje i zatvaranje sekcija je ravnomerno i tečno. Animacija je ranije računala kao da je svaka sekcija visoka 3000 px (a visoke su 94–430 px), pa je zatvaranje oko četvrt sekunde stajalo pa naglo padalo, a otvaranje odmah skakalo do kraja. Sada se animira stvarna visina sekcije, krivom koja kreće odmah u kadru klika i usporava na kraju (otvaranje 260 ms, zatvaranje 200 ms). Evidencija više ne naraste naknadno posle otvaranja: brojevi pored stavki stižu tek posle klika i ranije su prelamali red u dva; oznaka broja sada od početka zauzima isto mesto, a ako se sadržaj ipak promeni tokom animacije, sekcija glatko nastavi do nove visine. Stavke menija se tokom animacije više ne sabijaju (ranije su se redovi u dva reda skupljali pa na kraju „ispravljali“, pa je sekcija naknadno rasla), a mesto za traku za skrolovanje je uvek rezervisano, pa se širina menija ne menja kad se sekcija otvori
 
