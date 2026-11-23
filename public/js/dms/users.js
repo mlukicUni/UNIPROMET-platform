@@ -63,7 +63,7 @@ let selectedUsersForEmail = new Set();
 
         $('btnFilterUserAll').addEventListener('click', () => setFilter('all'));
         $('btnFilterUserKey').addEventListener('click', () => setFilter('key'));
-        $('userSearchInput').addEventListener('input', e => { search = (e.target.value || '').toLowerCase(); renderTable(); });
+        $('userSearchInput').addEventListener('input', e => { search = e.target.value || ''; renderTable(); });
         $('dmsUserNew').addEventListener('click', () => openForm(null));
         $('dmsUsersMail').addEventListener('click', () => {
             if (!canMail()) { dmsNotify('Nemate dozvolu za slanje mejlova.', 'error'); return; }
@@ -127,9 +127,10 @@ let selectedUsersForEmail = new Set();
 
         let keys = currentUsersFilter === 'key' ? allKeys.filter(k => USERS[k]?.isKeyUser) : allKeys;
         if (search) {
+            // Zajedničko pravilo pretrage (sve reči, bilo koje polje, bez kvačica)
             keys = keys.filter(k => {
                 const u = USERS[k];
-                return [u.name, u.sector, u.email, u.location].some(v => String(v || '').toLowerCase().includes(search));
+                return UniSearch.match(search, u.name, u.sector, u.email, u.location);
             });
         }
         $('modalUserCount').textContent = keys.length;

@@ -13,6 +13,12 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.12] - 2026-11-23
+- Modalni prozori na celoj platformi više se ne zatvaraju klikom van prozora (na tamnu pozadinu), da se uneti podaci ne izgube slučajnim klikom. Zatvaraju se samo X-om ili dugmetom prozora (Otkaži, Sačuvaj…); taster Esc i dalje zatvara
+- Sve pretrage na platformi (spiskovi uređaja, evidencije, šifarnici, kamere, role, DMS, izbor zaposlenog u formama) kreću tek kad korisnik prestane da kuca 0,8 sekundi, a ne na svaki otkucani znak. Enter pokreće pretragu odmah, a brisanje polja odmah vraća pun spisak. Pravilo je zajedničko (`public/js/core/search-delay.js`), pa važi i za buduća polja za pretragu
+- Svako polje za pretragu ima ✕ za poništavanje (pojavi se čim u polju ima teksta; klik briše pretragu i odmah vraća pun spisak). Polja koja su ga već imala zadržavaju svoje; ostala ga dobijaju automatski (računari, serveri, ostali uređaji, portovi sviča, role, Monitoring, izbor zaposlenog u formama, WiFi klijenti, DMS). Pretrage portova sviča i DMS tabela (Podaci, Oscilacije, Sektori) reaguju na unos kao i ostale (ranije na pritisak tastera, bez čekanja)
+- Pretraga po više reči na celoj platformi: upit se deli na reči i zapis se prikazuje ako sadrži SVAKU reč, u bilo kom polju i bilo kojim redom (npr. „odrzavanje analog“ nalazi analogne kamere na Održavanju, „marko laptop“ laptopove zadužene na Marka). Velika i mala slova i kvačice se ne razlikuju (č/ć → c, š → s, ž → z, đ/dj → d). Važi za spiskove uređaja i kamera, evidencije (oprema, mrežna oprema, čvorišta, linije, MTS, softver), šifarnike, role, Monitoring, DMS i evidenciju događaja. Zajedničko pravilo: `public/js/core/search-match.js` (ekran) i `src/utils/searchMatch.ts` (server, SQLite funkcija `unorm`); pretraga zaposlenih iz Navision-a ide reč po reč
+
 ## [1.3.11.1] - 2026-11-20
 - Video nadzor → Monitoring: vlasnik taba može direktno u prikazu taba da prevuče kameru na drugo polje (i na prazno) i tako zameni mesta kamerama; novi raspored se odmah čuva u bazi, bez otvaranja izmene taba. Strimovi se pri zameni ne prekidaju (polja samo menjaju položaj). Polje na koje se spušta je označeno („Zameni mesta“), prevlačenje je isključeno dok je kamera uvećana, a tuđi deljeni tabovi i zaseban prozor ostaju samo za gledanje. Ako čuvanje ne uspe, javlja se greška i raspored se vraća sa servera
 

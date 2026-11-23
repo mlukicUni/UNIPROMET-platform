@@ -1334,7 +1334,7 @@ function renderMultiGenericOverview(sheetName) {
                     <div class="dms-podaci-search-icon">
                         <i data-lucide="search"></i>
                     </div>
-                    <input type="text" id="${searchInputId}" onkeyup="filterTableRows('${searchInputId}', '${tableId}')" placeholder="Pretraži ${sheetName.toLowerCase()}..." class="dms-podaci-search-input">
+                    <input type="text" id="${searchInputId}" oninput="filterTableRows('${searchInputId}', '${tableId}')" placeholder="Pretraži ${sheetName.toLowerCase()}..." class="dms-podaci-search-input">
                 </div>
             </div>
 
@@ -1396,12 +1396,12 @@ function filterTableRows(inputId, tableId) {
     const table = document.getElementById(tableId);
     if (!input || !table) return;
 
-    const filter = input.value.toLowerCase();
+    // Zajedničko pravilo pretrage: svaka reč upita negde u redu (sve ćelije)
+    const filter = input.value;
     const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
 
     for (let i = 0; i < rows.length; i++) {
-        const text = rows[i].innerText.toLowerCase();
-        if (text.includes(filter)) {
+        if (UniSearch.match(filter, rows[i].innerText)) {
             rows[i].style.display = "";
         } else {
             rows[i].style.display = "none";

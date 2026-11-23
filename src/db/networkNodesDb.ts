@@ -1,4 +1,5 @@
 import { getDb } from './sqlite.js';
+import { sqlSearch } from '../utils/searchMatch.js';
 import { initSchema } from './schema.js';
 
 initSchema();
@@ -183,22 +184,13 @@ export class NetworkNodesDb {
       params.statusId = options.statusId;
     }
 
-    if (options.search && options.search.trim()) {
-      const q = `%${options.search.trim()}%`;
-      params.q = q;
-      whereClauses.push(`(
-        CAST(e.id AS TEXT) LIKE @q
-        OR e.name LIKE @q
-        OR e.description LIKE @q
-        OR e.rack_dims LIKE @q
-        OR e.route_desc LIKE @q
-        OR e.comment LIKE @q
-        OR e.employee_no LIKE @q
-        OR e.inventory_no LIKE @q
-        OR loc.name LIKE @q
-        OR bld.name LIKE @q
-        OR rm.name LIKE @q
-      )`);
+    const srch = sqlSearch([
+      'CAST(e.id AS TEXT)', 'e.name', 'e.description', 'e.rack_dims', 'e.route_desc', 'e.comment',
+      'e.employee_no', 'e.inventory_no', 'loc.name', 'bld.name', 'rm.name'
+    ], options.search);
+    if (srch) {
+      whereClauses.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';

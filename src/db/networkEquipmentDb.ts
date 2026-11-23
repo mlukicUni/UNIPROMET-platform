@@ -1,4 +1,5 @@
 import { getDb } from './sqlite.js';
+import { sqlSearchWithKeys } from '../utils/searchWithKeys.js';
 
 export const NETWORK_CATEGORY_IDS = [6, 7, 8, 16, 21, 22, 28, 33, 34, 39, 40, 47];
 
@@ -176,7 +177,8 @@ export const networkEquipmentDb = {
     statusId?: number | null;
     cvorId?: number | null;
     search?: string | null;
-    matchedEmployeeNos?: string[] | null;
+    /** kadrovski brojevi iz Navision-a koje je pogodila svaka reč upita (isti redosled kao searchWords) */
+    employeeNosPerWord?: string[][] | null;
     limit?: number;
     offset?: number;
   }): { items: NetworkEquipmentItem[]; total: number } {
@@ -218,17 +220,9 @@ export const networkEquipmentDb = {
       params.cvorId = options.cvorId;
     }
 
-    if (options.search && options.search.trim()) {
-      const trimmedSearch = options.search.trim();
-      const tokens = trimmedSearch.toLowerCase().split(/\s+/).filter(Boolean);
-
-      const tokenConditions: string[] = [];
-      tokens.forEach((tok, i) => {
-        const paramKey = `tok_${i}`;
-        params[paramKey] = `%${tok}%`;
-        tokenConditions.push(`(
-          LOWER(
-            '#' || CAST(e.id AS TEXT) || ' ' || 
+    // Svaka reč mora biti u tekstu zapisa ILI u zaduženom zaposlenom (Navision, po reči)
+    const srch = sqlSearchWithKeys(
+      [`'#' || CAST(e.id AS TEXT) || ' ' ||
             COALESCE(e.name, '') || ' ' || 
             COALESCE(e.description, '') || ' ' || 
             COALESCE(e.comment, '') || ' ' || 
@@ -241,19 +235,14 @@ export const networkEquipmentDb = {
             COALESCE(l.name, '') || ' ' || 
             COALESCE(b.name, '') || ' ' || 
             COALESCE(r.short_desc, '') || ' ' ||
-            COALESCE(parent_cvor.formatted, '')
-          ) LIKE @${paramKey}
-        )`);
-      });
-
-      const allTokensMatch = tokenConditions.length > 0 ? tokenConditions.join(' AND ') : '1=1';
-
-      if (options.matchedEmployeeNos && options.matchedEmployeeNos.length > 0) {
-        const empListStr = options.matchedEmployeeNos.map(emp => `'${emp.replace(/'/g, "''")}'`).join(',');
-        conditions.push(`((${allTokensMatch}) OR e.employee_no IN (${empListStr}))`);
-      } else {
-        conditions.push(`(${allTokensMatch})`);
-      }
+            COALESCE(parent_cvor.formatted, '')`],
+      options.search,
+      'e.employee_no',
+      options.employeeNosPerWord
+    );
+    if (srch) {
+      conditions.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

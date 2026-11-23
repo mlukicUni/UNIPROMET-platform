@@ -1,4 +1,5 @@
 import { getDb } from './sqlite';
+import { sqlSearchWithKeys } from '../utils/searchWithKeys';
 
 export interface MtsNumberItem {
   id: number;
@@ -78,7 +79,8 @@ export const mtsDb = {
     dodatakInternet?: string | null;
     dodatakRoming?: string | null;
     search?: string | null;
-    matchedPhoneNumbers?: string[] | null;
+    /** telefoni zaposlenih (Navision) koje je pogodila svaka reč upita (isti redosled kao searchWords) */
+    phoneNumbersPerWord?: string[][] | null;
     limit?: number;
     offset?: number;
   }): { items: MtsNumberItem[]; total: number } {
@@ -121,17 +123,9 @@ export const mtsDb = {
       params.dodatakRoming = options.dodatakRoming.trim();
     }
 
-    if (options.search && options.search.trim()) {
-      const trimmedSearch = options.search.trim();
-      const tokens = trimmedSearch.toLowerCase().split(/\s+/).filter(Boolean);
-
-      const tokenConditions: string[] = [];
-      tokens.forEach((tok, i) => {
-        const paramKey = `tok_${i}`;
-        params[paramKey] = `%${tok}%`;
-        tokenConditions.push(`(
-          LOWER(
-            '#' || CAST(m.id AS TEXT) || ' ' || 
+    // Svaka reč mora biti u tekstu zapisa ILI pogađa zaposlenog čiji je to telefon (Navision, po reči)
+    const srch = sqlSearchWithKeys(
+      [`'#' || CAST(m.id AS TEXT) || ' ' ||
             COALESCE(m.telefon, '') || ' ' || 
             COALESCE(m.kategorija, '') || ' ' || 
             COALESCE(m.status, '') || ' ' || 
@@ -141,19 +135,14 @@ export const mtsDb = {
             COALESCE(m.dodatak_internet, '') || ' ' || 
             COALESCE(m.dodatak1, '') || ' ' || 
             COALESCE(m.dodatak2, '') || ' ' || 
-            COALESCE(m.dodatak3, '')
-          ) LIKE @${paramKey}
-        )`);
-      });
-
-      const allTokensMatch = tokenConditions.length > 0 ? tokenConditions.join(' AND ') : '1=1';
-
-      if (options.matchedPhoneNumbers && options.matchedPhoneNumbers.length > 0) {
-        const phoneListStr = options.matchedPhoneNumbers.map(p => `'${p.replace(/'/g, "''")}'`).join(',');
-        conditions.push(`((${allTokensMatch}) OR m.telefon IN (${phoneListStr}))`);
-      } else {
-        conditions.push(`(${allTokensMatch})`);
-      }
+            COALESCE(m.dodatak3, '')`],
+      options.search,
+      'm.telefon',
+      options.phoneNumbersPerWord
+    );
+    if (srch) {
+      conditions.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';

@@ -17,7 +17,12 @@
   
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  
+
+  <!-- Odložena pretraga: sva polja za pretragu čekaju pauzu u kucanju (mora pre ostalih skripti) -->
+  <script src="/js/core/search-delay.js"></script>
+  <!-- Zajedničko pravilo pretrage: reči odvojeno, bez razlike u kvačicama (UniSearch.match) -->
+  <script src="/js/core/search-match.js"></script>
+
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/components/auth-widget.css">
@@ -8246,7 +8251,7 @@
             <button type="button" class="filter-pill" id="btn-switch-filter-disabled" onclick="filterSwitchPortsTable('disabled')">Onemogućeni (9)</button>
           </div>
           <div>
-            <input type="text" id="input-search-switch-ports" class="glass-input" placeholder="Pretraži port ili MAC..." onkeyup="searchSwitchPortsTable()" style="padding: 6px 12px; font-size: 0.8rem; width: 200px;">
+            <input type="text" id="input-search-switch-ports" class="glass-input" placeholder="Pretraži port ili MAC..." oninput="searchSwitchPortsTable()" style="padding: 6px 12px; font-size: 0.8rem; width: 200px;">
           </div>
         </div>
 

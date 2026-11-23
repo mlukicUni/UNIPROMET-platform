@@ -25,13 +25,8 @@ export function closeModal(modalId, callback) {
 }
 
 export function initModalDismissListeners() {
+  // Klik na pozadinu namerno ne zatvara modal (samo X ili dugme)
   document.querySelectorAll('.modal-overlay, .modal-backdrop').forEach(backdrop => {
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) {
-        closeModal(backdrop);
-      }
-    });
-
     backdrop.querySelectorAll('.modal-close-icon, .btn-modal-close, .btn-modal-cancel, .btn-cancel-modal').forEach(closeBtn => {
       closeBtn.addEventListener('click', (e) => {
         e.preventDefault();

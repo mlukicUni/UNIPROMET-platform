@@ -763,7 +763,7 @@ function renderKreiraniDokumentiPoSektorimaTab() {
                         <span class="dms-sektori-search-icon">
                             <i data-lucide="search"></i>
                         </span>
-                        <input type="text" id="searchSektorInput" onkeyup="filterSektorRows()" placeholder="Pretraži službu ili zaposlenog..." class="dms-sektori-search-input">
+                        <input type="text" id="searchSektorInput" oninput="filterSektorRows()" placeholder="Pretraži službu ili zaposlenog..." class="dms-sektori-search-input">
                     </div>
                 </div>
             </div>

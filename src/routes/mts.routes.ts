@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import { mtsDb, MtsNumberInput } from '../db/mtsDb.js';
 import { navisionService } from '../services/navisionService.js';
+import { keysPerSearchWord } from '../utils/searchWithKeys.js';
 import { addServerLog } from './system.routes.js';
 import { broadcastEquipmentEvent } from './equipment.routes.js';
 // [LEGACY_BRIDGE_START]
@@ -59,14 +60,10 @@ mtsRouter.get('/export/excel', async (req: Request, res: Response) => {
     const packageFilter = req.query.package ? String(req.query.package).trim() : undefined;
     const dodatak = req.query.dodatak ? String(req.query.dodatak).trim() : undefined;
 
-    let matchedPhoneNumbers: string[] | null = null;
-    if (search) {
-      try {
-        matchedPhoneNumbers = await navisionService.searchPhonesByEmployeeName(search);
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Navision (keš): za svaku reč upita telefoni zaposlenih koje ta reč pogađa
+    const phoneNumbersPerWord = await keysPerSearchWord(search, word =>
+      navisionService.searchPhonesByEmployeeName(word)
+    );
 
     // Fetch all matching records without pagination
     const result = mtsDb.getMtsNumbers({
@@ -75,7 +72,7 @@ mtsRouter.get('/export/excel', async (req: Request, res: Response) => {
       status,
       paket: packageFilter,
       dodatakInternet: dodatak === '1' ? 'YES' : undefined,
-      matchedPhoneNumbers,
+      phoneNumbersPerWord,
       limit: 100000,
       offset: 0
     });
@@ -321,14 +318,10 @@ mtsRouter.get('/', async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 50;
     const offset = (page - 1) * limit;
 
-    let matchedPhoneNumbers: string[] | null = null;
-    if (search) {
-      try {
-        matchedPhoneNumbers = await navisionService.searchPhonesByEmployeeName(search);
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Navision (keš): za svaku reč upita telefoni zaposlenih koje ta reč pogađa
+    const phoneNumbersPerWord = await keysPerSearchWord(search, word =>
+      navisionService.searchPhonesByEmployeeName(word)
+    );
 
     const result = mtsDb.getMtsNumbers({
       search,
@@ -336,7 +329,7 @@ mtsRouter.get('/', async (req: Request, res: Response) => {
       status,
       paket: packageFilter,
       dodatakInternet: dodatak === '1' ? 'YES' : undefined,
-      matchedPhoneNumbers,
+      phoneNumbersPerWord,
       limit,
       offset
     });

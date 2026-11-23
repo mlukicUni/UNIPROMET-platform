@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { normSearchText } from '../utils/searchMatch';
 
 const DATA_DIR = path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DATA_DIR, 'unipromet.db');
@@ -26,6 +27,8 @@ export function getDb(): Database.Database {
     dbInstance.pragma('journal_mode = WAL');
     dbInstance.pragma('foreign_keys = ON');
     dbInstance.pragma('synchronous = NORMAL');
+    // Pretraga bez razlike u kvačicama i velikim slovima (src/utils/searchMatch.ts → sqlSearch)
+    dbInstance.function('unorm', { deterministic: true }, (v: unknown) => normSearchText(v));
   }
   return dbInstance;
 }

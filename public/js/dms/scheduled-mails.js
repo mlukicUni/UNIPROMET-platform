@@ -209,8 +209,8 @@
     }
 
     function renderRecipients() {
-        const q = query.trim().toLowerCase();
-        const visible = available.filter(r => !q || r.label.toLowerCase().includes(q) || r.email.includes(q));
+        // Zajedničko pravilo pretrage: svaka reč upita mora biti u imenu/službi ili e-mailu
+        const visible = available.filter(r => UniSearch.match(query, r.label, r.email));
         $('dmsSmUserList').innerHTML = visible.map(r => `
             <label class="dms-recipient">
                 <input type="checkbox" data-email="${esc(r.email)}" ${selected.includes(r.email) ? 'checked' : ''}>
