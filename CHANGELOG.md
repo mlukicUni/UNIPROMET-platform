@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.12.1] - 2026-11-23
+- Bočni meni: otvaranje i zatvaranje sekcija je ravnomerno i tečno. Animacija je ranije računala kao da je svaka sekcija visoka 3000 px (a visoke su 94–430 px), pa je zatvaranje oko četvrt sekunde stajalo pa naglo padalo, a otvaranje odmah skakalo do kraja. Sada se animira stvarna visina sekcije, krivom koja kreće odmah u kadru klika i usporava na kraju (otvaranje 260 ms, zatvaranje 200 ms). Evidencija više ne naraste naknadno posle otvaranja: brojevi pored stavki stižu tek posle klika i ranije su prelamali red u dva; oznaka broja sada od početka zauzima isto mesto, a ako se sadržaj ipak promeni tokom animacije, sekcija glatko nastavi do nove visine. Stavke menija se tokom animacije više ne sabijaju (ranije su se redovi u dva reda skupljali pa na kraju „ispravljali“, pa je sekcija naknadno rasla), a mesto za traku za skrolovanje je uvek rezervisano, pa se širina menija ne menja kad se sekcija otvori
+
 ## [1.3.12] - 2026-11-23
 - Modalni prozori na celoj platformi više se ne zatvaraju klikom van prozora (na tamnu pozadinu), da se uneti podaci ne izgube slučajnim klikom. Zatvaraju se samo X-om ili dugmetom prozora (Otkaži, Sačuvaj…); taster Esc i dalje zatvara
 - Sve pretrage na platformi (spiskovi uređaja, evidencije, šifarnici, kamere, role, DMS, izbor zaposlenog u formama) kreću tek kad korisnik prestane da kuca 0,8 sekundi, a ne na svaki otkucani znak. Enter pokreće pretragu odmah, a brisanje polja odmah vraća pun spisak. Pravilo je zajedničko (`public/js/core/search-delay.js`), pa važi i za buduća polja za pretragu

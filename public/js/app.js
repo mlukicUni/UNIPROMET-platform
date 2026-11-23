@@ -441,18 +441,46 @@ function setupNavigationHandlers() {
   };
 
 
+  // Otvaranje/zatvaranje sekcije menija animira STVARNU visinu sadržaja. Ranije je CSS animirao
+  // max-height do 3000px, pa je zatvaranje ~250 ms stajalo pa naglo padalo, a otvaranje odmah skakalo.
+  const NAV_SECTION_ANIM_MS = 260; // najduži prelaz u .nav-section-content (style.css): otvaranje 260 ms, zatvaranje 200 ms
+
+  function setGroupOpen(group, open, animate = true) {
+    const content = group.querySelector(':scope > .nav-section-content');
+    if (!content || !animate || group.classList.contains('open') === open) {
+      group.classList.toggle('open', open);
+      return;
+    }
+    const from = content.getBoundingClientRect().height; // tačno i ako je prethodna animacija u toku
+    group.classList.toggle('open', open);
+    const to = open ? content.scrollHeight : 0;
+    content.style.maxHeight = `${from}px`;
+    void content.offsetHeight; // početna visina se primeni pre prelaza
+    content.style.maxHeight = `${to}px`;
+    clearTimeout(content._navAnimTimer);
+    const finish = (target) => {
+      // Sadržaj se promenio tokom animacije (npr. stigli brojevi): glatko do nove visine umesto skoka
+      if (open && Math.abs(content.scrollHeight - target) > 1) {
+        const next = content.scrollHeight;
+        content.style.maxHeight = `${next}px`;
+        content._navAnimTimer = setTimeout(() => finish(next), NAV_SECTION_ANIM_MS + 40);
+        return;
+      }
+      // Na kraju CSS preuzima (otvoreno: bez ograničenja visine, zatvoreno: 0)
+      content.style.maxHeight = '';
+    };
+    content._navAnimTimer = setTimeout(() => finish(to), NAV_SECTION_ANIM_MS + 40);
+  }
+
   function setOpenSection(sectionId, save = true) {
     const sectionGroups = document.querySelectorAll('.nav-section-group');
     sectionGroups.forEach(group => {
       const btn = group.querySelector('.nav-section-toggle');
       const grpSection = btn?.getAttribute('data-section');
-      if (grpSection === sectionId) {
-        group.classList.add('open');
-        if (btn) btn.setAttribute('aria-expanded', 'true');
-      } else {
-        group.classList.remove('open');
-        if (btn) btn.setAttribute('aria-expanded', 'false');
-      }
+      const open = grpSection === sectionId;
+      // Pri učitavanju stranice (save = false) bez animacije
+      setGroupOpen(group, open, save);
+      if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
     });
 
     if (save && sectionId) {
@@ -696,7 +724,7 @@ function setupNavigationHandlers() {
         }
 
         if (isAlreadyOpen) {
-          group.classList.remove('open');
+          setGroupOpen(group, false);
           sectionToggle.setAttribute('aria-expanded', 'false');
           try {
             localStorage.setItem('unipromet_open_nav_section', '');
