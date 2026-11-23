@@ -228,6 +228,8 @@ select option {
   padding: 18px 12px 36px 12px;
   overflow-y: auto;
   overflow-x: hidden;
+  /* Mesto za traku za skrolovanje uvek rezervisano: širina menija se ne menja kad se sekcija otvori */
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -331,11 +333,25 @@ select option {
   max-height: 0;
   opacity: 0;
   overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, margin 0.2s ease, padding 0.2s ease;
+  /* Visinu tokom animacije postavlja app.js (setGroupOpen) na stvarnu visinu sadržaja; trajanje = NAV_SECTION_ANIM_MS */
+  /* padding (2px) namerno bez prelaza, da app.js odmah izmeri tačnu krajnju visinu */
+  /* Kriva koja kreće odmah i usporava na kraju: meni reaguje u istom kadru kad se klikne (ranije je prvih ~30 ms stajao) */
+  transition: max-height 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease-out, margin 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Zatvaranje kraće od otvaranja */
+.nav-section-group:not(.open) > .nav-section-content {
+  transition-duration: 0.2s, 0.14s, 0.2s;
+}
+
+/* Stavke se ne skupljaju dok animacija ograničava visinu; inače se redovi u dva reda sabiju
+   pa „ispravе“ na kraju animacije i sekcija naraste još malo */
+.nav-section-content > * {
+  flex-shrink: 0;
 }
 
 .nav-section-group.open > .nav-section-content {
-  max-height: 3000px;
+  max-height: none;
   opacity: 1;
   margin-top: 4px;
   margin-bottom: 6px;
@@ -408,6 +424,15 @@ select option {
   border-radius: var(--radius-pill);
   background: var(--border-subtle);
   color: var(--text-muted);
+}
+
+/* Brojevi u sekcijama menija stižu tek posle otvaranja („--“ → „1.234“): fiksna najmanja širina
+   da se red ne prelomi naknadno i sekcija ne naraste posle animacije */
+.nav-section-content .nav-badge {
+  min-width: 48px;
+  box-sizing: border-box;
+  text-align: center;
+  flex-shrink: 0;
 }
 
 .nav-badge.yellow-pulse {
