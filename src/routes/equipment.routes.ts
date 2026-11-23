@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import ExcelJS from 'exceljs';
 import { equipmentDb, EquipmentInput, EquipmentDetails } from '../db/equipmentDb';
 import { navisionService } from '../services/navisionService';
+import { keysPerSearchWord } from '../utils/searchWithKeys';
 import { addServerLog } from './system.routes';
 // [LEGACY_BRIDGE_START]
 import { legacySyncBridge } from '../services/legacySyncBridge';
@@ -235,17 +236,10 @@ equipmentRouter.get('/', async (req: Request, res: Response) => {
     const locationId = req.query.location_id ? parseInt(req.query.location_id as string, 10) : undefined;
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
 
-    let matchedEmpNos: string[] = [];
-    if (search && search.trim()) {
-      try {
-        const empResults = await navisionService.searchEmployees(search.trim(), 1000);
-        if (empResults && empResults.length > 0) {
-          matchedEmpNos = empResults.map(e => e.employee_no).filter((no): no is string => Boolean(no));
-        }
-      } catch (e) {
-        // Fallback if Navision DB unreachable
-      }
-    }
+    // Navision: za svaku reč upita kadrovski brojevi zaposlenih koje ta reč pogađa (nedostupan Navision = prazno)
+    const empNosPerWord = await keysPerSearchWord(search, async word =>
+      (await navisionService.searchEmployees(word, 1000)).map(e => e.employee_no).filter((no): no is string => Boolean(no))
+    );
 
     const result = equipmentDb.getEquipmentList(
       {
@@ -254,7 +248,7 @@ equipmentRouter.get('/', async (req: Request, res: Response) => {
         statusGroup,
         locationId,
         search,
-        employeeNos: matchedEmpNos
+        employeeNosPerWord: empNosPerWord
       },
       {
         page,
@@ -306,17 +300,10 @@ equipmentRouter.get('/export/excel', async (req: Request, res: Response) => {
     const locationId = req.query.location_id ? parseInt(req.query.location_id as string, 10) : undefined;
     const search = typeof req.query.search === 'string' ? req.query.search : undefined;
 
-    let matchedEmpNos: string[] = [];
-    if (search && search.trim()) {
-      try {
-        const empResults = await navisionService.searchEmployees(search.trim(), 1000);
-        if (empResults && empResults.length > 0) {
-          matchedEmpNos = empResults.map(e => e.employee_no).filter((no): no is string => Boolean(no));
-        }
-      } catch (e) {
-        // Fallback if Navision DB unreachable
-      }
-    }
+    // Navision: za svaku reč upita kadrovski brojevi zaposlenih koje ta reč pogađa (nedostupan Navision = prazno)
+    const empNosPerWord = await keysPerSearchWord(search, async word =>
+      (await navisionService.searchEmployees(word, 1000)).map(e => e.employee_no).filter((no): no is string => Boolean(no))
+    );
 
     // Fetch all records (up to 10000) matching current filters
     const result = equipmentDb.getEquipmentList(
@@ -326,7 +313,7 @@ equipmentRouter.get('/export/excel', async (req: Request, res: Response) => {
         statusGroup,
         locationId,
         search,
-        employeeNos: matchedEmpNos
+        employeeNosPerWord: empNosPerWord
       },
       {
         page: 1,

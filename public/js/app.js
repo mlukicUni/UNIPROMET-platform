@@ -111,16 +111,9 @@ window.closeModal = function(modalOrId, callback) {
 };
 
 function initUniversalModalSystem() {
-  // Capture clicks on backdrop or close/cancel buttons globally
+  // Close/cancel dugmad globalno. Klik van prozora (na pozadinu) namerno NE zatvara modal,
+  // da se uneti podaci ne izgube slučajnim klikom - zatvara se samo X-om ili dugmetom.
   document.addEventListener('click', (e) => {
-    // Backdrop click (clicked outside modal-window)
-    if (e.target && e.target.classList && e.target.classList.contains('modal-overlay')) {
-      e.preventDefault();
-      e.stopPropagation();
-      window.closeModal(e.target);
-      return;
-    }
-
     // Close / Cancel icon or button click
     const closeBtn = e.target && e.target.closest && e.target.closest('.modal-close-icon, .btn-modal-cancel, .btn-cancel-modal, .btn-modal-close, [data-modal-close], [data-dismiss="modal"]');
     if (closeBtn) {
@@ -977,7 +970,7 @@ function setupEventListeners() {
   });
 
   inputSearchPrinters?.addEventListener('input', (e) => {
-    printerSearchTerm = e.target.value.toLowerCase().trim();
+    printerSearchTerm = e.target.value.trim();
     if (btnClearSearchPrinters) {
       btnClearSearchPrinters.style.display = printerSearchTerm ? 'flex' : 'none';
     }
@@ -1505,13 +1498,8 @@ function renderPrintersList() {
 
     // 5. Search filter (Name, Location, IP, Tag, Model, Notes)
     if (printerSearchTerm) {
-      const matchName = (printer.name || '').toLowerCase().includes(printerSearchTerm);
-      const matchLoc = (printer.location || '').toLowerCase().includes(printerSearchTerm);
-      const matchIp = (printer.ip || '').toLowerCase().includes(printerSearchTerm);
-      const matchModel = (printer.model || '').toLowerCase().includes(printerSearchTerm);
-      const matchTag = (printer.customTag || '').toLowerCase().includes(printerSearchTerm);
-      const matchNotes = (printer.notes || '').toLowerCase().includes(printerSearchTerm);
-      if (!matchName && !matchLoc && !matchIp && !matchModel && !matchTag && !matchNotes) return false;
+      if (!UniSearch.match(printerSearchTerm, printer.name, printer.location, printer.ip,
+        printer.model, printer.customTag, printer.notes)) return false;
     }
 
     return true;
@@ -3200,16 +3188,8 @@ function renderComputersTab() {
   if (compLocation !== 'all') list = list.filter(d => d.locationCode === compLocation);
 
   if (compSearch) {
-    const q = compSearch.toLowerCase();
-    list = list.filter(d => (
-      d.ip.toLowerCase().includes(q) ||
-      d.hostname.toLowerCase().includes(q) ||
-      d.mac.toLowerCase().includes(q) ||
-      d.vendor.toLowerCase().includes(q) ||
-      d.categoryLabel.toLowerCase().includes(q) ||
-      (d.location && d.location.toLowerCase().includes(q)) ||
-      (d.domain && d.domain.toLowerCase().includes(q))
-    ));
+    list = list.filter(d => UniSearch.match(compSearch,
+      d.ip, d.hostname, d.mac, d.vendor, d.categoryLabel, d.location, d.domain));
   }
 
   if (list.length === 0) {
@@ -3396,14 +3376,8 @@ function renderServersTab() {
   if (srvSubnet === '121') list = list.filter(d => d.ip.startsWith('192.168.121.'));
 
   if (srvSearch) {
-    const q = srvSearch.toLowerCase();
-    list = list.filter(d => (
-      d.ip.toLowerCase().includes(q) ||
-      d.hostname.toLowerCase().includes(q) ||
-      d.vendor.toLowerCase().includes(q) ||
-      d.categoryLabel.toLowerCase().includes(q) ||
-      d.services.some(s => s.toLowerCase().includes(q))
-    ));
+    list = list.filter(d => UniSearch.match(srvSearch,
+      d.ip, d.hostname, d.vendor, d.categoryLabel, d.services));
   }
 
   if (list.length === 0) {
@@ -3605,14 +3579,8 @@ function renderOtherDevicesTab() {
   if (othLocation !== 'all') list = list.filter(d => d.locationCode === othLocation);
 
   if (othSearch) {
-    const q = othSearch.toLowerCase();
-    list = list.filter(d => (
-      d.ip.toLowerCase().includes(q) ||
-      d.hostname.toLowerCase().includes(q) ||
-      d.mac.toLowerCase().includes(q) ||
-      d.vendor.toLowerCase().includes(q) ||
-      d.categoryLabel.toLowerCase().includes(q)
-    ));
+    list = list.filter(d => UniSearch.match(othSearch,
+      d.ip, d.hostname, d.mac, d.vendor, d.categoryLabel));
   }
 
   if (list.length === 0) {
@@ -4265,15 +4233,8 @@ function renderCamerasTab() {
   if (camVendor !== 'all') list = list.filter(c => c.vendor === camVendor);
 
   if (camSearch) {
-    const q = camSearch.toLowerCase();
-    list = list.filter(c => (
-      c.ip.toLowerCase().includes(q) ||
-      c.name.toLowerCase().includes(q) ||
-      (c.recorder && c.recorder.toLowerCase().includes(q)) ||
-      (c.position && c.position.toLowerCase().includes(q)) ||
-      c.vendor.toLowerCase().includes(q) ||
-      c.subnetLabel.toLowerCase().includes(q)
-    ));
+    list = list.filter(c => UniSearch.match(camSearch,
+      c.ip, c.name, c.recorder, c.position, c.vendor, c.subnetLabel));
   }
 
   if (list.length === 0) {
@@ -6094,11 +6055,10 @@ function isAnalogCamera(cam) {
  * vode kao "Analog 3" i nemaju IP adresu u tekstu.
  */
 function cameraMatchesSearch(cam, query) {
-  const q = String(query || '').trim().toLowerCase();
-  if (!q || !cam) return true;
-  const fields = [cam.ip, cam.name, cam.position, cam.recorder, cam.location, cam.note, cameraAddressLabel(cam)];
+  if (!UniSearch.tokens(query).length || !cam) return true;
+  const fields = [cam.ip, cam.name, cam.position, cam.recorder, cam.location, cam.note, cam.type, cameraAddressLabel(cam)];
   if (isAnalogCamera(cam)) fields.push('analogna', 'analogni kanal');
-  return fields.some(v => v && String(v).toLowerCase().includes(q));
+  return UniSearch.match(query, fields);
 }
 window.cameraMatchesSearch = cameraMatchesSearch;
 window.isAnalogCamera = isAnalogCamera;
@@ -7082,14 +7042,7 @@ function renderInventoryRecordersTab() {
 
     // Text search query
     if (recSearchQuery) {
-      const q = recSearchQuery.toLowerCase();
-      const match =
-        (r.name && r.name.toLowerCase().includes(q)) ||
-        (r.location && r.location.toLowerCase().includes(q)) ||
-        (r.ip && r.ip.toLowerCase().includes(q)) ||
-        (r.model && r.model.toLowerCase().includes(q)) ||
-        (r.note && r.note.toLowerCase().includes(q));
-      if (!match) return false;
+      if (!UniSearch.match(recSearchQuery, r.name, r.location, r.ip, r.model, r.note)) return false;
     }
 
     return true;
@@ -9753,15 +9706,7 @@ function renderRfReadersTab() {
 
     // Search query
     if (rfSearchQuery) {
-      const q = rfSearchQuery.toLowerCase();
-      const match =
-        (r.name && r.name.toLowerCase().includes(q)) ||
-        (r.ip && r.ip.toLowerCase().includes(q)) ||
-        (r.location && r.location.toLowerCase().includes(q)) ||
-        (r.direction && r.direction.toLowerCase().includes(q)) ||
-        (r.model && r.model.toLowerCase().includes(q)) ||
-        (r.note && r.note.toLowerCase().includes(q));
-      if (!match) return false;
+      if (!UniSearch.match(rfSearchQuery, r.name, r.ip, r.location, r.direction, r.model, r.note)) return false;
     }
 
     return true;
@@ -10636,7 +10581,7 @@ function renderWifiApsTab() {
   const container = document.getElementById('wifi-aps-container');
   if (!container) return;
 
-  const searchVal = wifiSearchTerm.toLowerCase().trim();
+  const searchVal = wifiSearchTerm.trim();
 
   // Filter APs
   const filtered = allWifiAps.filter(ap => {
@@ -10653,14 +10598,8 @@ function renderWifiApsTab() {
 
     // Search query
     if (searchVal) {
-      const matchName = (ap.name || '').toLowerCase().includes(searchVal);
-      const matchIp = (ap.ip || '').toLowerCase().includes(searchVal);
-      const matchModel = (ap.model || '').toLowerCase().includes(searchVal);
-      const matchSerial = (ap.serial || '').toLowerCase().includes(searchVal);
-      const matchZone = (ap.zone || '').toLowerCase().includes(searchVal);
-      const matchR0 = (ap.radio0Channel || '').toLowerCase().includes(searchVal);
-      const matchR1 = (ap.radio1Channel || '').toLowerCase().includes(searchVal);
-      if (!matchName && !matchIp && !matchModel && !matchSerial && !matchZone && !matchR0 && !matchR1) {
+      if (!UniSearch.match(searchVal, ap.name, ap.ip, ap.model, ap.serial, ap.zone,
+        ap.radio0Channel, ap.radio1Channel)) {
         return false;
       }
     }
@@ -11287,19 +11226,13 @@ function setupWifiApsEventListeners() {
 
   // Filter inside client modal
   searchModalClients?.addEventListener('input', (e) => {
-    const q = (e.target.value || '').toLowerCase().trim();
+    const q = (e.target.value || '').trim();
     if (!q) {
       renderModalClientsTable(currentModalClients);
       return;
     }
-    const filteredClients = currentModalClients.filter(c => {
-      return (c.name || '').toLowerCase().includes(q) ||
-             (c.ip || '').toLowerCase().includes(q) ||
-             (c.mac || '').toLowerCase().includes(q) ||
-             (c.essid || '').toLowerCase().includes(q) ||
-             (c.apName || '').toLowerCase().includes(q) ||
-             (c.os || '').toLowerCase().includes(q);
-    });
+    const filteredClients = currentModalClients.filter(c =>
+      UniSearch.match(q, c.name, c.ip, c.mac, c.essid, c.apName, c.os));
     renderModalClientsTable(filteredClients);
   });
 }

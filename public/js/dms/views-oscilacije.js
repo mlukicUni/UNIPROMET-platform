@@ -570,7 +570,7 @@ function renderNagleOscilacijeTab() {
                             <div class="dms-osc-search-icon">
                                 <i data-lucide="search"></i>
                             </div>
-                            <input type="text" id="osc_emp_search" onkeyup="filterTableRows('osc_emp_search', 'osc_emp_table')" placeholder="Pretraži zaposlenog ili sektor..." class="dms-osc-search-input">
+                            <input type="text" id="osc_emp_search" oninput="filterTableRows('osc_emp_search', 'osc_emp_table')" placeholder="Pretraži zaposlenog ili sektor..." class="dms-osc-search-input">
                         </div>
                     </div>
                     <div class="dms-scroll custom-scrollbar dms-osc-scroll-emp">
@@ -677,7 +677,8 @@ function filterSektorRows() {
     const input = document.getElementById('searchSektorInput');
     if (!input) return;
 
-    const filter = input.value.toLowerCase();
+    // Zajedničko pravilo pretrage: svaka reč upita negde u redu (sve ćelije)
+    const filter = input.value;
     ['sektoriTable', 'lokacijeTable'].forEach(tableId => {
         const table = document.getElementById(tableId);
         if (!table) return;
@@ -686,8 +687,7 @@ function filterSektorRows() {
         const rows = tbody.getElementsByTagName('tr');
 
         for (let i = 0; i < rows.length; i++) {
-            const text = rows[i].innerText.toLowerCase();
-            if (text.includes(filter)) {
+            if (UniSearch.match(filter, rows[i].innerText)) {
                 rows[i].style.display = "";
             } else {
                 rows[i].style.display = "none";

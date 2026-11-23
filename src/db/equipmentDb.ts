@@ -1,4 +1,6 @@
 import { getDb } from './sqlite';
+import { sqlSearch } from '../utils/searchMatch';
+import { sqlSearchWithKeys } from '../utils/searchWithKeys';
 
 export interface EquipmentCategory {
   id: number;
@@ -174,9 +176,10 @@ export const equipmentDb = {
       LEFT JOIN equipment e ON s.id = e.status_id
     `;
     const params: any = {};
-    if (search && search.trim()) {
-      query += ' WHERE (s.name LIKE @search OR s.color LIKE @search)';
-      params.search = `%${search.trim()}%`;
+    const srch = sqlSearch(['s.name', 's.color'], search);
+    if (srch) {
+      query += ` WHERE ${srch.where}`;
+      Object.assign(params, srch.params);
     }
     query += ' GROUP BY s.id, s.name, s.color ORDER BY s.id ASC;';
     return db.prepare(query).all(params) as any;
@@ -239,9 +242,10 @@ export const equipmentDb = {
       LEFT JOIN equipment e ON c.id = e.category_id
     `;
     const params: any = {};
-    if (search && search.trim()) {
-      query += ' WHERE (c.name LIKE @search OR c.icon LIKE @search)';
-      params.search = `%${search.trim()}%`;
+    const srch = sqlSearch(['c.name', 'c.icon'], search);
+    if (srch) {
+      query += ` WHERE ${srch.where}`;
+      Object.assign(params, srch.params);
     }
     query += ' GROUP BY c.id, c.name, c.is_network, c.icon ORDER BY c.id ASC;';
     return db.prepare(query).all(params) as any;
@@ -307,9 +311,10 @@ export const equipmentDb = {
       LEFT JOIN equipment e ON l.id = e.location_id
     `;
     const params: any = {};
-    if (search && search.trim()) {
-      query += ' WHERE l.name LIKE @search';
-      params.search = `%${search.trim()}%`;
+    const srch = sqlSearch(['l.name'], search);
+    if (srch) {
+      query += ` WHERE ${srch.where}`;
+      Object.assign(params, srch.params);
     }
     query += ' GROUP BY l.id, l.name ORDER BY l.id ASC;';
     return db.prepare(query).all(params) as any;
@@ -379,9 +384,10 @@ export const equipmentDb = {
       LEFT JOIN equipment e ON b.id = e.building_id
     `;
     const params: any = {};
-    if (search && search.trim()) {
-      query += ' WHERE (b.name LIKE @search OR b.code LIKE @search OR b.description LIKE @search OR l.name LIKE @search)';
-      params.search = `%${search.trim()}%`;
+    const srch = sqlSearch(['b.name', 'b.code', 'b.description', 'l.name'], search);
+    if (srch) {
+      query += ` WHERE ${srch.where}`;
+      Object.assign(params, srch.params);
     }
     query += ' GROUP BY b.id, b.name, b.location_id, l.name, b.code, b.description ORDER BY b.id ASC;';
     return db.prepare(query).all(params) as any;
@@ -481,9 +487,10 @@ export const equipmentDb = {
       params.buildingId = buildingId;
     }
 
-    if (search && search.trim()) {
-      conditions.push('(r.code LIKE @search OR r.name LIKE @search OR r.short_desc LIKE @search OR r.floor LIKE @search OR b.name LIKE @search)');
-      params.search = `%${search.trim()}%`;
+    const srch = sqlSearch(['r.code', 'r.name', 'r.short_desc', 'r.floor', 'b.name'], search);
+    if (srch) {
+      conditions.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     if (conditions.length > 0) {
@@ -655,7 +662,7 @@ export const equipmentDb = {
       statusGroup?: 'service' | 'in_use' | 'in_reserve' | 'all' | null;
       locationId?: number | null;
       search?: string | null;
-      employeeNos?: string[] | null;
+      employeeNosPerWord?: string[][] | null;
     },
     pagination: {
       page: number;
@@ -672,7 +679,7 @@ export const equipmentDb = {
       statusGroup: filters.statusGroup,
       locationId: filters.locationId,
       search: filters.search,
-      employeeNos: filters.employeeNos,
+      employeeNosPerWord: filters.employeeNosPerWord,
       limit: pageSize,
       offset
     });
@@ -696,7 +703,8 @@ export const equipmentDb = {
     statusGroup?: 'service' | 'in_use' | 'in_reserve' | 'all' | null;
     locationId?: number | null;
     search?: string | null;
-    employeeNos?: string[] | null;
+    /** kadrovski brojevi iz Navision-a koje je pogodila svaka reč upita (isti redosled kao searchWords) */
+    employeeNosPerWord?: string[][] | null;
     limit?: number;
     offset?: number;
   }): { items: EquipmentItem[]; total: number } {
@@ -729,17 +737,9 @@ export const equipmentDb = {
       params.locationId = options.locationId;
     }
 
-    if (options.search && options.search.trim()) {
-      const trimmedSearch = options.search.trim();
-      const tokens = trimmedSearch.toLowerCase().split(/\s+/).filter(Boolean);
-
-      const tokenConditions: string[] = [];
-      tokens.forEach((tok, i) => {
-        const paramKey = `tok_${i}`;
-        params[paramKey] = `%${tok}%`;
-        tokenConditions.push(`(
-          LOWER(
-            '#' || CAST(e.id AS TEXT) || ' ' || 
+    // Svaka reč mora biti u tekstu zapisa ILI u zaduženom zaposlenom (Navision, po reči)
+    const srch = sqlSearchWithKeys(
+      [`'#' || CAST(e.id AS TEXT) || ' ' ||
             CAST(e.id AS TEXT) || ' ' || 
             COALESCE(e.name, '') || ' ' || 
             COALESCE(e.employee_no, '') || ' ' || 
@@ -756,19 +756,14 @@ export const equipmentDb = {
             COALESCE(d.ram, '') || ' ' || 
             COALESCE(d.ip_address, '') || ' ' || 
             COALESCE(d.mac_address, '') || ' ' || 
-            COALESCE(d.os, '')
-          ) LIKE @${paramKey}
-        )`);
-      });
-
-      const allTokensMatch = tokenConditions.length > 0 ? tokenConditions.join(' AND ') : '1=1';
-
-      if (options.employeeNos && options.employeeNos.length > 0) {
-        const empListStr = options.employeeNos.map(emp => `'${emp.replace(/'/g, "''")}'`).join(',');
-        conditions.push(`((${allTokensMatch}) OR e.employee_no IN (${empListStr}))`);
-      } else {
-        conditions.push(`(${allTokensMatch})`);
-      }
+            COALESCE(d.os, '')`],
+      options.search,
+      'e.employee_no',
+      options.employeeNosPerWord
+    );
+    if (srch) {
+      conditions.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -1415,19 +1410,13 @@ export const equipmentDb = {
     const conditions: string[] = [];
     const params: Record<string, any> = {};
 
-    if (options.search && options.search.trim()) {
-      const q = `%${options.search.trim()}%`;
-      conditions.push(`(
-        s.name LIKE @q OR 
-        s.vendor LIKE @q OR 
-        s.license_key LIKE @q OR 
-        s.note LIKE @q OR 
-        e.name LIKE @q OR 
-        e.inventory_no LIKE @q OR 
-        e.employee_no LIKE @q OR
-        d.ip_address LIKE @q
-      )`);
-      params.q = q;
+    const srch = sqlSearch(
+      ['s.name', 's.vendor', 's.license_key', 's.note', 'e.name', 'e.inventory_no', 'e.employee_no', 'd.ip_address'],
+      options.search
+    );
+    if (srch) {
+      conditions.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     if (options.vendor && options.vendor.trim() && options.vendor.toUpperCase() !== 'ALL') {

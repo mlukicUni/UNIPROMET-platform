@@ -1211,12 +1211,11 @@
   }
 
   function filteredCameras() {
-    const q = $('mon-picker-search').value.trim().toLowerCase();
+    const q = $('mon-picker-search').value;
     const rec = $('mon-picker-recorder').value;
     return S.cameras.filter(c => {
       if (rec && c.recorder !== rec) return false;
-      if (!q) return true;
-      return window.cameraMatchesSearch ? window.cameraMatchesSearch(c, q) : [c.name, c.position, c.ip, c.recorder].some(v => String(v || '').toLowerCase().includes(q));
+      return window.cameraMatchesSearch ? window.cameraMatchesSearch(c, q) : UniSearch.match(q, c.name, c.position, c.ip, c.recorder);
     });
   }
 

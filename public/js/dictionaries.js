@@ -155,22 +155,15 @@
     if (!tbody) return;
 
     let items = state.data.rooms;
-    const q = state.searchQueries.rooms.toLowerCase().trim();
+    const q = state.searchQueries.rooms;
     const bId = state.filterRoomBuilding;
 
     if (bId !== 'all') {
       items = items.filter(r => String(r.building) === String(bId));
     }
 
-    if (q) {
-      items = items.filter(r => 
-        (r.code && r.code.toLowerCase().includes(q)) ||
-        (r.short_desc && r.short_desc.toLowerCase().includes(q)) ||
-        (r.name && r.name.toLowerCase().includes(q)) ||
-        (r.building_name && r.building_name.toLowerCase().includes(q)) ||
-        (r.floor && r.floor.toLowerCase().includes(q))
-      );
-    }
+    // Zajednicko pravilo pretrage (svaka rec u bilo kom polju)
+    items = items.filter(r => UniSearch.match(q, r.code, r.short_desc, r.name, r.building_name, r.floor));
 
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${state.data.rooms.length} kancelarija`;
 
@@ -232,16 +225,8 @@
     if (!tbody) return;
 
     let items = state.data.buildings;
-    const q = state.searchQueries.buildings.toLowerCase().trim();
-
-    if (q) {
-      items = items.filter(b => 
-        (b.name && b.name.toLowerCase().includes(q)) ||
-        (b.code && b.code.toLowerCase().includes(q)) ||
-        (b.description && b.description.toLowerCase().includes(q)) ||
-        (b.location_name && b.location_name.toLowerCase().includes(q))
-      );
-    }
+    const q = state.searchQueries.buildings;
+    items = items.filter(b => UniSearch.match(q, b.name, b.code, b.description, b.location_name));
 
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${state.data.buildings.length} objekata`;
 
@@ -312,11 +297,8 @@
     if (!tbody) return;
 
     let items = state.data.locations;
-    const q = state.searchQueries.locations.toLowerCase().trim();
-
-    if (q) {
-      items = items.filter(l => l.name && l.name.toLowerCase().includes(q));
-    }
+    const q = state.searchQueries.locations;
+    items = items.filter(l => UniSearch.match(q, l.name));
 
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${state.data.locations.length} lokacija`;
 
@@ -373,14 +355,8 @@
     if (!tbody) return;
 
     let items = state.data.categories;
-    const q = state.searchQueries.categories.toLowerCase().trim();
-
-    if (q) {
-      items = items.filter(c => 
-        (c.name && c.name.toLowerCase().includes(q)) ||
-        (c.icon && c.icon.toLowerCase().includes(q))
-      );
-    }
+    const q = state.searchQueries.categories;
+    items = items.filter(c => UniSearch.match(q, c.name, c.icon));
 
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${state.data.categories.length} kategorija`;
 
@@ -443,14 +419,8 @@
     if (!tbody) return;
 
     let items = state.data.statuses;
-    const q = state.searchQueries.statuses.toLowerCase().trim();
-
-    if (q) {
-      items = items.filter(s => 
-        (s.name && s.name.toLowerCase().includes(q)) ||
-        (s.color && s.color.toLowerCase().includes(q))
-      );
-    }
+    const q = state.searchQueries.statuses;
+    items = items.filter(s => UniSearch.match(q, s.name, s.color));
 
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${state.data.statuses.length} statusa`;
 

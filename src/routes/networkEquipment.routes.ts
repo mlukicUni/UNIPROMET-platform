@@ -3,6 +3,7 @@ import ExcelJS from 'exceljs';
 import { networkEquipmentDb, NetworkEquipmentInput } from '../db/networkEquipmentDb.js';
 import { equipmentDb } from '../db/equipmentDb.js';
 import { navisionService } from '../services/navisionService.js';
+import { keysPerSearchWord } from '../utils/searchWithKeys.js';
 import { addServerLog } from './system.routes.js';
 import { broadcastEquipmentEvent } from './equipment.routes.js';
 // [LEGACY_BRIDGE_START]
@@ -86,15 +87,10 @@ networkEquipmentRouter.get('/export/excel', async (req: Request, res: Response) 
     const statusId = req.query.statusId ? parseInt(String(req.query.statusId), 10) : undefined;
     const cvorId = req.query.cvorId ? parseInt(String(req.query.cvorId), 10) : undefined;
 
-    let matchedEmployeeNos: string[] | null = null;
-    if (search) {
-      try {
-        const empResults = await navisionService.searchEmployees(search);
-        matchedEmployeeNos = empResults.map(e => e.employee_no);
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Navision: za svaku reč upita kadrovski brojevi zaposlenih koje ta reč pogađa (nedostupan Navision = prazno)
+    const employeeNosPerWord = await keysPerSearchWord(search, async word =>
+      (await navisionService.searchEmployees(word)).map(e => e.employee_no)
+    );
 
     const result = networkEquipmentDb.getNetworkEquipment({
       categoryId: isNaN(categoryId as any) ? undefined : categoryId,
@@ -104,7 +100,7 @@ networkEquipmentRouter.get('/export/excel', async (req: Request, res: Response) 
       statusId: isNaN(statusId as any) ? undefined : statusId,
       cvorId: isNaN(cvorId as any) ? undefined : cvorId,
       search,
-      matchedEmployeeNos,
+      employeeNosPerWord,
       limit: 100000,
       offset: 0
     });
@@ -317,15 +313,10 @@ networkEquipmentRouter.get('/', async (req: Request, res: Response) => {
     const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 50;
     const offset = (page - 1) * limit;
 
-    let matchedEmployeeNos: string[] | null = null;
-    if (search) {
-      try {
-        const empResults = await navisionService.searchEmployees(search);
-        matchedEmployeeNos = empResults.map(e => e.employee_no);
-      } catch (e) {
-        // Ignore
-      }
-    }
+    // Navision: za svaku reč upita kadrovski brojevi zaposlenih koje ta reč pogađa (nedostupan Navision = prazno)
+    const employeeNosPerWord = await keysPerSearchWord(search, async word =>
+      (await navisionService.searchEmployees(word)).map(e => e.employee_no)
+    );
 
     const result = networkEquipmentDb.getNetworkEquipment({
       categoryId: isNaN(categoryId as any) ? undefined : categoryId,
@@ -335,7 +326,7 @@ networkEquipmentRouter.get('/', async (req: Request, res: Response) => {
       statusId: isNaN(statusId as any) ? undefined : statusId,
       cvorId: isNaN(cvorId as any) ? undefined : cvorId,
       search,
-      matchedEmployeeNos,
+      employeeNosPerWord,
       limit,
       offset
     });

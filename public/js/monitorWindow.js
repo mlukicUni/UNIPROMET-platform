@@ -253,7 +253,7 @@
     $('mw-btn-rot-save').addEventListener('click', saveSettings);
     const modal = $('mw-modal-rotation');
     modal.querySelectorAll('.modal-close-icon, .btn-modal-cancel').forEach(b => b.addEventListener('click', closeSettings));
-    modal.addEventListener('click', (e) => { if (e.target === modal) closeSettings(); });
+    // Klik na pozadinu namerno ne zatvara podešavanja (samo X ili dugme)
     document.addEventListener('mousemove', revealBar);
     document.addEventListener('keydown', (e) => {
       if (modalOpen()) {

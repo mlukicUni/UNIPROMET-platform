@@ -281,8 +281,7 @@
     const tbody = $('ar-tbody-roles');
     const countEl = $('ar-count-roles');
     if (!tbody) return;
-    const q = S.rolesSearch.trim().toLowerCase();
-    const items = S.roles.filter(r => !q || r.name.toLowerCase().includes(q) || (r.description || '').toLowerCase().includes(q));
+    const items = S.roles.filter(r => UniSearch.match(S.rolesSearch, r.name, r.description));
     const limited = dmsOnly();
     if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : 'rola'}`;
 
@@ -628,7 +627,7 @@
   }
 
   function camMatches(c, q) {
-    return !q || (c.name || '').toLowerCase().includes(q) || (c.position || '').toLowerCase().includes(q) || (c.ip || '').includes(q);
+    return UniSearch.match(q, c.name, c.position, c.ip);
   }
 
   function renderCamTree() {
@@ -646,7 +645,8 @@
     saveBtn.closest('.ar-savebar').style.display = 'flex';
     $('ar-cam-dirty').style.display = E.camDirty ? 'inline' : 'none';
 
-    const q = (E.camSearch || '').trim().toLowerCase();
+    // Zajednicko pravilo pretrage (UniSearch); q ostaje i kao znak "ima pretrage"
+    const q = (E.camSearch || '').trim();
     const st = E.cam;
     const total = S.tree.totalCameras || 0;
     let html = '';
@@ -662,7 +662,7 @@
     html += `<div class="ar-tree-title">Grupe po snimaču (automatske)</div>`;
     let shownRec = 0;
     for (const r of recorders) {
-      const recMatch = !q || (r.name || '').toLowerCase().includes(q) || (r.location || '').toLowerCase().includes(q);
+      const recMatch = UniSearch.match(q, r.name, r.location);
       const cams = r.cameras.filter(c => recMatch || camMatches(c, q));
       if (!recMatch && cams.length === 0) continue;
       shownRec++;
@@ -684,7 +684,7 @@
     if (recorders.length && shownRec === 0) html += `<div class="ar-tree-empty">Nijedan snimač ni kamera ne odgovara pretrazi.</div>`;
 
     // Ručne grupe
-    const groups = S.groups.filter(g => !q || g.name.toLowerCase().includes(q));
+    const groups = S.groups.filter(g => UniSearch.match(q, g.name));
     if (groups.length) {
       html += `<div class="ar-tree-title">Ručne grupe kamera</div>`;
       for (const g of groups) {
@@ -837,12 +837,12 @@
   }
 
   function renderKnownPicker() {
-    const q = $('ar-assign-q').value.trim().toLowerCase();
+    const q = $('ar-assign-q').value;
     const isUser = S.assignMode === 'user';
     const list = isUser
       ? S.known.users.map(u => ({ type: 'user', id: (u.email || u.id).toLowerCase(), name: u.name || u.email, email: u.email, description: '' }))
       : S.known.groups.map(g => ({ type: 'ad_group', id: g.id || g.name, name: g.name, email: '', description: g.id && g.id !== g.name ? g.id : '' }));
-    const filtered = list.filter(p => !q || p.name.toLowerCase().includes(q) || (p.email || '').toLowerCase().includes(q));
+    const filtered = list.filter(p => UniSearch.match(q, p.name, p.email));
     $('ar-assign-known-list').innerHTML = filtered.length
       ? filtered.map(pickItemHtml).join('')
       : '<div class="ar-pick-empty">Nema podataka. Korisnici i grupe se pojavljuju nakon prve prijave.</div>';
@@ -974,7 +974,7 @@
 
   function renderGroupTree() {
     const G = S.groupModal;
-    const q = (G.search || '').trim().toLowerCase();
+    const q = (G.search || '').trim();
     let html = '';
 
     const camRow = (c) => `<label class="ar-row ar-cam-row" style="cursor:pointer;">
@@ -982,7 +982,7 @@
     </label>`;
 
     for (const r of (S.tree.recorders || [])) {
-      const recMatch = !q || (r.name || '').toLowerCase().includes(q);
+      const recMatch = UniSearch.match(q, r.name);
       const cams = r.cameras.filter(c => recMatch || camMatches(c, q));
       if (!recMatch && cams.length === 0) continue;
       const open = q ? true : G.openRecorders.has(r.id);

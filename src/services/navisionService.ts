@@ -1,6 +1,7 @@
 import sql from 'mssql';
 import dotenv from 'dotenv';
 import path from 'path';
+import { matchesSearch } from '../utils/searchMatch';
 
 dotenv.config({ path: path.join(process.cwd(), '.env') });
 
@@ -461,14 +462,10 @@ export const navisionService = {
 
     if (!phoneEmployeesCache || !phoneEmployeesCache.data) return [];
 
-    const trimmed = keyword.toLowerCase().trim();
-    const tokens = trimmed.split(/\s+/).filter(Boolean);
-
     const matchedPhones: string[] = [];
     for (const r of phoneEmployeesCache.data) {
-      const fullText = `${r.employee_no} ${r.first_name} ${r.last_name} ${r.job_title || ''} ${r.department || ''}`.toLowerCase();
-      const allTokensMatch = tokens.every(tok => fullText.includes(tok));
-      if (allTokensMatch) {
+      // Zajedničko pravilo pretrage (src/utils/searchMatch.ts): svaka reč u bar jednom polju, bez kvačica
+      if (matchesSearch(keyword, r.employee_no, r.first_name, r.last_name, r.job_title, r.department)) {
         if (r.sl1) matchedPhones.push(r.sl1.replace(/\D/g, ''));
         if (r.sl2) matchedPhones.push(r.sl2.replace(/\D/g, ''));
         if (r.sl3) matchedPhones.push(r.sl3.replace(/\D/g, ''));

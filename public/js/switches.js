@@ -650,14 +650,13 @@ function renderSwitchPortsTable(ports = []) {
 
   const searchInput = document.getElementById('input-search-switch-ports');
   if (searchInput && searchInput.value.trim()) {
-    const q = searchInput.value.trim().toLowerCase();
-    filtered = filtered.filter(p => 
-      p.name.toLowerCase().includes(q) ||
-      p.descr.toLowerCase().includes(q) ||
-      p.alias.toLowerCase().includes(q) ||
-      (p.macAddresses && p.macAddresses.some(m => m.toLowerCase().includes(q))) ||
-      (p.devices && p.devices.some(d => (d.ip && d.ip.includes(q)) || (d.hostname && d.hostname.toLowerCase().includes(q)) || (d.vendor && d.vendor.toLowerCase().includes(q))))
-    );
+    const q = searchInput.value;
+    // Zajednicko pravilo pretrage: svaka rec u bilo kom polju porta
+    filtered = filtered.filter(p => UniSearch.match(q,
+      p.name, p.descr, p.alias,
+      p.macAddresses || [],
+      (p.devices || []).map(d => [d.ip, d.hostname, d.vendor])
+    ));
   }
 
   if (filtered.length === 0) {
@@ -793,13 +792,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-
-  // Clicking backdrop
-  if (portModal) {
-    portModal.addEventListener('click', (e) => {
-      if (e.target === portModal) closePortModal();
-    });
-  }
+  // Klik na pozadinu namerno ne zatvara prozor portova (samo X ili dugme)
 });
 
 window.fetchSwitches = fetchSwitches;

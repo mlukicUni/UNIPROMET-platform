@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { getDb } from './sqlite';
+import { searchTokens } from '../utils/searchMatch';
 import { initSchema } from './schema';
 import {
   PermissionLevel,
@@ -718,10 +719,13 @@ export function listAudit(opts: { limit?: number; offset?: number; action?: stri
     where.push('action LIKE ?');
     params.push(`${opts.action}%`);
   }
-  if (opts.q) {
-    where.push('(user_name LIKE ? OR user_email LIKE ? OR details LIKE ? OR object_id LIKE ?)');
-    const like = `%${opts.q}%`;
-    params.push(like, like, like, like);
+  // Zajedničko pravilo pretrage (src/utils/searchMatch.ts): svaka reč u bar jednom polju, bez kvačica.
+  // Pozicioni parametri (?) jer ostatak upita koristi njih - zato ne sqlSearch(), već isti uslov ručno.
+  const searchCols = ['user_name', 'user_email', 'details', 'object_id'];
+  for (const word of searchTokens(opts.q)) {
+    where.push('(' + searchCols.map(c => `unorm(${c}) LIKE ? ESCAPE '\\'`).join(' OR ') + ')');
+    const like = `%${word.replace(/[\\%_]/g, ch => '\\' + ch)}%`;
+    for (let i = 0; i < searchCols.length; i++) params.push(like);
   }
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const total = (db.prepare(`SELECT COUNT(*) AS c FROM audit_log ${whereSql}`).get(...params) as { c: number }).c;

@@ -1,4 +1,5 @@
 import { getDb } from './sqlite.js';
+import { sqlSearch } from '../utils/searchMatch.js';
 import { initSchema } from './schema.js';
 
 initSchema();
@@ -125,22 +126,13 @@ export class LinesDb {
       params.locationId = options.locationId;
     }
 
-    if (options.search && options.search.trim()) {
-      const q = `%${options.search.trim()}%`;
-      params.q = q;
-      whereClauses.push(`(
-        CAST(l.id AS TEXT) LIKE @q
-        OR CAST(l.wall_socket_no AS TEXT) LIKE @q
-        OR l.patch_panel_code LIKE @q
-        OR l.route_description LIKE @q
-        OR l.description LIKE @q
-        OR r.name LIKE @q
-        OR r.code LIKE @q
-        OR b.name LIKE @q
-        OR loc.name LIKE @q
-        OR cv.name LIKE @q
-        OR cv.description LIKE @q
-      )`);
+    const srch = sqlSearch([
+      'CAST(l.id AS TEXT)', 'CAST(l.wall_socket_no AS TEXT)', 'l.patch_panel_code', 'l.route_description',
+      'l.description', 'r.name', 'r.code', 'b.name', 'loc.name', 'cv.name', 'cv.description'
+    ], options.search);
+    if (srch) {
+      whereClauses.push(srch.where);
+      Object.assign(params, srch.params);
     }
 
     const whereSql = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
