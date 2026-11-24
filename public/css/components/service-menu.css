@@ -1,0 +1,86 @@
+/* ==========================================================================
+   SERVISNI MENI: jedno dugme sa padajućim spiskom radnji (npr. Mreža → Kamere)
+   Izgled prati kontekstni meni Monitoringa. Upotreba:
+   <div class="svc-menu" data-svc-menu>
+     <button class="btn-dark-outline-sm svc-menu-toggle">…</button>
+     <div class="svc-menu-panel"><button class="svc-menu-item">…</button>…</div>
+   </div>
+   ========================================================================== */
+.svc-menu {
+  position: relative;
+  display: inline-flex;
+}
+
+.svc-menu-toggle .svc-menu-caret {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.15s ease;
+}
+
+.svc-menu.is-open .svc-menu-toggle {
+  border-color: var(--yellow-primary);
+  color: var(--yellow-bright);
+}
+
+.svc-menu.is-open .svc-menu-caret {
+  transform: rotate(180deg);
+}
+
+.svc-menu-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 950;
+  display: none;
+  min-width: 250px;
+  padding: 6px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-elevated);
+  box-shadow: var(--shadow-card);
+}
+
+.svc-menu.is-open .svc-menu-panel {
+  display: block;
+}
+
+.svc-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.svc-menu-item:hover:not(:disabled) {
+  background: var(--yellow-subtle-bg);
+  color: var(--yellow-bright);
+}
+
+.svc-menu-item:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.svc-menu-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--yellow-primary);
+}
+
+.svc-menu-sep {
+  height: 1px;
+  margin: 5px 4px;
+  background: var(--border-subtle);
+}

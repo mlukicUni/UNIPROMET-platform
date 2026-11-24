@@ -25,6 +25,7 @@
   <!-- Jedinstven loader stranice (prati zahteve ka /api/; mora rano da bi obuhvatio sve) -->
   <script src="/js/core/page-loader.js"></script>
   <script src="/js/core/camera-status.js?v=20261124"></script>
+  <script src="/js/core/service-menu.js?v=20261124"></script>
 
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/css/style.css">
@@ -45,6 +46,7 @@
   <link rel="stylesheet" href="/css/components/dms-perf.css?v=20261106">
   <link rel="stylesheet" href="/css/components/page-loader.css?v=20261124">
   <link rel="stylesheet" href="/css/components/camera-status.css?v=20261124">
+  <link rel="stylesheet" href="/css/components/service-menu.css?v=20261124">
 </head>
 <body class="unipromet-theme">
 
@@ -1185,30 +1187,42 @@
               </div>
 
               <div class="panel-actions-group">
-                <button class="btn-yellow-solid-sm" id="btn-scan-unrecorded-cameras" title="Pronađi nove kamere na mreži (skenira opsege 124 i 125 van evidencije)">
-                  <i data-lucide="radar" id="icon-scan-unrecorded-spin"></i>
-                  <span>Pronađi Novu Kameru</span>
-                </button>
-                <button class="btn-dark-outline-sm" id="btn-add-camera-by-ip" title="Dodaj kameru ako znate IP adresu — proverava se samo ta adresa, bez skeniranja opsega">
-                  <i data-lucide="crosshair"></i>
-                  <span>Dodaj po IP adresi</span>
-                </button>
-                <button class="btn-dark-outline-sm" id="btn-export-cameras-excel" title="Izvezi trenutni prikaz liste kamera (sa filterima i pretragom) u Excel">
-                  <i data-lucide="file-spreadsheet"></i>
-                  <span>Izvezi u Excel</span>
-                </button>
-                <button class="btn-dark-outline-sm" id="btn-capture-camera-snapshots" title="Uzmi novu sliku svih kamera (inače se slike uzimaju automatski jednom mesečno). Offline kamera prikazuje poslednju sliku umesto snimka uživo.">
-                  <i data-lucide="image"></i>
-                  <span id="text-capture-camera-snapshots">Osveži slike kamera</span>
-                </button>
-                <button class="btn-dark-outline-sm" id="btn-analog-channels" title="Pronađi analogne kamere priključene na snimače i dodaj ih u evidenciju (živi prikaz ide preko snimača)">
-                  <i data-lucide="tv"></i>
-                  <span>Analogni kanali</span>
-                </button>
-                <button class="btn-dark-outline-sm" id="btn-sync-cameras-peer" data-super-only title="Preuzima evidenciju kamera i snimača sa drugog servera i prepisuje je preko ove (prvo se prikazuje pregled)">
-                  <i data-lucide="refresh-cw"></i>
-                  <span id="btn-sync-cameras-peer-text">Sinhronizuj podatke</span>
-                </button>
+                <!-- Servisni meni: sve radnje nad evidencijom kamera na jednom mestu -->
+                <div class="svc-menu" data-svc-menu>
+                  <button type="button" class="btn-dark-outline-sm svc-menu-toggle" aria-haspopup="true" aria-expanded="false" title="Radnje nad evidencijom kamera">
+                    <i data-lucide="wrench"></i>
+                    <span>Servisni meni</span>
+                    <i data-lucide="chevron-down" class="svc-menu-caret"></i>
+                  </button>
+                  <div class="svc-menu-panel" role="menu">
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-scan-unrecorded-cameras" title="Pronađi nove kamere na mreži (skenira opsege 124 i 125 van evidencije)">
+                      <i data-lucide="radar" id="icon-scan-unrecorded-spin"></i>
+                      <span>Pronađi novu kameru</span>
+                    </button>
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-add-camera-by-ip" title="Dodaj kameru ako znate IP adresu — proverava se samo ta adresa, bez skeniranja opsega">
+                      <i data-lucide="crosshair"></i>
+                      <span>Dodaj po IP adresi</span>
+                    </button>
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-analog-channels" title="Pronađi analogne kamere priključene na snimače i dodaj ih u evidenciju (živi prikaz ide preko snimača)">
+                      <i data-lucide="tv"></i>
+                      <span>Analogni kanali</span>
+                    </button>
+                    <div class="svc-menu-sep"></div>
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-capture-camera-snapshots" title="Uzmi novu sliku svih kamera (inače se slike uzimaju automatski jednom mesečno). Offline kamera prikazuje poslednju sliku umesto snimka uživo.">
+                      <i data-lucide="image"></i>
+                      <span id="text-capture-camera-snapshots">Osveži slike kamera</span>
+                    </button>
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-export-cameras-excel" title="Izvezi trenutni prikaz liste kamera (sa filterima i pretragom) u Excel">
+                      <i data-lucide="file-spreadsheet"></i>
+                      <span>Izvezi u Excel</span>
+                    </button>
+                    <div class="svc-menu-sep" data-super-only></div>
+                    <button type="button" class="svc-menu-item" role="menuitem" id="btn-sync-cameras-peer" data-super-only title="Preuzima evidenciju kamera i snimača sa drugog servera i prepisuje je preko ove (prvo se prikazuje pregled)">
+                      <i data-lucide="refresh-cw"></i>
+                      <span id="btn-sync-cameras-peer-text">Sinhronizuj podatke</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -4889,12 +4903,20 @@
             </div>
             <div class="mon-picker-row">
               <div class="model-filter-dropdown-wrap" style="flex: 1; min-width: 0;">
+                <i data-lucide="map-pin" class="model-filter-icon"></i>
+                <select id="mon-picker-location" class="model-filter-select" style="width: 100%;" aria-label="Filtriraj po lokaciji">
+                  <option value="">Sve lokacije</option>
+                </select>
+              </div>
+            </div>
+            <div class="mon-picker-row">
+              <div class="model-filter-dropdown-wrap" style="flex: 1; min-width: 0;">
                 <i data-lucide="hard-drive" class="model-filter-icon"></i>
                 <select id="mon-picker-recorder" class="model-filter-select" style="width: 100%;" aria-label="Filtriraj po snimaču">
                   <option value="">Svi snimači</option>
                 </select>
               </div>
-              <button type="button" class="btn-dark-outline-sm" id="mon-btn-autofill" title="Popuni prazna polja kamerama izabranog snimača"><i data-lucide="wand-sparkles"></i><span>Popuni</span></button>
+              <button type="button" class="btn-dark-outline-sm" id="mon-btn-autofill" title="Popuni prazna polja kamerama iz trenutnog filtera (lokacija, snimač i pretraga)"><i data-lucide="wand-sparkles"></i><span>Popuni</span></button>
             </div>
             <div class="mon-picker-list" id="mon-picker-list"></div>
             <p class="mon-picker-hint"><i data-lucide="mouse-pointer-click"></i> Prevucite kameru na polje ili izaberite polje pa kliknite kameru.</p>
@@ -8473,7 +8495,7 @@
 
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js?v=20261124_status"></script>
-  <script src="/js/monitoring.js?v=20261124_status"></script>
+  <script src="/js/monitoring.js?v=20261124_loc"></script>
   <script src="/js/monitoringQuickAdd.js?v=20261123_tpl"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>

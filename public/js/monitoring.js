@@ -1124,6 +1124,10 @@
     // Korak 2: lista kamera
     $('mon-picker-search').addEventListener('input', () => debounce('picker', renderPicker, 150));
     $('mon-picker-recorder').addEventListener('change', renderPicker);
+    $('mon-picker-location').addEventListener('change', () => {
+      fillRecorderOptions();
+      renderPicker();
+    });
     $('mon-btn-autofill').addEventListener('click', autofill);
     $('mon-btn-clear-cams').addEventListener('click', () => {
       W.cameras = W.cameras.map(() => null);
@@ -1204,19 +1208,35 @@
     });
   }
 
+  /** Filteri izbora kamera: lokacija, pa snimač (brojevi kod snimača važe za izabranu lokaciju) */
   function fillRecorderFilter() {
-    const names = [...new Set(S.cameras.map(c => c.recorder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sr'));
+    const byName = (a, b) => a.localeCompare(b, 'sr');
+    const locSel = $('mon-picker-location');
+    const prevLoc = locSel.value;
+    const locations = [...new Set(S.cameras.map(c => c.location).filter(Boolean))].sort(byName);
+    locSel.innerHTML = `<option value="">Sve lokacije (${S.cameras.length})</option>` +
+      locations.map(n => `<option value="${esc(n)}">${esc(n)} (${S.cameras.filter(c => c.location === n).length})</option>`).join('');
+    if (locations.includes(prevLoc)) locSel.value = prevLoc;
+    fillRecorderOptions();
+  }
+
+  function fillRecorderOptions() {
+    const loc = $('mon-picker-location').value;
+    const pool = loc ? S.cameras.filter(c => c.location === loc) : S.cameras;
+    const names = [...new Set(pool.map(c => c.recorder).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'sr'));
     const sel = $('mon-picker-recorder');
     const prev = sel.value;
-    sel.innerHTML = `<option value="">Svi snimači (${S.cameras.length})</option>` +
-      names.map(n => `<option value="${esc(n)}">${esc(n)} (${S.cameras.filter(c => c.recorder === n).length})</option>`).join('');
-    if (names.includes(prev)) sel.value = prev;
+    sel.innerHTML = `<option value="">Svi snimači (${pool.length})</option>` +
+      names.map(n => `<option value="${esc(n)}">${esc(n)} (${pool.filter(c => c.recorder === n).length})</option>`).join('');
+    sel.value = names.includes(prev) ? prev : '';
   }
 
   function filteredCameras() {
     const q = $('mon-picker-search').value;
+    const loc = $('mon-picker-location').value;
     const rec = $('mon-picker-recorder').value;
     return S.cameras.filter(c => {
+      if (loc && c.location !== loc) return false;
       if (rec && c.recorder !== rec) return false;
       return window.cameraMatchesSearch ? window.cameraMatchesSearch(c, q) : UniSearch.match(q, c.name, c.position, c.ip, c.recorder);
     });
