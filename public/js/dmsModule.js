@@ -302,36 +302,14 @@ function dmsBuildReportItem(f) {
 }
 
 /**
- * Loader stranice: dok traje učitavanje prikazuje se samo loader (sa tekstom i opcionim procentom),
- * a sadržaj stranice se otkriva tek kad je sve spremno. tabId je npr. 'dms_users'.
+ * Loader stranice: jedinstveni loader platforme (js/core/page-loader.js). Dok traje učitavanje vidi se samo loader
+ * (sa tekstom i opcionim procentom), a sadržaj stranice se otkriva tek kad je sve spremno. tabId je npr. 'dms_users'.
  */
 function dmsSetLoading(tabId, on, text, pct) {
-  const section = document.getElementById('tab-' + tabId);
-  if (!section) return;
-  let loader = section.querySelector(':scope > .dms-loader');
-  if (!on) {
-    section.classList.remove('dms-is-loading');
-    if (loader) loader.remove();
-    return;
-  }
-  if (!loader) {
-    loader = document.createElement('div');
-    loader.className = 'dms-loader';
-    loader.innerHTML = '<div class="dms-loader-spinner"></div><div class="dms-loader-text"></div>' +
-      '<div class="dms-loader-bar"><span></span></div>';
-    section.appendChild(loader);
-  }
-  section.classList.add('dms-is-loading');
-  loader.querySelector('.dms-loader-text').textContent = text || 'Učitavanje...';
-  const bar = loader.querySelector('.dms-loader-bar');
-  const fill = bar.querySelector('span');
-  if (typeof pct === 'number') {
-    bar.classList.remove('is-indeterminate');
-    fill.style.width = Math.max(4, Math.min(100, pct)) + '%';
-  } else {
-    bar.classList.add('is-indeterminate');
-    fill.style.width = '';
-  }
+  const L = window.UniPageLoader;
+  if (!L) return;
+  if (on) L.show(tabId, { text: text || 'Učitavanje...', pct, cover: true });
+  else L.hide(tabId);
 }
 
 // Čeka da pregledač izračuna raspored i iscrta stranicu pre nego što se loader ukloni

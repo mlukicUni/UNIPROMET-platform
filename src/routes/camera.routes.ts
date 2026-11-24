@@ -5,7 +5,9 @@ import { getCameraSchedulerStatus, addCameraScheduledTime } from '../services/ca
 import { sendOfflineCamerasAlertEmail } from '../services/mailService';
 import { fetchCameraSnapshot, getCameraCredentials } from '../services/cameraLiveService';
 import { checkGatewayHealth, startVideoGateway } from '../services/videoGatewayService';
-import { getCameraInventoryByIp } from '../db/cameraInventoryDb';
+import { getCameraInventoryByIp, getAllCameraInventory } from '../db/cameraInventoryDb';
+import { checkCameraStatuses } from '../services/cameraStatusService';
+import { getSnapshotInfoMap, getSnapshotFile, getSnapshotRunState, captureCameraNow, startSnapshotRun } from '../services/cameraSnapshotService';
 import { parseAnalogIp, analogRtspPath } from '../services/analogChannels';
 import { hasLevel, filterCamerasByAccess } from '../services/accessService';
 import {
@@ -81,6 +83,77 @@ cameraRouter.post('/offline/email', async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error('Offline camera alert email error:', err);
     res.status(500).json({ error: 'Failed to send offline camera email', details: err?.message });
+  }
+});
+
+// POST /api/cameras/status - Dostupnost kamera koje su trenutno na ekranu (lista, Video nadzor, Monitoring).
+// Telo: { ids: [id kamere, ...] } (najviše 120). Vraća status, od kada traje i datum poslednje slike.
+cameraRouter.post('/status', async (req: Request, res: Response) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map((v: unknown) => String(v)).slice(0, 120) : [];
+    const want = new Set(ids);
+    let cams = getAllCameraInventory().filter(c => want.has(c.id) && c.ip && !c.isReserved);
+    if (req.access && !hasLevel(req.access, 'mreza.kamere', 'view')) cams = filterCamerasByAccess(req.access, cams);
+    const statuses = await checkCameraStatuses(cams.map(c => c.ip));
+    const byIp = new Map(statuses.map(s => [s.ip, s]));
+    const snaps = getSnapshotInfoMap();
+    res.json({
+      success: true,
+      statuses: cams.map(c => {
+        const s = byIp.get(c.ip.trim());
+        return {
+          id: c.id,
+          ip: c.ip,
+          online: s ? s.online : true,
+          since: s?.since || null,
+          checkedAt: s?.checkedAt || null,
+          snapshotAt: snaps.get(c.id)?.takenAt || null
+        };
+      })
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Provera dostupnosti kamera nije uspela', details: err?.message });
+  }
+});
+
+// GET /api/cameras/snapshots/status - Stanje uzimanja slika (u toku / poslednje)
+cameraRouter.get('/snapshots/status', (_req: Request, res: Response) => {
+  try {
+    res.json({ success: true, ...getSnapshotRunState() });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Greška', details: err?.message });
+  }
+});
+
+// POST /api/cameras/snapshots/capture - { cameraId } = slika jedne kamere odmah; bez tela = sve kamere u pozadini
+cameraRouter.post('/snapshots/capture', async (req: Request, res: Response) => {
+  try {
+    const cameraId = req.body?.cameraId ? String(req.body.cameraId) : '';
+    if (cameraId) {
+      const r = await captureCameraNow(cameraId);
+      if (!r.ok) return res.status(502).json({ success: false, error: 'Kamera nije vratila sliku (stara slika ostaje).' });
+      return res.json({ success: true, takenAt: r.takenAt });
+    }
+    const started = startSnapshotRun('manual');
+    if (!started) return res.status(409).json({ success: false, error: 'Uzimanje slika je već u toku.', ...getSnapshotRunState() });
+    res.json({ success: true, ...getSnapshotRunState() });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message || 'Greška pri uzimanju slike' });
+  }
+});
+
+// GET /api/cameras/:ip/last-snapshot - Poslednja sačuvana slika kamere (mesečna ili ručna)
+cameraRouter.get('/:ip/last-snapshot', (req: Request, res: Response) => {
+  try {
+    const cam = getCameraInventoryByIp(req.params.ip);
+    const snap = cam ? getSnapshotFile(cam.id) : null;
+    if (!snap) return res.status(404).json({ error: 'Za ovu kameru još nema sačuvane slike.' });
+    res.setHeader('Content-Type', 'image/jpeg');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Snapshot-Taken-At', snap.takenAt);
+    res.sendFile(snap.file);
+  } catch (err: any) {
+    res.status(500).json({ error: 'Greška pri čitanju slike', details: err?.message });
   }
 });
 

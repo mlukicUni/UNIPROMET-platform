@@ -9,7 +9,7 @@
 (function () {
   'use strict';
 
-  const MAX_CELLS = 25;
+  const MAX_CELLS = 64; // cela mreža 8×8 (isto kao na serveru)
   const MAX_GRID = 8;
   const WARN_STREAMS = 16;
 
@@ -231,7 +231,7 @@
         inner = `<div class="mon-cell-empty is-denied"><i data-lucide="shield-off"></i><span>Nema pristupa kameri</span></div>`;
       } else {
         inner = `
-          <img class="mon-cell-snap" src="${esc(snapshotUrl(cam))}" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'">
+          ${cam.isOffline ? '' : `<img class="mon-cell-snap" src="${esc(snapshotUrl(cam))}" alt="" loading="lazy" draggable="false" onerror="this.style.display='none'">`}
           <div class="mon-cell-video"></div>
           <div class="mon-cell-osd">
             <span class="mon-cell-name" title="${esc(cameraLabel(cam))}">${esc(cameraLabel(cam))}</span>
@@ -349,13 +349,17 @@
     return true;
   };
 
-  /** Postepeno pokretanje strimova (100 ms razmaka) da se gateway ne zaguši */
+  /** Postepeno pokretanje strimova (100 ms razmaka) da se gateway ne zaguši; offline kamere dobijaju poslednju sliku */
   GridPlayer.prototype.mountAll = function () {
     if (!this.tab) return;
     let n = 0;
     this.tab.cameras.forEach((camId, i) => {
       const cam = camId ? this.camerasById.get(camId) : null;
       if (!cam) return;
+      if (cam.isOffline) {
+        this.showOffline(i);
+        return;
+      }
       const t = setTimeout(() => this.mountCell(i, 'sub'), n * 100);
       this.timers.push(t);
       n++;
@@ -371,7 +375,11 @@
 
     holder.querySelectorAll('video-stream').forEach(destroyStream);
     cellEl.classList.remove('is-playing');
-    this.setState(cellEl, cam.isOffline ? 'offline' : 'connecting');
+    if (cam.isOffline) {
+      this.showOffline(index);
+      return;
+    }
+    this.setState(cellEl, 'connecting');
 
     const vs = document.createElement('video-stream');
     vs.mode = 'webrtc,mse,mp4,mjpeg';
@@ -400,6 +408,58 @@
       }
     }, 700);
     this.timers.push(watch);
+  };
+
+  /** Offline kamera: bez toka, poslednja sačuvana slika sa natpisom „OFFLINE · od … · slika od …“ */
+  GridPlayer.prototype.showOffline = function (index) {
+    const cellEl = this.container.querySelector(`.mon-cell[data-index="${index}"]`);
+    if (!cellEl || !this.tab) return;
+    const cam = this.camerasById.get(this.tab.cameras[index]);
+    if (!cam) return;
+    cellEl.querySelectorAll('video-stream').forEach(destroyStream);
+    cellEl.classList.remove('is-playing');
+    cellEl.classList.add('is-offline');
+    cellEl.querySelectorAll('.cam-off-layer').forEach(el => el.remove());
+    if (window.CameraStatus) {
+      cellEl.insertAdjacentHTML('afterbegin', window.CameraStatus.offlineLayerHtml(cam.ip, { since: cam.offlineSince, snapshotAt: cam.snapshotAt }));
+    }
+    this.setState(cellEl, 'offline');
+  };
+
+  /**
+   * Novi statusi kamera (mapa id -> { online, since, snapshotAt }): kamera koja ode offline
+   * prelazi na poslednju sliku, a kad se vrati, ponovo se pokreće snimak uživo.
+   */
+  GridPlayer.prototype.applyStatus = function (statusMap) {
+    if (!this.tab) return;
+    this.tab.cameras.forEach((camId, i) => {
+      const cam = camId ? this.camerasById.get(camId) : null;
+      const st = cam ? statusMap.get(String(camId)) : null;
+      if (!st) return;
+      const offline = !st.online;
+      const since = offline ? st.since : null;
+      const wasOffline = !!cam.isOffline;
+      if (wasOffline === offline && (cam.offlineSince || null) === (since || null) && (cam.snapshotAt || null) === (st.snapshotAt || null)) return;
+      cam.isOffline = offline;
+      cam.offlineSince = since;
+      cam.snapshotAt = st.snapshotAt || null;
+      if (offline) {
+        this.showOffline(i);
+      } else if (wasOffline) {
+        const cellEl = this.container.querySelector(`.mon-cell[data-index="${i}"]`);
+        if (!cellEl) return;
+        cellEl.classList.remove('is-offline');
+        cellEl.querySelectorAll('.cam-off-layer').forEach(el => el.remove());
+        const snap = cellEl.querySelector('.mon-cell-snap');
+        if (snap) { snap.style.display = ''; snap.src = snapshotUrl(cam); }
+        this.mountCell(i, this.maxIndex === i ? 'main' : 'sub');
+      }
+    });
+  };
+
+  /** Id-jevi kamera u prikazanom tabu (za proveru dostupnosti) */
+  GridPlayer.prototype.cameraIds = function () {
+    return this.tab ? this.tab.cameras.filter(id => id && this.camerasById.has(id)) : [];
   };
 
   GridPlayer.prototype.setState = function (cellEl, state) {

@@ -166,7 +166,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initParticleCanvas();
   setupNavigationHandlers();
   setupEventListeners();
-  fetchInitialData();
+  // Predučitavanje podataka za sve stranice: loader prve stranice drži samo njene podatke
+  if (window.UniPageLoader) window.UniPageLoader.untracked(() => fetchInitialData());
+  else fetchInitialData();
   initAuthWidget();
 
   // Periodic Telemetry Polling (every 4s)
@@ -556,6 +558,9 @@ function setupNavigationHandlers() {
       }
     });
 
+    // Jedinstven loader: otvara se pre nego što moduli stranice zatraže podatke (js/core/page-loader.js)
+    if (window.UniPageLoader) window.UniPageLoader.tabActivated(tabId);
+
     if (scrollContainer) {
       scrollContainer.scrollTop = 0;
     }
@@ -584,6 +589,9 @@ function setupNavigationHandlers() {
       } else {
         renderInventoryCamerasTab();
       }
+    } else if (window.CameraStatus) {
+      // Van liste kamera nema provere dostupnosti
+      window.CameraStatus.unwatch('inventory');
     }
 
     if (tabId === 'cctv_cameras') {
@@ -593,6 +601,7 @@ function setupNavigationHandlers() {
       if (typeof unmountCctvSubStreams === 'function') {
         unmountCctvSubStreams();
       }
+      if (window.CameraStatus) window.CameraStatus.unwatch('cctv');
     }
 
     if (tabId === 'inventory_recorders') {
@@ -796,11 +805,15 @@ function setupNavigationHandlers() {
   window.activateTab = activateTab;
   window.switchTab = activateTab;
   window.switchNavTab = activateTab;
+  // „Pokušaj ponovo“ posle neuspelog učitavanja ponovo otvara istu stranicu
+  if (window.UniPageLoader) window.UniPageLoader.onRetry((id) => activateTab(id));
 
   // Restore previous tab from hash or localStorage on page load
   const initialHash = window.location.hash.replace('#', '').trim();
   const savedTab = initialHash || localStorage.getItem('unipromet_active_tab') || 'dashboard';
   activateTab(savedTab);
+  // Prava i prva stranica su spremni: loader pokretanja ustupa mesto loaderu stranice (isti izgled)
+  if (window.UniPageLoader) window.UniPageLoader.hideBoot();
 
   // Restore user's last open main section (or section belonging to saved tab)
   const savedOpenSection = localStorage.getItem('unipromet_open_nav_section');
@@ -5182,6 +5195,7 @@ function renderInventoryCamerasTab() {
       </div>
     `;
     if (window.lucide) window.lucide.createIcons();
+    invWatchStatus([]);
     return;
   }
 
@@ -5255,27 +5269,7 @@ function renderInventoryCamerasTab() {
                   <td>
                     <span class="inv-subnet-badge font-mono text-xs">${escapeHtml(cam.subnet || '')}</span>
                   </td>
-                  <td>
-                    ${isReserved ? `
-                      <span class="status-pill" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border-color: rgba(100, 116, 139, 0.25); font-size: 0.72rem;">
-                        Slobodno
-                      </span>
-                    ` : cam.isOffline ? `
-                      <span class="status-pill offline-pill" style="font-size: 0.72rem; cursor: pointer;" onclick="openOfflineCamerasModal()" title="Kamera je offline na lokalnoj mreži. Kliknite za detalje.">
-                        <span class="status-dot offline-dot"></span>
-                        Offline
-                      </span>
-                    ` : isAnalog ? `
-                      <span class="status-pill" style="background: rgba(192, 132, 252, 0.15); color: #c084fc; border-color: rgba(192, 132, 252, 0.3); font-size: 0.72rem;">
-                        Analogna
-                      </span>
-                    ` : `
-                      <span class="status-pill active-pill" style="font-size: 0.72rem;">
-                        <span class="status-dot"></span>
-                        Online
-                      </span>
-                    `}
-                  </td>
+                  <td data-inv-status="${escapeHtml(cam.id)}">${invStatusCellHtml(cam)}</td>
                   <td>
                     <span class="text-dim text-xs" style="max-width: 170px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(cam.note || '')}">
                       ${cam.note ? escapeHtml(cam.note) : '<span class="text-dim">-</span>'}
@@ -5292,6 +5286,11 @@ function renderInventoryCamerasTab() {
                         <a href="${webUrl}" target="_blank" rel="noopener" class="btn-inv-action btn-web" title="Otvori Web GUI (${webUrl})">
                           <i data-lucide="external-link" style="width: 13px; height: 13px;"></i>
                         </a>
+                      ` : ''}
+                      ${!isReserved && cam.ip ? `
+                        <button class="btn-inv-action" onclick="captureCameraSnapshot('${cam.id}', this)" title="Uzmi novu sliku kamere (offline kamera prikazuje poslednju sliku)">
+                          <i data-lucide="image" style="width: 13px; height: 13px;"></i>
+                        </button>
                       ` : ''}
                       <button class="btn-inv-action" onclick="openEditCameraModal('${cam.id}')" title="Izmeni podatke o kameri">
                         <i data-lucide="edit-3" style="width: 13px; height: 13px;"></i>
@@ -5324,23 +5323,7 @@ function renderInventoryCamerasTab() {
               <i data-lucide="${isAnalog ? 'tv' : 'video'}"></i>
               <span>${escapeHtml(cam.type || 'IP')}</span>
             </div>
-            ${isReserved ? `
-              <span class="status-pill" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border-color: rgba(100, 116, 139, 0.25); font-size: 0.72rem;">
-                Slobodno
-              </span>
-            ` : cam.isOffline ? `
-              <span class="status-pill offline-pill" style="font-size: 0.72rem; cursor: pointer;" onclick="openOfflineCamerasModal()" title="Kamera je offline. Kliknite za detalje.">
-                <span class="status-dot offline-dot"></span> Offline
-              </span>
-            ` : isAnalog ? `
-              <span class="status-pill" style="background: rgba(192, 132, 252, 0.15); color: #c084fc; border-color: rgba(192, 132, 252, 0.3); font-size: 0.72rem;">
-                Analogna
-              </span>
-            ` : `
-              <span class="status-pill active-pill" style="font-size: 0.72rem;">
-                <span class="status-dot"></span> Online
-              </span>
-            `}
+            <div data-inv-status="${escapeHtml(cam.id)}" style="text-align: right;">${invStatusCellHtml(cam)}</div>
           </div>
 
           <div class="printer-card-body">
@@ -5408,7 +5391,180 @@ function renderInventoryCamerasTab() {
   }
 
   if (window.lucide) window.lucide.createIcons();
+  invWatchStatus(pageItems);
 }
+
+/* ---------- Dostupnost kamera na ekranu (proverava se dok je lista otvorena) ---------- */
+let invShownStatusIds = [];
+
+/** Kamere sa ekrana koje se proveravaju (IP kamere i analogni kanali, bez slobodnih adresa) */
+function invWatchStatus(pageItems) {
+  if (!window.CameraStatus) return;
+  invShownStatusIds = (pageItems || [])
+    .filter(c => !c.isReserved && c.ip && (c.type === 'IP Kamera' || isAnalogChannelIp(c.ip)))
+    .map(c => c.id);
+  window.CameraStatus.watch('inventory', () => invShownStatusIds, applyInvStatuses);
+}
+
+/** Ćelija statusa u listi: Slobodno / Offline (od kada + slika) / Analogna / Online */
+function invStatusCellHtml(cam) {
+  if (cam.isReserved) {
+    return `<span class="status-pill" style="background: rgba(100, 116, 139, 0.15); color: #94a3b8; border-color: rgba(100, 116, 139, 0.25); font-size: 0.72rem;">Slobodno</span>`;
+  }
+  const isAnalog = cam.type === 'Analogna';
+  if (cam.isOffline) {
+    const CS = window.CameraStatus;
+    const since = cam.offlineSince && CS ? CS.fmtSince(cam.offlineSince) : '';
+    const snap = cam.snapshotAt && CS
+      ? `<button type="button" class="inv-snap-btn" data-snap-ip="${escapeHtml(cam.ip)}" data-snap-at="${escapeHtml(cam.snapshotAt)}" data-snap-since="${escapeHtml(cam.offlineSince || '')}" onclick="event.stopPropagation(); window.open(window.CameraStatus.lastSnapshotUrl(this.dataset.snapIp, this.dataset.snapAt), '_blank')" title="Poslednja slika kamere (${escapeHtml(CS.fmtDate(cam.snapshotAt))}) — pređite mišem za pregled, klik otvara sliku"><i data-lucide="image"></i></button>`
+      : '';
+    return `<span class="status-pill offline-pill" style="font-size: 0.72rem; cursor: pointer;" onclick="openOfflineCamerasModal()" title="${isAnalog ? 'Snimač ovog analognog kanala ne odgovara' : 'Kamera ne odgovara na mreži'}. Kliknite za spisak offline kamera.">
+        <span class="status-dot offline-dot"></span>Offline</span>${snap}
+      ${since ? `<span class="inv-off-since">od ${escapeHtml(since)}</span>` : ''}`;
+  }
+  if (isAnalog) {
+    return `<span class="status-pill" style="background: rgba(192, 132, 252, 0.15); color: #c084fc; border-color: rgba(192, 132, 252, 0.3); font-size: 0.72rem;">Analogna</span>`;
+  }
+  return `<span class="status-pill active-pill" style="font-size: 0.72rem;"><span class="status-dot"></span>Online</span>`;
+}
+
+/** Novi statusi sa servera: menja se samo ćelija statusa (bez ponovnog crtanja cele liste) */
+function applyInvStatuses(statusMap) {
+  let changed = false;
+  allInventoryCameras.forEach(cam => {
+    const st = statusMap.get(String(cam.id));
+    if (!st || cam.isReserved) return;
+    const offline = !st.online;
+    const since = offline ? st.since : null;
+    cam.statusCheckedAt = st.checkedAt;
+    const same = !!cam.isOffline === offline && (cam.offlineSince || null) === (since || null) && (cam.snapshotAt || null) === (st.snapshotAt || null);
+    if (same) return;
+    changed = true;
+    cam.isOffline = offline;
+    cam.isOnline = !offline && cam.type === 'IP Kamera';
+    cam.offlineSince = since;
+    cam.snapshotAt = st.snapshotAt || null;
+    document.querySelectorAll(`[data-inv-status="${CSS.escape(String(cam.id))}"]`).forEach(el => {
+      el.innerHTML = invStatusCellHtml(cam);
+    });
+  });
+  if (!changed) return;
+  if (window.lucide) window.lucide.createIcons();
+
+  // Kartica i spisak offline kamera prate isti status
+  offlineCamerasList = allInventoryCameras.filter(c => c.isOffline).map(c => ({
+    ...c,
+    name: c.name || c.position || `Kamera ${c.ip}`,
+    reason: c.type === 'Analogna' ? 'Snimač ovog kanala ne odgovara' : 'Kamera ne odgovara ni na HTTP (port 80) ni na RTSP (port 554)',
+    lastChecked: c.statusCheckedAt
+  }));
+  const kOffline = document.getElementById('kpi-inv-offline');
+  if (kOffline) kOffline.textContent = offlineCamerasList.length;
+  const bOffline = document.getElementById('badge-inv-offline-count');
+  if (bOffline) bOffline.textContent = offlineCamerasList.length;
+
+  // Filter po statusu menja sastav liste, pa se ona ponovo crta
+  if (invStatusFilter === 'online' || invStatusFilter === 'offline') renderInventoryCamerasTab();
+}
+
+/** Pregled poslednje slike kad se pređe mišem preko dugmeta sa slikom */
+(function bindInvSnapshotPreview() {
+  let preview = null;
+  const hide = () => { if (preview) { preview.remove(); preview = null; } };
+  document.addEventListener('mouseover', (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest('.inv-snap-btn') : null;
+    if (!btn) { hide(); return; }
+    if (preview && preview.dataset.ip === btn.dataset.snapIp) return;
+    hide();
+    if (!window.CameraStatus) return;
+    preview = document.createElement('div');
+    preview.className = 'inv-snap-preview';
+    preview.dataset.ip = btn.dataset.snapIp;
+    preview.innerHTML = window.CameraStatus.offlineLayerHtml(btn.dataset.snapIp, { since: btn.dataset.snapSince, snapshotAt: btn.dataset.snapAt });
+    document.body.appendChild(preview);
+    const r = btn.getBoundingClientRect();
+    const w = 320, h = 180;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left - w - 10));
+    const top = Math.max(8, Math.min(window.innerHeight - h - 8, r.top - h / 2 + r.height / 2));
+    preview.style.left = `${left}px`;
+    preview.style.top = `${top}px`;
+  });
+  window.addEventListener('scroll', hide, true);
+})();
+
+/** Nova slika jedne kamere (dugme u listi) */
+async function captureCameraSnapshot(cameraId, btn) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await fetch('/api/cameras/snapshots/capture', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cameraId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) throw new Error(data.error || 'Kamera nije vratila sliku');
+    const cam = allInventoryCameras.find(c => c.id === cameraId);
+    if (cam) {
+      cam.snapshotAt = data.takenAt;
+      document.querySelectorAll(`[data-inv-status="${CSS.escape(String(cameraId))}"]`).forEach(el => { el.innerHTML = invStatusCellHtml(cam); });
+      if (window.lucide) window.lucide.createIcons();
+    }
+    showToast('Nova slika kamere je sačuvana.', 'success');
+  } catch (err) {
+    showToast(`Slika nije uzeta: ${err.message}`, 'error');
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.captureCameraSnapshot = captureCameraSnapshot;
+
+/** Nove slike svih kamera (u pozadini na serveru, kamera po kamera) */
+let snapshotRunPoll = null;
+async function captureAllCameraSnapshots() {
+  const btn = document.getElementById('btn-capture-camera-snapshots');
+  try {
+    const res = await fetch('/api/cameras/snapshots/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 409) showToast('Uzimanje slika je već u toku.', 'info');
+    else if (!res.ok || !data.success) throw new Error(data.error || 'Pokretanje nije uspelo');
+    else showToast(`Počelo je uzimanje slika za ${data.total} kamera (oko ${Math.max(1, Math.round(data.total * 2 / 60))} min). Lista se može koristiti normalno.`, 'info');
+    trackSnapshotRun(btn);
+  } catch (err) {
+    showToast(`Slike nisu pokrenute: ${err.message}`, 'error');
+  }
+}
+
+function trackSnapshotRun(btn) {
+  const text = document.getElementById('text-capture-camera-snapshots');
+  if (snapshotRunPoll) clearInterval(snapshotRunPoll);
+  const reset = () => {
+    clearInterval(snapshotRunPoll);
+    snapshotRunPoll = null;
+    if (btn) btn.disabled = false;
+    if (text) text.textContent = 'Osveži slike kamera';
+  };
+  const step = async () => {
+    try {
+      const res = await fetch('/api/cameras/snapshots/status');
+      const st = await res.json();
+      if (st.running) {
+        if (btn) btn.disabled = true;
+        if (text) text.textContent = `Slike: ${st.done}/${st.total}`;
+        return;
+      }
+      reset();
+      if (st.finishedAt) {
+        showToast(`Slike kamera: sačuvano ${st.ok}, bez slike ${st.failed} (njima ostaje stara slika).`, st.failed ? 'info' : 'success');
+        fetchInventoryCameras();
+      }
+    } catch (e) {
+      reset();
+    }
+  };
+  step();
+  snapshotRunPoll = setInterval(step, 4000);
+}
+
 
 function renderInventoryPagination(totalPages) {
   const container = document.getElementById('inv-pagination-controls');
@@ -5782,6 +5938,7 @@ function setupInventoryCamerasEventListeners() {
   // Analogni kanali na snimačima
   document.getElementById('btn-analog-channels')?.addEventListener('click', openAnalogChannelsModal);
   document.getElementById('btn-export-cameras-excel')?.addEventListener('click', exportInventoryCamerasExcel);
+  document.getElementById('btn-capture-camera-snapshots')?.addEventListener('click', captureAllCameraSnapshots);
   document.getElementById('btn-scan-analog-channels')?.addEventListener('click', scanAnalogChannels);
   document.getElementById('btn-import-analog-channels')?.addEventListener('click', importAnalogChannelsClient);
   document.getElementById('btn-close-analog-modal')?.addEventListener('click', closeAnalogChannelsModal);
@@ -6586,7 +6743,13 @@ function mountCctvSubStreams(pageItems) {
   unmountCctvSubStreams();
   if (!cctvLiveSubStreamEnabled) return;
 
-  pageItems.forEach((cam, idx) => {
+  // Offline kamera prikazuje poslednju sliku, pa joj se tok ne pokreće
+  pageItems.filter(cam => !cam.isOffline).forEach((cam, idx) => mountCctvSubStream(cam, idx * 100));
+}
+
+/** Pokreće živi pomoćni tok jedne kamere u njenom prozoru (posle zadate pauze) */
+function mountCctvSubStream(cam, delayMs) {
+  {
     if (!cam.ip) return;
     const wsUrl = cam.streamWsSubUrl || `/api/video-gateway/ws?src=cam_${(cam.ip || '').replace(/\./g, '_')}_sub`;
     const container = document.getElementById(`cctv-preview-screen-${cam.id}`);
@@ -6626,9 +6789,68 @@ function mountCctvSubStreams(pageItems) {
       cctvCheckPlayIntervals.push(checkPlay);
       const expireTid = setTimeout(() => clearInterval(checkPlay), 12000);
       cctvMountTimeouts.push(expireTid);
-    }, idx * 100);
+    }, delayMs || 0);
 
     cctvMountTimeouts.push(tid);
+  }
+}
+
+/** Gasi živi tok jedne kamere (kad ode offline) */
+function unmountCctvSubStream(camId) {
+  const box = document.getElementById(`cctv-preview-screen-${camId}`);
+  if (!box) return;
+  box.querySelectorAll('video-stream').forEach(v => {
+    try {
+      if (typeof v.destroy === 'function') v.destroy();
+      else if (typeof v.ondisconnect === 'function') v.ondisconnect();
+    } catch (e) {}
+    v.remove();
+  });
+}
+
+/** Status kamere u Video nadzoru: Uživo ili Offline */
+function cctvStatusPillHtml(cam) {
+  return cam.isOffline
+    ? '<span class="status-pill offline-pill" style="font-size: 0.70rem; padding: 2px 8px;"><span class="status-dot offline-dot"></span> Offline</span>'
+    : '<span class="status-pill active-pill" style="font-size: 0.70rem; padding: 2px 8px;"><span class="status-dot"></span> Uživo</span>';
+}
+
+/** Sloj poslednje slike preko prozora offline kamere */
+function setCctvOfflineLayer(cam) {
+  const box = document.getElementById(`cctv-preview-screen-${cam.id}`);
+  if (!box) return;
+  box.querySelectorAll('.cam-off-layer').forEach(el => el.remove());
+  if (cam.isOffline && window.CameraStatus) {
+    box.insertAdjacentHTML('beforeend', window.CameraStatus.offlineLayerHtml(cam.ip, { since: cam.offlineSince, snapshotAt: cam.snapshotAt }));
+  }
+}
+
+let cctvShownStatusIds = [];
+
+/** Novi statusi: kamera koja ode offline gubi tok i dobija poslednju sliku; kad se vrati, tok se pokreće ponovo */
+function applyCctvStatuses(statusMap) {
+  const shown = new Set(cctvShownStatusIds);
+  allCctvCameras.forEach(cam => {
+    const st = statusMap.get(String(cam.id));
+    if (!st) return;
+    const offline = !st.online;
+    const since = offline ? st.since : null;
+    const wasOffline = !!cam.isOffline;
+    const same = wasOffline === offline && (cam.offlineSince || null) === (since || null) && (cam.snapshotAt || null) === (st.snapshotAt || null);
+    if (same) return;
+    cam.isOffline = offline;
+    cam.offlineSince = since;
+    cam.snapshotAt = st.snapshotAt || null;
+    if (!shown.has(cam.id)) return;
+    document.querySelectorAll(`[data-cctv-pill="${CSS.escape(String(cam.id))}"]`).forEach(el => { el.innerHTML = cctvStatusPillHtml(cam); });
+    if (offline && !wasOffline) unmountCctvSubStream(cam.id);
+    setCctvOfflineLayer(cam);
+    if (!offline && wasOffline && cctvLiveSubStreamEnabled) {
+      const box = document.getElementById(`cctv-preview-screen-${cam.id}`);
+      const fb = box && box.querySelector('.cctv-snapshot-fallback');
+      if (fb) { fb.style.display = ''; fb.style.opacity = '1'; fb.src = `/api/cameras/${encodeURIComponent(cam.ip)}/snapshot?t=${Date.now()}`; }
+      mountCctvSubStream(cam, 0);
+    }
   });
 }
 
@@ -6702,6 +6924,7 @@ function renderCctvCamerasTab() {
       </div>
     `;
     if (window.lucide) window.lucide.createIcons();
+    cctvShownStatusIds = [];
     return;
   }
 
@@ -6731,9 +6954,7 @@ function renderCctvCamerasTab() {
                         <span class="cctv-cam-icon"><i data-lucide="video"></i></span>
                         <strong>${escapeHtml(cam.position || cam.name || '')}</strong>
                         ${cctvAnalogBadge(cam)}
-                        <span class="status-pill active-pill" style="font-size: 0.70rem; padding: 2px 8px;">
-                          <span class="status-dot"></span> Uživo
-                        </span>
+                        <span data-cctv-pill="${escapeHtml(cam.id)}">${cctvStatusPillHtml(cam)}</span>
                       </div>
                       <div class="cctv-cam-actions">
                         <button type="button" class="cctv-ip-chip" onclick="copyCustomUrl('${escapeHtml(cam.ip)}')" title="Kopiraj IP adresu">
@@ -6837,7 +7058,11 @@ function renderCctvCamerasTab() {
 
   if (window.lucide) window.lucide.createIcons();
   if (window.MonitoringQuickAdd) window.MonitoringQuickAdd.decorate(container);
+  // Offline kamere: poslednja slika umesto snimka uživo
+  pageItems.forEach(cam => { if (cam.isOffline) setCctvOfflineLayer(cam); });
   mountCctvSubStreams(pageItems);
+  cctvShownStatusIds = pageItems.map(c => c.id);
+  if (window.CameraStatus) window.CameraStatus.watch('cctv', () => cctvShownStatusIds, applyCctvStatuses);
 }
 
 function renderCctvPagination(totalPages) {

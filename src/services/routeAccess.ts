@@ -104,6 +104,15 @@ const RULES: Rule[] = [
   { m: 'GET', p: '/cameras/offline', spec: { key: 'mreza.kamere', level: 'view' } },
   { m: 'POST', p: '/cameras/offline/email', spec: { key: 'mreza.kamere', level: 'edit' } },
   { m: 'POST', p: '/cameras/sync-nvr-channels', spec: { action: 'mreza.snimaci:sinhronizacija' } },
+  // Status kamera na zahtev (lista i video prikazi); ruta sama sužava kamere na one koje korisnik vidi
+  { m: 'POST', p: '/cameras/status', spec: { custom: ({ access }) => hasVideoContext(access) || hasLevel(access, 'mreza.kamere', 'view') } },
+  // Poslednja slika kamere (mesečna)
+  { m: 'GET', p: '/cameras/snapshots/status', spec: { key: 'mreza.kamere', level: 'view' } },
+  { m: 'POST', p: '/cameras/snapshots/capture', spec: { key: 'mreza.kamere', level: 'edit' } },
+  {
+    m: 'GET', p: '/cameras/:ip/last-snapshot',
+    spec: { custom: ({ access, params }) => hasLevel(access, 'mreza.kamere', 'view') || canAccessCameraIp(access, params.ip, 'live') }
+  },
   {
     m: 'GET', p: '/cameras',
     spec: {
