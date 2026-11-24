@@ -200,6 +200,75 @@
 
     const active = wrap.querySelector('.mon-tab.is-active');
     if (active) active.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    updateTabOverflow();
+  }
+
+  /** Strelice i dugme „Svi tabovi“ vide se samo kad tabovi ne staju u traku */
+  function updateTabOverflow() {
+    const strip = $('mon-tabs');
+    const wrap = $('mon-tabs-wrap');
+    if (!strip || !wrap) return;
+    // Prvo bez strelica, da se vidi da li tabovi staju i bez njih
+    const wasOn = wrap.classList.contains('has-overflow');
+    if (wasOn) wrap.classList.remove('has-overflow');
+    const overflow = strip.scrollWidth > strip.clientWidth + 1;
+    wrap.classList.toggle('has-overflow', overflow);
+    const max = strip.scrollWidth - strip.clientWidth;
+    $('mon-tabs-left').disabled = strip.scrollLeft <= 1;
+    $('mon-tabs-right').disabled = strip.scrollLeft >= max - 1;
+    const listBtn = $('mon-btn-tab-list');
+    listBtn.style.display = overflow ? '' : 'none';
+    $('mon-tab-list-count').textContent = String(S.tabs.length);
+  }
+
+  /** Spisak svih tabova (vlastiti, pa deljeni) za brz izbor; uz pretragu kad ih ima više od 8 */
+  function openTabListMenu(anchor) {
+    if (ctxMenu && ctxMenu.classList.contains('is-tablist')) {
+      closeContextMenu();
+      return;
+    }
+    const item = (t) => `
+      <button type="button" class="mon-ctx-item ${t.id === S.activeId ? 'is-current' : ''}" data-goto-tab="${esc(t.id)}" data-name="${esc(t.name.toLowerCase())}">
+        <i data-lucide="${t.shared ? 'share-2' : 'layout-grid'}"></i>
+        <span class="mon-tablist-name">${esc(t.name)}</span>
+        <span class="mon-tablist-count">${t.cameras.filter(Boolean).length}/${t.layout.cells.length}</span>
+      </button>`;
+    const own = S.tabs.filter(t => !t.shared);
+    const shared = S.tabs.filter(t => t.shared);
+    const html = `
+      ${S.tabs.length > 8 ? '<input type="text" class="mon-tablist-search" placeholder="Pretraži tabove..." autocomplete="off" data-search-instant>' : ''}
+      ${own.length && shared.length ? '<div class="mon-tablist-title">Moji tabovi</div>' : ''}
+      ${own.map(item).join('')}
+      ${shared.length ? `${own.length ? '<div class="mon-ctx-sep"></div>' : ''}<div class="mon-tablist-title">Deljeni sa mnom</div>${shared.map(item).join('')}` : ''}
+      <div class="mon-tablist-empty" style="display: none;">Nijedan tab ne odgovara pretrazi.</div>`;
+    openAnchoredMenu(anchor, html);
+    ctxMenu.classList.add('is-tablist');
+    anchor.classList.add('is-open');
+    // Meni uz desnu ivicu dugmeta, da ne izađe iz ekrana
+    const b = anchor.getBoundingClientRect();
+    const r = ctxMenu.getBoundingClientRect();
+    ctxMenu.style.left = `${Math.max(8, Math.min(b.right - r.width, window.innerWidth - r.width - 8))}px`;
+    const cur = ctxMenu.querySelector('.is-current');
+    if (cur) cur.scrollIntoView({ block: 'nearest' });
+    const search = ctxMenu.querySelector('.mon-tablist-search');
+    if (search) {
+      search.focus();
+      search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        let shown = 0;
+        ctxMenu.querySelectorAll('[data-goto-tab]').forEach(el => {
+          const ok = !q || el.dataset.name.includes(q);
+          el.style.display = ok ? '' : 'none';
+          if (ok) shown++;
+        });
+        ctxMenu.querySelector('.mon-tablist-empty').style.display = shown ? 'none' : '';
+      });
+      search.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const first = [...ctxMenu.querySelectorAll('[data-goto-tab]')].find(el => el.style.display !== 'none');
+        if (first) first.click();
+      });
+    }
   }
 
   /** Oznaka deljenog taba, dugme za sakrivene deljene tabove i zabrana izmene tuđeg taba */
@@ -349,6 +418,29 @@
   function bindTabStrip() {
     const wrap = $('mon-tabs');
 
+    // Kad tabovi ne staju: strelice pomeraju traku za ~3/4 širine, točkić miša je pomera vodoravno
+    const scrollStrip = (dir) => wrap.scrollBy({ left: dir * Math.max(160, wrap.clientWidth * 0.75), behavior: 'smooth' });
+    $('mon-tabs-left').addEventListener('click', () => scrollStrip(-1));
+    $('mon-tabs-right').addEventListener('click', () => scrollStrip(1));
+    wrap.addEventListener('wheel', (e) => {
+      if (wrap.scrollWidth <= wrap.clientWidth + 1) return;
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (!delta) return;
+      e.preventDefault();
+      wrap.scrollLeft += delta;
+    }, { passive: false });
+    wrap.addEventListener('scroll', () => {
+      const max = wrap.scrollWidth - wrap.clientWidth;
+      $('mon-tabs-left').disabled = wrap.scrollLeft <= 1;
+      $('mon-tabs-right').disabled = wrap.scrollLeft >= max - 1;
+    });
+    if (window.ResizeObserver) new ResizeObserver(() => updateTabOverflow()).observe($('mon-tabs-wrap').parentElement);
+    else window.addEventListener('resize', updateTabOverflow);
+    $('mon-btn-tab-list').addEventListener('click', (e) => {
+      e.stopPropagation();
+      openTabListMenu(e.currentTarget);
+    });
+
     wrap.addEventListener('click', (e) => {
       const close = e.target.closest('[data-close]');
       if (close) {
@@ -483,6 +575,8 @@
   function closeContextMenu() {
     if (ctxMenu) ctxMenu.remove();
     ctxMenu = null;
+    const listBtn = $('mon-btn-tab-list');
+    if (listBtn) listBtn.classList.remove('is-open');
   }
 
   function openContextMenu(id, x, y) {
@@ -642,9 +736,11 @@
     ctxMenu.addEventListener('click', (e) => {
       const unhide = e.target.closest('[data-unhide]');
       const create = e.target.closest('[data-new-tab]');
-      if (!unhide && !create) return;
+      const go = e.target.closest('[data-goto-tab]');
+      if (!unhide && !create && !go) return;
       closeContextMenu();
-      if (unhide) unhideShared(unhide.dataset.unhide);
+      if (go) setActive(go.dataset.gotoTab);
+      else if (unhide) unhideShared(unhide.dataset.unhide);
       else openWizard('create');
     });
   }

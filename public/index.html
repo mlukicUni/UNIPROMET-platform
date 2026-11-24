@@ -34,7 +34,7 @@
   <link rel="stylesheet" href="/css/components/dictionaries.css">
   <link rel="stylesheet" href="/css/components/access.css">
   <link rel="stylesheet" href="/css/components/access-roles.css">
-  <link rel="stylesheet" href="/css/components/monitoring.css?v=20261123_tpl">
+  <link rel="stylesheet" href="/css/components/monitoring.css?v=20261124_tabs">
   <link rel="stylesheet" href="/css/components/ai-agent.css">
   <link rel="stylesheet" href="/css/components/noleko-docs.css">
   <link rel="stylesheet" href="/css/components/dms.css?v=20261105">
@@ -1462,8 +1462,14 @@
             <div class="panel-box-body mon-body">
               <!-- Traka tabova (kao u pretraživaču) -->
               <div class="mon-tabbar">
-                <div class="mon-tabs" id="mon-tabs" role="tablist" aria-label="Monitoring tabovi"></div>
+                <!-- Tabovi: kad ne staju, strelice levo/desno i točkić miša umesto trake za skrolovanje -->
+                <div class="mon-tabs-wrap" id="mon-tabs-wrap">
+                  <button type="button" class="mon-tabs-arrow is-left" id="mon-tabs-left" title="Prethodni tabovi" aria-label="Pomeri tabove ulevo"><i data-lucide="chevron-left"></i></button>
+                  <div class="mon-tabs" id="mon-tabs" role="tablist" aria-label="Monitoring tabovi"></div>
+                  <button type="button" class="mon-tabs-arrow is-right" id="mon-tabs-right" title="Sledeći tabovi" aria-label="Pomeri tabove udesno"><i data-lucide="chevron-right"></i></button>
+                </div>
                 <button type="button" class="mon-tab-new" id="mon-btn-new-tab" title="Novi tab (ili ponovo otvori dodeljeni tab)"><i data-lucide="plus"></i></button>
+                <button type="button" class="mon-tab-list-btn" id="mon-btn-tab-list" style="display: none;" title="Svi tabovi — izaberite tab sa spiska"><i data-lucide="list"></i><span id="mon-tab-list-count">0</span></button>
                 <div class="mon-tabbar-tools">
                   <span class="mon-stream-warn" id="mon-stream-warn" style="display: none;" title="Svaki živi strim ide preko servera">
                     <i data-lucide="alert-triangle"></i><span></span>
@@ -8495,7 +8501,7 @@
 
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js?v=20261124_status"></script>
-  <script src="/js/monitoring.js?v=20261124_loc"></script>
+  <script src="/js/monitoring.js?v=20261124_tabs"></script>
   <script src="/js/monitoringQuickAdd.js?v=20261123_tpl"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>

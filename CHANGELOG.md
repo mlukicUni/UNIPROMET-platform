@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.16] - 2026-11-24
+- Monitoring, traka tabova na manjem ekranu: umesto vodoravne trake za skrolovanje, kad tabovi ne staju pojavljuju se strelice levo/desno (pomeraju traku za oko tri četvrtine širine; siva strelica znači da se dalje ne može), a traka se pomera i točkićem miša preko tabova. Pored dugmeta „+“ je dugme „Svi tabovi“ (sa brojem tabova) koje otvara spisak svih tabova, odvojeno „Moji tabovi“ i „Deljeni sa mnom“, sa brojem kamera i označenim aktivnim tabom; klik prebacuje na tab i pomera traku do njega. Kad ima više od 8 tabova, spisak ima pretragu (Enter bira prvi pronađeni tab). Kad svi tabovi staju, traka izgleda kao ranije, bez strelica i bez dugmeta „Svi tabovi“
+
 ## [1.3.15] - 2026-11-24
 - Mreža → Kamere: šest dugmadi iznad liste (Pronađi novu kameru, Dodaj po IP adresi, Analogni kanali, Osveži slike kamera, Izvezi u Excel, Sinhronizuj podatke) sada su u jednom dugmetu „Servisni meni“ sa padajućim spiskom. Meni se zatvara posle izbora, klikom van njega i tasterom Esc. Stavke za koje korisnik nema pravo ne prikazuju se, kao i ranije; „Osveži slike kamera“ sada vide samo korisnici sa pravom izmene kamera. Servisni meni je zajednička komponenta (`public/js/core/service-menu.js` + `public/css/components/service-menu.css`) i može se koristiti i na drugim stranicama
 - Monitoring, dodela kamera u tabu: pored filtera po snimaču sada postoji i filter po lokaciji kamere (sa brojem kamera po lokaciji). Filteri se kombinuju: brojevi kod snimača važe za izabranu lokaciju, a „Popuni“ prazna polja puni kamerama iz trenutnog filtera (lokacija, snimač i pretraga). Pretraga kamera u Monitoringu sada nalazi kameru i po lokaciji
