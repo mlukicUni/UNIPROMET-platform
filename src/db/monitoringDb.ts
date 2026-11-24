@@ -10,7 +10,7 @@ import { initRolesSchema, findKnownUserByEmail } from './rolesDb';
  * ==========================================================================
  */
 
-export const MAX_CELLS = 25;
+export const MAX_CELLS = 64; // cela mreža 8×8
 export const MAX_GRID = 8;
 export const MAX_TABS = 30;
 export const MAX_TEMPLATES = 50;

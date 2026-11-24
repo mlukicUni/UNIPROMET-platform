@@ -27,6 +27,8 @@ import {
 import { listRoles, getRolePermissions, getRoleCameraAccess, getCameraGroupMembersMap, writeAudit } from '../db/rolesDb';
 import { cameraRights, hasAction, levelFor, lookupCameraById, EffectiveAccess } from '../services/accessService';
 import { getCachedOfflineCamerasInfoSync } from '../services/cameraScanner';
+import { getAllCameraStatuses } from '../services/cameraStatusService';
+import { getSnapshotInfoMap } from '../services/cameraSnapshotService';
 
 /**
  * Monitoring - lični tabovi sa gridovima kamera.
@@ -55,6 +57,8 @@ interface MonitoringCamera {
   recorder: string;
   recorderId: string;
   isOffline: boolean;
+  offlineSince: string | null;
+  snapshotAt: string | null;
   canPlayback: boolean;
 }
 
@@ -101,6 +105,16 @@ function liveCameras(access: EffectiveAccess): MonitoringCamera[] {
     // keš statusa još nije spreman
   }
 
+  // Poslednji poznat status (provera na zahtev ima prednost nad kešom zakazane provere)
+  let statusMap = new Map<string, { online: boolean; since: string }>();
+  let snapshotMap = new Map<string, { takenAt: string }>();
+  try {
+    statusMap = getAllCameraStatuses();
+    snapshotMap = getSnapshotInfoMap();
+  } catch {
+    // tabele još nisu napravljene
+  }
+
   const out: MonitoringCamera[] = [];
   for (const r of rows) {
     const rights = cameraRights(access, { id: r.id, recorderId: r.recorder_id });
@@ -113,7 +127,9 @@ function liveCameras(access: EffectiveAccess): MonitoringCamera[] {
       position: r.position || '',
       recorder: r.recorder || '',
       recorderId: r.recorder_id || '',
-      isOffline: offlineIps.has(ip),
+      isOffline: statusMap.has(ip) ? !statusMap.get(ip)!.online : offlineIps.has(ip),
+      offlineSince: statusMap.has(ip) && !statusMap.get(ip)!.online ? statusMap.get(ip)!.since : null,
+      snapshotAt: snapshotMap.get(r.id)?.takenAt || null,
       canPlayback: rights.playback
     });
   }

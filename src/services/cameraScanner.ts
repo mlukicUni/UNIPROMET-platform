@@ -4,6 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { getAllCameraInventory } from '../db/cameraInventoryDb';
 import { acquireScanLock } from './scanLockManager';
+import { httpAnswers, rtspAnswers, cameraAnswers } from './cameraProbe';
+import { recordScheduledResults } from './cameraStatusService';
 
 export interface CameraDevice {
   ip: string;
@@ -219,6 +221,13 @@ async function inspectCamera(
     return null;
   }
 
+  // Otvoren port nije dovoljan: uređaj mora i da odgovori (HTTP ili RTSP). Ako ne odgovori,
+  // kamera ide u ponovnu proveru u getOfflineCamerasFromInventory (sa još jednim pokušajem).
+  const answers = (port80.open && await httpAnswers(ip, 80, 1200)) || (port554.open && await rtspAnswers(ip, 554, 1200));
+  if (!answers) {
+    return null;
+  }
+
   const openPorts: number[] = [];
   if (port80.open) openPorts.push(80);
   if (port554.open) openPorts.push(554);
@@ -333,12 +342,8 @@ export async function getOfflineCamerasFromInventory(discoveredCameras?: CameraD
     for (let i = 0; i < list.length; i += batchSize) {
       const batch = list.slice(i, i + batchSize);
       await Promise.all(batch.map(async (c) => {
-        const p80 = await testPort(c.ip.trim(), 80, 500);
-        let isOpen = p80.open;
-        if (!isOpen) {
-          const p554 = await testPort(c.ip.trim(), 554, 500);
-          isOpen = p554.open;
-        }
+        // Kamera je živa samo ako odgovori na HTTP (80) ili RTSP (554); otvoren port nije dovoljan
+        const isOpen = await cameraAnswers(c.ip.trim());
 
         if (!isOpen) {
           offlineCameras.push({
@@ -352,7 +357,7 @@ export async function getOfflineCamerasFromInventory(discoveredCameras?: CameraD
             note: c.note || '',
             isOnline: false,
             statusLabel: 'Nedostupna na mreži',
-            reason: 'Port 80 (HTTP) i Port 554 (RTSP) zatvoreni - nema mrežnog odziva',
+            reason: 'Kamera ne odgovara ni na HTTP (port 80) ni na RTSP (port 554)',
             lastChecked: now
           });
         }
@@ -488,6 +493,16 @@ export async function scanCameras(force = false, deepScan = false, waitIfBusy = 
 
       // Cross-reference with database inventory to get verified offline cameras
       const offlineCheck = await getOfflineCamerasFromInventory(discovered);
+
+      // Rezultat ide i u tabelu statusa (Mreža → Kamere, "Offline od")
+      try {
+        const checkedIps = allDbCameras
+          .filter(c => c.ip && !c.isReserved && c.type !== 'Analogna')
+          .map(c => c.ip.trim());
+        recordScheduledResults(checkedIps, new Set(offlineCheck.offlineCameras.map(c => c.ip.trim())));
+      } catch (e) {
+        console.warn('[CameraScanner] Upis statusa kamera nije uspeo:', e);
+      }
 
       const scanResult: CameraScanResult = {
         cameras: discovered,

@@ -45,6 +45,8 @@ import {
 } from '../services/arubaService';
 import { addServerLog } from './system.routes';
 import { hasLevel, filterCamerasByAccess, liveCameraIdSet, accessibleRecorderIds } from '../services/accessService';
+import { getAllCameraStatuses } from '../services/cameraStatusService';
+import { getSnapshotInfoMap } from '../services/cameraSnapshotService';
 
 export const inventoryRouter = Router();
 
@@ -254,9 +256,15 @@ inventoryRouter.get('/cameras', async (req: Request, res: Response) => {
     // Žive pločice u listi samo za kamere za koje korisnik ima pravo "uživo"
     const liveIds = req.access ? liveCameraIdSet(req.access) : null;
 
+    // Poslednji poznat status iz tabele (provera na zahtev i zakazana provera); bez zapisa važi keš zakazane provere
+    const statusMap = getAllCameraStatuses();
+    const snapshotMap = getSnapshotInfoMap();
+
     const items = rawItems.map(c => {
       const ip = (c.ip || '').trim();
-      const isOffline = !c.isReserved && c.type === 'IP Kamera' && offlineIps.has(ip);
+      const st = statusMap.get(ip);
+      const checkable = !c.isReserved && (c.type === 'IP Kamera' || (c.type === 'Analogna' && !!parseAnalogIp(c.ip)));
+      const isOffline = checkable && (st ? !st.online : (c.type === 'IP Kamera' && offlineIps.has(ip)));
       const isOnline = !c.isReserved && c.type === 'IP Kamera' && !isOffline;
 
       let streamWsSubUrl: string | undefined;
@@ -270,9 +278,32 @@ inventoryRouter.get('/cameras', async (req: Request, res: Response) => {
         ...c,
         isOffline,
         isOnline,
+        offlineSince: isOffline && st ? st.since : null,
+        statusCheckedAt: st ? st.checkedAt : null,
+        snapshotAt: snapshotMap.get(c.id)?.takenAt || null,
         streamWsSubUrl
       };
     });
+
+    // Spisak offline kamera prati isti status kao i lista
+    if (statusMap.size > 0) {
+      const now = new Date().toISOString();
+      offlineCamerasList = items.filter(c => c.isOffline).map(c => ({
+        id: c.id,
+        ip: (c.ip || '').trim(),
+        name: c.name || c.position || `Kamera ${c.ip}`,
+        recorder: c.recorder || 'Nedodeljeno',
+        position: c.position || 'Pozicija nepoznata',
+        subnet: c.subnet || '',
+        type: c.type || 'IP Kamera',
+        note: c.note || '',
+        isOnline: false,
+        statusLabel: 'Nedostupna na mreži',
+        reason: c.type === 'Analogna' ? 'Snimač ovog kanala ne odgovara' : 'Kamera ne odgovara ni na HTTP (port 80) ni na RTSP (port 554)',
+        lastChecked: c.statusCheckedAt || now,
+        offlineSince: c.offlineSince
+      }));
+    }
 
     res.json({
       success: true,

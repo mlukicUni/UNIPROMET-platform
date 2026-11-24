@@ -60,7 +60,7 @@
       tabs: data.tabs || [],
       templates: data.templates || [],
       cameras: data.cameras || [],
-      limits: data.limits || { maxTabs: 30, maxCells: 25 }
+      limits: data.limits || { maxTabs: 30, maxCells: 64 }
     };
     Q.camById = new Map(Q.state.cameras.map(c => [c.id, c]));
     Q.allowedIds = new Set(Q.state.cameras.map(c => c.id));

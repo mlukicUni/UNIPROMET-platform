@@ -72,6 +72,8 @@
     $('mw-title').textContent = tab.name;
     updateSub();
     S.player.render(tab, S.camById);
+    // Dostupnost kamera u tabu: odmah i na 30 s; offline kamera prikazuje poslednju sliku
+    if (window.CameraStatus) window.CameraStatus.watch('monitor-window', () => S.player.cameraIds(), (map) => S.player.applyStatus(map));
     banner(tab.name);
   }
 

@@ -1,0 +1,115 @@
+/* ==========================================================================
+   OFFLINE KAMERA: poslednja sačuvana slika umesto snimka uživo
+   Koriste Monitoring, zaseban prozor, Video nadzor i Mreža → Kamere.
+   ========================================================================== */
+.cam-off-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  overflow: hidden;
+  background: #05070a;
+  pointer-events: none;
+}
+
+.cam-off-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.55) brightness(0.55);
+}
+
+.cam-off-empty {
+  width: 100%;
+  height: 100%;
+  background: repeating-linear-gradient(135deg, #0b0f17 0 12px, #0e131d 12px 24px);
+}
+
+.cam-off-label {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100% - 12px);
+  padding: 4px 9px;
+  border-radius: 6px;
+  background: rgba(127, 29, 29, 0.85);
+  border: 1px solid rgba(248, 113, 113, 0.6);
+  color: #fee2e2;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+}
+
+.cam-off-dot {
+  width: 7px;
+  height: 7px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 6px #ef4444;
+}
+
+/* Offline status u listi: "od 10:42" i pregled slike */
+.inv-off-since {
+  display: block;
+  margin-top: 3px;
+  font-size: 0.66rem;
+  color: #fca5a5;
+  white-space: nowrap;
+}
+
+.inv-snap-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: 4px;
+  vertical-align: middle;
+  border-radius: 5px;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+  cursor: zoom-in;
+}
+
+.inv-snap-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+.inv-snap-preview {
+  position: fixed;
+  z-index: 20000;
+  width: 320px;
+  aspect-ratio: 16 / 9;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(248, 113, 113, 0.5);
+  background: #05070a;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.inv-snap-preview .cam-off-layer {
+  position: absolute;
+}
+
+/* Monitoring: sloj je ispod naziva kamere i dugmadi polja (oni ostaju vidljivi) */
+.mon-cell .cam-off-layer {
+  z-index: 0;
+}
+
+.mon-cell .cam-off-label {
+  top: auto;
+  bottom: 8px;
+  transform: translateX(-50%);
+}

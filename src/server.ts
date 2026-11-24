@@ -350,6 +350,10 @@ async function startServer() {
     import('./services/unifiedSchedulerManager').then(({ initUnifiedScheduler }) => {
       initUnifiedScheduler();
     });
+    // Poslednja slika svake kamere: jednom mesečno
+    import('./services/cameraSnapshotService').then(({ initMonthlySnapshots }) => {
+      initMonthlySnapshots();
+    });
     // DMS Analiza podataka: zakazani mailovi koje korisnici sami podešavaju
     import('./services/dms/scheduledMailService').then(({ startScheduler }) => {
       startScheduler();

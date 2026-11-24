@@ -271,9 +271,12 @@
     }
     if (!S.visible || !tab) {
       S.player.render(null);
+      if (window.CameraStatus) window.CameraStatus.unwatch('monitoring');
       return;
     }
     S.player.render(tab, S.camById);
+    // Dostupnost kamera u tabu: proverava se odmah i na 30 s dok je tab na ekranu
+    if (window.CameraStatus) window.CameraStatus.watch('monitoring', () => S.player.cameraIds(), (map) => S.player.applyStatus(map));
   }
 
   /**
@@ -1471,10 +1474,11 @@
     return map;
   }
 
-  function fits(rect, exceptSet) {
+  /** occ: gotova mapa zauzetosti (tokom prevlačenja se računa jednom, ne na svaki pokret miša) */
+  function fits(rect, exceptSet, occ) {
     if (rect.x < 1 || rect.y < 1 || rect.w < 1 || rect.h < 1) return false;
     if (rect.x + rect.w - 1 > E.cols || rect.y + rect.h - 1 > E.rows) return false;
-    const occ = occupancy(exceptSet);
+    if (!occ) occ = occupancy(exceptSet);
     for (let x = rect.x; x < rect.x + rect.w; x++) for (let y = rect.y; y < rect.y + rect.h; y++) if (occ.has(`${x}:${y}`)) return false;
     return true;
   }
@@ -1541,8 +1545,9 @@
     });
   }
 
-  function unitAt(e) {
-    const r = $('mon-tpl-canvas').getBoundingClientRect();
+  /** rect: dimenzije platna izmerene na početku prevlačenja (merenje na svaki pokret miša usporava) */
+  function unitAt(e, rect) {
+    const r = rect || $('mon-tpl-canvas').getBoundingClientRect();
     const x = Math.min(E.cols, Math.max(1, Math.floor(((e.clientX - r.left) / r.width) * E.cols) + 1));
     const y = Math.min(E.rows, Math.max(1, Math.floor(((e.clientY - r.top) / r.height) * E.rows) + 1));
     return { x, y };
@@ -1555,12 +1560,13 @@
       if (e.button !== 0) return;
       const handle = e.target.closest('.mon-tpl-handle');
       const cellEl = e.target.closest('.mon-tpl-cell');
-      const u = unitAt(e);
+      const rect = canvas.getBoundingClientRect();
+      const u = unitAt(e, rect);
       canvas.setPointerCapture(e.pointerId);
 
       if (handle && cellEl) {
         const i = Number(cellEl.dataset.cell);
-        E.drag = { mode: 'resize', i, h: handle.dataset.h, orig: { ...E.cells[i] }, cand: null };
+        E.drag = { mode: 'resize', i, h: handle.dataset.h, orig: { ...E.cells[i] }, cand: null, rect, occ: occupancy(new Set([i])) };
         return;
       }
       if (cellEl) {
@@ -1576,26 +1582,40 @@
           E.selected = new Set([i]);
           renderEditor();
         }
-        E.drag = { mode: 'move', i, start: u, orig: { ...E.cells[i] }, cand: null };
+        E.drag = { mode: 'move', i, start: u, orig: { ...E.cells[i] }, cand: null, rect, occ: occupancy(new Set([i])) };
         return;
       }
       if (!e.shiftKey && E.selected.size) {
         E.selected = new Set();
         renderEditor();
       }
-      E.drag = { mode: 'draw', start: u, cand: null };
+      E.drag = { mode: 'draw', start: u, cand: null, rect, occ: occupancy() };
     });
 
+    // Pokret miša samo pamti poziciju; crta se najviše jednom po frejmu ekrana
     canvas.addEventListener('pointermove', (e) => {
       const d = E.drag;
       if (!d) return;
-      const u = unitAt(e);
+      d.point = { clientX: e.clientX, clientY: e.clientY };
+      if (d.raf) return;
+      d.raf = requestAnimationFrame(() => {
+        d.raf = 0;
+        if (E.drag === d) applyDrag(d);
+      });
+    });
+
+    /** Primena tekuće pozicije prevlačenja; ništa se ne radi dok miš ne pređe u drugu ćeliju mreže */
+    function applyDrag(d) {
+      if (!d.point) return;
+      const u = unitAt(d.point, d.rect);
+      const key = `${u.x}:${u.y}`;
+      if (key === d.lastKey) return;
+      d.lastKey = key;
       let cand;
       if (d.mode === 'draw') {
         cand = { x: Math.min(d.start.x, u.x), y: Math.min(d.start.y, u.y), w: Math.abs(u.x - d.start.x) + 1, h: Math.abs(u.y - d.start.y) + 1 };
-        const ok = fits(cand) && E.cells.length < C.MAX_CELLS;
-        const draft = $('mon-tpl-draft');
-        draft.style.display = 'block';
+        const ok = fits(cand, null, d.occ) && E.cells.length < C.MAX_CELLS;
+        const draft = d.el || (d.el = $('mon-tpl-draft'));
         draft.setAttribute('style', `${rectStyle(cand)} display: block;`);
         draft.classList.toggle('is-invalid', !ok);
         d.cand = ok ? cand : null;
@@ -1617,22 +1637,29 @@
         if (d.h.includes('s')) y2 = Math.max(u.y, y1);
         cand = { x: x1, y: y1, w: x2 - x1 + 1, h: y2 - y1 + 1 };
       }
-      const ok = fits(cand, new Set([d.i]));
-      const el = canvas.querySelector(`.mon-tpl-cell[data-cell="${d.i}"]`);
+      const ok = fits(cand, null, d.occ);
+      const el = d.el || (d.el = canvas.querySelector(`.mon-tpl-cell[data-cell="${d.i}"]`));
       if (el) {
-        el.style.left = '';
         el.setAttribute('style', rectStyle(cand));
         el.classList.toggle('is-invalid', !ok);
-        const small = el.querySelector('small');
+        const small = d.small || (d.small = el.querySelector('small'));
         if (small) small.textContent = `${cand.w}×${cand.h}`;
       }
       d.cand = ok ? cand : null;
-    });
+    }
 
     const endDrag = () => {
       const d = E.drag;
-      E.drag = null;
       if (!d) return;
+      // Poslednji pokret koji još nije nacrtan uračunava se pre otpuštanja
+      if (d.raf) {
+        cancelAnimationFrame(d.raf);
+        d.raf = 0;
+        applyDrag(d);
+      }
+      E.drag = null;
+      // Običan klik bez pomeranja: izbor je već nacrtan na pritisak, nema ponovnog crtanja
+      if (!d.lastKey) return;
       if (d.mode === 'draw') {
         if (d.cand) {
           pushHistory();
@@ -1951,6 +1978,7 @@
     S.visible = false;
     closeContextMenu();
     if (S.player) S.player.unmount();
+    if (window.CameraStatus) window.CameraStatus.unwatch('monitoring');
     stopRotation(false);
     if (C.isFullscreen() && document.fullscreenElement === $('mon-stage')) C.toggleFullscreen($('mon-stage'));
   }

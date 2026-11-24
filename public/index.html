@@ -22,6 +22,9 @@
   <script src="/js/core/search-delay.js"></script>
   <!-- Zajedničko pravilo pretrage: reči odvojeno, bez razlike u kvačicama (UniSearch.match) -->
   <script src="/js/core/search-match.js"></script>
+  <!-- Jedinstven loader stranice (prati zahteve ka /api/; mora rano da bi obuhvatio sve) -->
+  <script src="/js/core/page-loader.js"></script>
+  <script src="/js/core/camera-status.js?v=20261124"></script>
 
   <!-- Main Stylesheet -->
   <link rel="stylesheet" href="/css/style.css">
@@ -30,7 +33,7 @@
   <link rel="stylesheet" href="/css/components/dictionaries.css">
   <link rel="stylesheet" href="/css/components/access.css">
   <link rel="stylesheet" href="/css/components/access-roles.css">
-  <link rel="stylesheet" href="/css/components/monitoring.css">
+  <link rel="stylesheet" href="/css/components/monitoring.css?v=20261123_tpl">
   <link rel="stylesheet" href="/css/components/ai-agent.css">
   <link rel="stylesheet" href="/css/components/noleko-docs.css">
   <link rel="stylesheet" href="/css/components/dms.css?v=20261105">
@@ -40,9 +43,19 @@
   <link rel="stylesheet" href="/css/components/dms-sektori.css?v=20261105">
   <link rel="stylesheet" href="/css/components/dms-oscilacije.css?v=20261105">
   <link rel="stylesheet" href="/css/components/dms-perf.css?v=20261106">
-  <link rel="stylesheet" href="/css/components/dms-loader.css?v=20261106">
+  <link rel="stylesheet" href="/css/components/page-loader.css?v=20261124">
+  <link rel="stylesheet" href="/css/components/camera-status.css?v=20261124">
 </head>
 <body class="unipromet-theme">
+
+  <!-- Loader pokretanja platforme (skida ga UniPageLoader.hideBoot posle učitavanja prava i prve stranice) -->
+  <div class="app-boot-loader" id="app-boot-loader" role="status" aria-live="polite">
+    <div class="page-loader-box">
+      <div class="page-loader-spinner"></div>
+      <div class="page-loader-text">Učitavanje platforme…</div>
+      <div class="page-loader-bar is-indeterminate"><span></span></div>
+    </div>
+  </div>
   
   <!-- Background Canvas for Glowing Dot Matrix ('Na svetloj strani puta') -->
   <canvas id="ambient-particles" class="ambient-canvas"></canvas>
@@ -1183,6 +1196,10 @@
                 <button class="btn-dark-outline-sm" id="btn-export-cameras-excel" title="Izvezi trenutni prikaz liste kamera (sa filterima i pretragom) u Excel">
                   <i data-lucide="file-spreadsheet"></i>
                   <span>Izvezi u Excel</span>
+                </button>
+                <button class="btn-dark-outline-sm" id="btn-capture-camera-snapshots" title="Uzmi novu sliku svih kamera (inače se slike uzimaju automatski jednom mesečno). Offline kamera prikazuje poslednju sliku umesto snimka uživo.">
+                  <i data-lucide="image"></i>
+                  <span id="text-capture-camera-snapshots">Osveži slike kamera</span>
                 </button>
                 <button class="btn-dark-outline-sm" id="btn-analog-channels" title="Pronađi analogne kamere priključene na snimače i dodaj ih u evidenciju (živi prikaz ide preko snimača)">
                   <i data-lucide="tv"></i>
@@ -8455,9 +8472,9 @@
   <script src="/js/accessRoles.js"></script>
 
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
-  <script src="/js/monitoringCore.js?v=20261120_dnd"></script>
-  <script src="/js/monitoring.js?v=20261120_dnd"></script>
-  <script src="/js/monitoringQuickAdd.js"></script>
+  <script src="/js/monitoringCore.js?v=20261124_status"></script>
+  <script src="/js/monitoring.js?v=20261124_status"></script>
+  <script src="/js/monitoringQuickAdd.js?v=20261123_tpl"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>
   <script src="/js/nolekoPlan.js"></script>
@@ -8477,7 +8494,7 @@
   <script src="/js/dms/signatures.js?v=20261105"></script>
   <script src="/js/dms/table-fullscreen.js?v=20261105"></script>
   <script src="/js/dms/paging.js?v=20261106"></script>
-  <script src="/js/app.js?v=20261123_locpills"></script>
+  <script src="/js/app.js?v=20261124_status"></script>
 </body>
 
 </html>
