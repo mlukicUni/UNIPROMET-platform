@@ -56,6 +56,7 @@ interface MonitoringCamera {
   position: string;
   recorder: string;
   recorderId: string;
+  location: string;
   isOffline: boolean;
   offlineSince: string | null;
   snapshotAt: string | null;
@@ -91,12 +92,12 @@ function sharedTabsFor(req: Request, key: string): MonitoringTab[] {
 /** Kamere koje korisnik sme da gleda uživo (IP kamere i analogni kanali na snimačima, koje nisu rezervisane) */
 function liveCameras(access: EffectiveAccess): MonitoringCamera[] {
   const rows = getDb()
-    .prepare(`SELECT id, ip, name, position, recorder, recorder_id FROM cameras
+    .prepare(`SELECT id, ip, name, position, recorder, recorder_id, location FROM cameras
               WHERE COALESCE(is_reserved, 0) = 0
                 AND (type = 'IP Kamera' OR (type = 'Analogna' AND ip LIKE '%~ch%'))
                 AND TRIM(COALESCE(ip, '')) <> ''
               ORDER BY recorder, position, name`)
-    .all() as { id: string; ip: string; name: string; position: string | null; recorder: string | null; recorder_id: string | null }[];
+    .all() as { id: string; ip: string; name: string; position: string | null; recorder: string | null; recorder_id: string | null; location: string | null }[];
 
   let offlineIps = new Set<string>();
   try {
@@ -127,6 +128,7 @@ function liveCameras(access: EffectiveAccess): MonitoringCamera[] {
       position: r.position || '',
       recorder: r.recorder || '',
       recorderId: r.recorder_id || '',
+      location: r.location || '',
       isOffline: statusMap.has(ip) ? !statusMap.get(ip)!.online : offlineIps.has(ip),
       offlineSince: statusMap.has(ip) && !statusMap.get(ip)!.online ? statusMap.get(ip)!.since : null,
       snapshotAt: snapshotMap.get(r.id)?.takenAt || null,
