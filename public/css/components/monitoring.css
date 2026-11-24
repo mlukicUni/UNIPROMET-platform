@@ -23,6 +23,15 @@
   min-height: 50px;
 }
 
+/* Tabovi: bez trake za skrolovanje; kad ne staju, pojavljuju se strelice (JS dodaje .has-overflow) */
+.mon-tabs-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  flex: 0 1 auto;
+}
+
 .mon-tabs {
   display: flex;
   align-items: flex-end;
@@ -30,7 +39,146 @@
   min-width: 0;
   flex: 0 1 auto;
   overflow-x: auto;
-  scrollbar-width: thin;
+  scrollbar-width: none;
+  scroll-behavior: smooth;
+}
+
+.mon-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mon-tabs-arrow {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid var(--border-subtle);
+  border-bottom: none;
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  background: var(--bg-pitch);
+  color: var(--yellow-primary);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition-fast);
+}
+
+.mon-tabs-arrow.is-left { margin-right: 4px; }
+.mon-tabs-arrow.is-right { margin-left: 4px; }
+
+.mon-tabs-arrow svg {
+  width: 16px;
+  height: 16px;
+}
+
+.mon-tabs-arrow:hover:not(:disabled) {
+  background: var(--yellow-subtle-bg);
+  border-color: var(--yellow-primary);
+}
+
+.mon-tabs-arrow:disabled {
+  color: var(--text-dim);
+  opacity: 0.45;
+  cursor: default;
+}
+
+.mon-tabs-wrap.has-overflow .mon-tabs-arrow {
+  display: inline-flex;
+}
+
+/* Dugme „Svi tabovi“: spisak svih tabova za brz izbor (vidi se kad tabovi ne staju) */
+.mon-tab-list-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  margin-bottom: 3px;
+  padding: 0 10px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition-fast);
+}
+
+.mon-tab-list-btn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--yellow-primary);
+}
+
+.mon-tab-list-btn:hover,
+.mon-tab-list-btn.is-open {
+  border-color: var(--yellow-primary);
+  background: var(--yellow-subtle-bg);
+}
+
+/* Spisak tabova u meniju */
+.mon-ctx-menu.is-tablist {
+  min-width: 280px;
+  max-width: min(420px, calc(100vw - 16px));
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.mon-tablist-search {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 6px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-pitch);
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.mon-tablist-search:focus {
+  border-color: var(--yellow-primary);
+}
+
+.mon-tablist-title {
+  padding: 4px 10px 2px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mon-ctx-item.is-current {
+  background: var(--yellow-subtle-bg);
+  color: var(--yellow-bright);
+}
+
+.mon-ctx-item .mon-tablist-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mon-ctx-item .mon-tablist-count {
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.mon-tablist-empty {
+  padding: 10px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: center;
 }
 
 .mon-tab {
