@@ -33,6 +33,12 @@
     'access.denied': 'Odbijen pristup'
   };
 
+  /** Nazivi: u SERVER → Korisnici i role to su „role“, a u VIDEO NADZOR → Dozvole za pristup „dozvole“ */
+  const TERM = {
+    standard: { n: 'rola', g: 'role', a: 'rolu', d: 'roli', pg: 'rola', N: 'Rola', G: 'Role' },
+    camera: { n: 'dozvola', g: 'dozvole', a: 'dozvolu', d: 'dozvoli', pg: 'dozvola', N: 'Dozvola', G: 'Dozvole' }
+  };
+
   const S = {
     initialized: false,
     loading: false,
@@ -142,6 +148,7 @@
   /** Član grupe DMS-Admins: radi samo sa DMS rolama i dozvolama iz sekcije DMS (server proverava isto) */
   const dmsOnly = () => S.mode === 'standard' && !!(window.UniAccess && window.UniAccess.rolesScope === 'dms');
   const camMode = () => S.mode === 'camera';
+  const T = () => TERM[S.mode];
 
   /** DMS administratoru sakriva kamere, grupe kamera, proveru korisnika i evidenciju */
   function applyScope() {
@@ -234,7 +241,7 @@
     return await new Promise((resolve) => {
       askConfirm({
         title: 'Nesačuvane izmene',
-        text: 'Imate nesačuvane izmene u roli. Da li želite da ih odbacite?',
+        text: `Imate nesačuvane izmene u ${T().d}. Da li želite da ih odbacite?`,
         okLabel: 'Odbaci izmene',
         okIcon: 'x'
       });
@@ -284,14 +291,14 @@
     if (!tbody) return;
     const items = S.roles.filter(r => UniSearch.match(S.rolesSearch, r.name, r.description));
     const limited = dmsOnly();
-    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : camMode() ? 'kamernih rola' : 'rola'}`;
+    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : T().pg}`;
 
     if (items.length === 0) {
       const empty = limited && S.roles.length === 0
         ? 'Nema DMS rola. Napravite rolu dugmetom „Nova rola“ i dajte joj dozvole iz sekcije DMS Analiza podataka.'
         : camMode() && S.roles.length === 0
-          ? 'Nema kamernih rola. Napravite rolu dugmetom „Nova rola“, odaberite kamere koje vidi i dodelite je korisnicima ili AD grupama.'
-          : 'Nema rola za dati pojam.';
+          ? 'Nema dozvola. Napravite dozvolu dugmetom „Nova dozvola“, odaberite kamere koje otvara i dodelite je korisnicima ili AD grupama.'
+          : `Nema ${T().pg} za dati pojam.`;
       tbody.innerHTML = `<tr><td colspan="6"><div class="ar-tree-empty">${empty}</div></td></tr>`;
       return;
     }
@@ -318,9 +325,9 @@
           <td style="text-align:center;"><span class="ar-num-badge ${r.assignmentCount ? 'is-on' : ''}">${r.assignmentCount}</span></td>
           <td style="text-align:center;">
             <div class="inv-actions-cell" style="justify-content:center;">
-              <button class="btn-inv-action btn-edit" data-open-role="${esc(r.id)}" title="Uredi rolu"><i data-lucide="pencil"></i></button>
-              <button class="btn-inv-action" data-copy-role="${esc(r.id)}" title="Napravi kopiju role"><i data-lucide="copy"></i></button>
-              ${r.isSystem ? '' : `<button class="btn-inv-action btn-danger btn-delete" data-delete-role="${esc(r.id)}" title="Obriši rolu"><i data-lucide="trash-2"></i></button>`}
+              <button class="btn-inv-action btn-edit" data-open-role="${esc(r.id)}" title="Uredi ${T().a}"><i data-lucide="pencil"></i></button>
+              <button class="btn-inv-action" data-copy-role="${esc(r.id)}" title="Napravi kopiju ${T().g}"><i data-lucide="copy"></i></button>
+              ${r.isSystem ? '' : `<button class="btn-inv-action btn-danger btn-delete" data-delete-role="${esc(r.id)}" title="Obriši ${T().a}"><i data-lucide="trash-2"></i></button>`}
             </div>
           </td>
         </tr>`;
@@ -332,9 +339,9 @@
     const sel = $('ar-role-copy');
     const head = $('form-ar-role').querySelector('.modal-title');
     const sub = $('form-ar-role').querySelector('.modal-subtitle');
-    if (head) head.textContent = camMode() ? 'Nova kamerna rola' : 'Nova rola';
+    if (head) head.textContent = camMode() ? 'Nova dozvola' : 'Nova rola';
     if (sub) sub.textContent = camMode() ? 'Naziv i opis; kamere i dodele se podešavaju posle snimanja' : 'Naziv i opis; dozvole se podešavaju posle snimanja';
-    sel.innerHTML = `<option value="">— Prazna rola (${camMode() ? 'bez kamera' : 'bez dozvola'}) —</option>` +
+    sel.innerHTML = `<option value="">— Prazna ${T().n} (${camMode() ? 'bez kamera' : 'bez dozvola'}) —</option>` +
       S.roles.filter(r => !r.isSuperAdmin).map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
     sel.value = copyFromId && S.roles.some(r => r.id === copyFromId && !r.isSuperAdmin) ? copyFromId : '';
     const src = S.roles.find(r => r.id === copyFromId);
@@ -352,7 +359,7 @@
       const copyFrom = $('ar-role-copy').value || undefined;
       const res = await api(`${API}/roles`, 'POST', { name, description: $('ar-role-desc').value.trim(), copyFrom, kind: S.mode });
       closeModalEl('modal-ar-role');
-      notify(`Rola „${res.role.name}“ je napravljena.`, 'success');
+      notify(`${T().N} „${res.role.name}“ je napravljena.`, 'success');
       await refreshRoles();
       await openEditor(res.role.id);
     } catch (err) {
@@ -364,14 +371,14 @@
     const role = S.roles.find(r => r.id === id);
     if (!role) return;
     const ok = await askConfirm({
-      title: 'Brisanje role',
-      text: `Rola „${role.name}“ i sve njene dodele i pristupi kamerama biće obrisani.`,
-      okLabel: 'Obriši rolu'
+      title: `Brisanje ${T().g}`,
+      text: `${T().N} „${role.name}“ i sve njene dodele i pristupi kamerama biće obrisani.`,
+      okLabel: `Obriši ${T().a}`
     });
     if (!ok) return;
     try {
       await api(`${API}/roles/${encodeURIComponent(id)}`, 'DELETE');
-      notify('Rola je obrisana.', 'success');
+      notify(`${T().N} je obrisana.`, 'success');
       if (S.editor.role && S.editor.role.id === id) closeEditor(true);
       await refreshRoles();
     } catch (err) {
@@ -751,7 +758,7 @@
     $('ar-badge-assign').textContent = E.assignments.length;
 
     if (E.assignments.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5"><div class="ar-tree-empty">Rola još nije dodeljena nikome. Dodajte korisnika ili AD grupu.${E.role.isSuperAdmin ? '<br><span class="text-dim">Napomena: članovi grupe ITadmin su Super admin po ugrađenom pravilu.</span>' : ''}</div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5"><div class="ar-tree-empty">${T().N} još nije dodeljena nikome. Dodajte korisnika ili AD grupu.${E.role.isSuperAdmin ? '<br><span class="text-dim">Napomena: članovi grupe ITadmin su Super admin po ugrađenom pravilu.</span>' : ''}</div></td></tr>`;
       return;
     }
 
@@ -765,7 +772,7 @@
           <td style="font-size:0.76rem; color:#94a3b8;">${esc(fmtTime(a.createdAt))}<br>${esc(a.createdBy || '')}</td>
           <td style="text-align:center;">
             <div class="inv-actions-cell" style="justify-content:center;">
-              <button class="btn-inv-action btn-danger btn-delete" data-remove-assign="${a.id}" title="Oduzmi rolu"><i data-lucide="user-minus"></i></button>
+              <button class="btn-inv-action btn-danger btn-delete" data-remove-assign="${a.id}" title="Oduzmi ${T().a}"><i data-lucide="user-minus"></i></button>
             </div>
           </td>
         </tr>`;
@@ -778,9 +785,9 @@
     const a = E.assignments.find(x => x.id === aid);
     if (!a) return;
     const ok = await askConfirm({
-      title: 'Oduzimanje role',
-      text: `Rola „${E.role.name}“ biće oduzeta: ${a.displayName || a.principalId}.`,
-      okLabel: 'Oduzmi rolu',
+      title: `Oduzimanje ${T().g}`,
+      text: `${T().N} „${E.role.name}“ biće oduzeta: ${a.displayName || a.principalId}.`,
+      okLabel: `Oduzmi ${T().a}`,
       okIcon: 'user-minus'
     });
     if (!ok) return;
@@ -801,7 +808,7 @@
     $('ar-assign-title').textContent = isUser ? 'Dodaj korisnika' : 'Dodaj AD grupu';
     $('ar-assign-sub').textContent = isUser
       ? 'Pretražite Active Directory ili izaberite među prijavljenima'
-      : 'Svi članovi izabrane AD grupe dobijaju ovu rolu';
+      : `Svi članovi izabrane AD grupe dobijaju ovu ${T().a}`;
     $('ar-assign-known-title').textContent = isUser ? 'Prijavljeni korisnici' : 'Grupe viđene pri prijavama';
     $('ar-assign-manual-wrap').style.display = isUser ? 'flex' : 'none';
     $('ar-assign-q').value = '';
@@ -1175,6 +1182,18 @@
   /* ==========================================================================
      JAVNI INTERFEJS
      ========================================================================== */
+  /** Tekstovi sa data-t-cam / data-tp-cam / data-ttl-cam menjaju se u kamernom prikazu (dozvola umesto rola) */
+  function applyTerms(cam) {
+    const scope = [$('ar-panel-box'), $('modal-ar-role')].filter(Boolean);
+    const each = (attr, std, apply) => scope.forEach(root => root.querySelectorAll(`[${attr}]`).forEach(el => {
+      if (el.getAttribute(std) === null) el.setAttribute(std, apply.read(el));
+      apply.write(el, cam ? el.getAttribute(attr) : el.getAttribute(std));
+    }));
+    each('data-t-cam', 'data-t-std', { read: el => el.textContent, write: (el, v) => { el.textContent = v; } });
+    each('data-tp-cam', 'data-tp-std', { read: el => el.getAttribute('placeholder') || '', write: (el, v) => el.setAttribute('placeholder', v) });
+    each('data-ttl-cam', 'data-ttl-std', { read: el => el.getAttribute('title') || '', write: (el, v) => el.setAttribute('title', v) });
+  }
+
   /** Ista stranica služi za dva taba: dobija jedan od dva domaćina i prebacuje se u odgovarajući prikaz */
   function setMode(mode) {
     const box = $('ar-panel-box');
@@ -1198,11 +1217,12 @@
     }
     box.setAttribute('data-ar-mode', mode);
     const cam = mode === 'camera';
+    applyTerms(cam);
     const title = $('ar-title');
     const desc = $('ar-desc');
     if (title) title.textContent = cam ? 'Dozvole za pristup' : 'Korisnici i role';
     if (desc) desc.textContent = cam
-      ? 'Kamerne role: koje kamere (uživo i snimci) vide korisnici i AD grupe'
+      ? 'Kamerne dozvole: koje kamere (uživo i snimci) vide korisnici i AD grupe'
       : 'Dozvole za sekcije i stranice platforme po rolama, korisnicima i AD grupama';
     document.querySelectorAll('#ar-main-pills [data-ar-tab]').forEach(b => b.classList.toggle('active', b.getAttribute('data-ar-tab') === S.mainTab));
     ['roles', 'ov-roles', 'ov-users', 'ov-cams', 'check', 'audit'].forEach(t => {

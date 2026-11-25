@@ -107,12 +107,13 @@ export function initRolesSchema(): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS roles (
       id TEXT PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL,
       description TEXT DEFAULT '',
       is_super_admin INTEGER DEFAULT 0,
       is_system INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
-      updated_at TEXT
+      updated_at TEXT,
+      kind TEXT NOT NULL DEFAULT 'standard'
     );
 
     CREATE TABLE IF NOT EXISTS role_permissions (
@@ -190,6 +191,7 @@ export function initRolesSchema(): void {
 
   schemaReady = true;
   ensureRoleKind();
+  getDb().exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_roles_name_kind ON roles(name COLLATE NOCASE, kind)');
   migrateCameraGroupRules();
   seedDefaultRoles();
   migrateDmsRoleAction();
@@ -204,33 +206,61 @@ export function initRolesSchema(): void {
 function ensureRoleKind(): void {
   const db = getDb();
   const cols = db.prepare('PRAGMA table_info(roles)').all() as { name: string }[];
-  if (cols.some(c => c.name === 'kind')) return;
+  const hadKind = cols.some(c => c.name === 'kind');
+  // Stara šema ima UNIQUE na samom nazivu: tada se rola i kamerna dozvola ne bi mogle zvati isto
+  const oldUniqueName = (db.prepare('PRAGMA index_list(roles)').all() as { unique: number; origin: string }[])
+    .some(ix => ix.unique === 1 && ix.origin === 'u');
+  if (hadKind && !oldUniqueName) return;
 
   db.exec('CREATE TABLE IF NOT EXISTS role_split_map (standard_id TEXT PRIMARY KEY, camera_id TEXT NOT NULL, shares_done INTEGER DEFAULT 0)');
-  const tx = db.transaction(() => {
-    db.exec("ALTER TABLE roles ADD COLUMN kind TEXT NOT NULL DEFAULT 'standard'");
-    const roles = db.prepare('SELECT * FROM roles WHERE is_super_admin = 0').all() as RoleDbRow[];
-    const now = new Date().toISOString();
-    for (const r of roles) {
-      const rules = db.prepare('SELECT COUNT(*) AS c FROM role_camera_access WHERE role_id = ?').get(r.id) as { c: number };
-      if (rules.c === 0) continue;
+  // Tabela se pravi ponovo (SQLite ne može da ukloni UNIQUE); strani ključevi se isključuju da brisanje stare tabele ne obriše zavisne redove
+  const fkWas = db.pragma('foreign_keys', { simple: true });
+  db.pragma('foreign_keys = OFF');
+  try {
+    db.transaction(() => {
+      db.exec(`
+        CREATE TABLE roles_new (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT DEFAULT '',
+          is_super_admin INTEGER DEFAULT 0,
+          is_system INTEGER DEFAULT 0,
+          created_at TEXT NOT NULL,
+          updated_at TEXT,
+          kind TEXT NOT NULL DEFAULT 'standard'
+        );
+        INSERT INTO roles_new (id, name, description, is_super_admin, is_system, created_at, updated_at, kind)
+          SELECT id, name, description, is_super_admin, is_system, created_at, updated_at, ${hadKind ? "COALESCE(kind, 'standard')" : "'standard'"} FROM roles;
+        DROP TABLE roles;
+        ALTER TABLE roles_new RENAME TO roles;
+      `);
 
-      let name = `${r.name} (kamere)`;
-      for (let i = 2; db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE').get(name); i++) name = `${r.name} (kamere ${i})`;
-      const camId = newId('role');
-      db.prepare(
-        "INSERT INTO roles (id, name, description, is_super_admin, is_system, created_at, updated_at, kind) VALUES (?, ?, ?, 0, 0, ?, ?, 'camera')"
-      ).run(camId, name, r.description || '', now, now);
-      db.prepare('UPDATE role_camera_access SET role_id = ? WHERE role_id = ?').run(camId, r.id);
-      db.prepare(`
-        INSERT INTO role_assignments (role_id, principal_type, principal_id, display_name, email, created_at, created_by)
-        SELECT ?, principal_type, principal_id, display_name, email, created_at, 'migracija' FROM role_assignments WHERE role_id = ?
-      `).run(camId, r.id);
-      db.prepare('INSERT OR REPLACE INTO role_split_map (standard_id, camera_id, shares_done) VALUES (?, ?, 0)').run(r.id, camId);
-      console.log(`[Roles] Rola „${r.name}“ podeljena: kamerna rola „${name}“`);
-    }
-  });
-  tx();
+      if (!hadKind) {
+        // Svaka rola koja ima pravila za kamere deli se na rolu (dozvole za sekcije) i kamernu dozvolu istog naziva
+        const roles = db.prepare('SELECT * FROM roles WHERE is_super_admin = 0').all() as RoleDbRow[];
+        const now = new Date().toISOString();
+        for (const r of roles) {
+          const rules = db.prepare('SELECT COUNT(*) AS c FROM role_camera_access WHERE role_id = ?').get(r.id) as { c: number };
+          if (rules.c === 0) continue;
+          const camId = newId('role');
+          db.prepare(
+            "INSERT INTO roles (id, name, description, is_super_admin, is_system, created_at, updated_at, kind) VALUES (?, ?, ?, 0, 0, ?, ?, 'camera')"
+          ).run(camId, r.name, r.description || '', now, now);
+          db.prepare('UPDATE role_camera_access SET role_id = ? WHERE role_id = ?').run(camId, r.id);
+          db.prepare(`
+            INSERT INTO role_assignments (role_id, principal_type, principal_id, display_name, email, created_at, created_by)
+            SELECT ?, principal_type, principal_id, display_name, email, created_at, 'migracija' FROM role_assignments WHERE role_id = ?
+          `).run(camId, r.id);
+          db.prepare('INSERT OR REPLACE INTO role_split_map (standard_id, camera_id, shares_done) VALUES (?, ?, 0)').run(r.id, camId);
+          console.log(`[Roles] Rola „${r.name}“ podeljena: rola i kamerna dozvola istog naziva`);
+        }
+      }
+    })();
+  } finally {
+    db.pragma(`foreign_keys = ${fkWas ? 'ON' : 'OFF'}`);
+  }
+  const broken = db.pragma('foreign_key_check') as unknown[];
+  if (broken.length) console.warn(`[Roles] Upozorenje: ${broken.length} zapisa sa neispravnim stranim ključem posle obnove tabele rola`);
   bumpAccessVersion();
 }
 
@@ -314,7 +344,7 @@ function seedDefaultRoles(): void {
 
     insertRole.run('video-nadzor-pregled', 'Video nadzor – pregled', 'Pregled stranica sekcije VIDEO NADZOR.', 0, 0, now, now);
     insertPerm.run('video-nadzor-pregled', 'video', 'view', '[]');
-    insertRole.run('kamere-sve', 'Sve kamere – uživo i snimci', 'Kamerna rola: sve kamere uživo i snimci.', 0, 0, now, now);
+    insertRole.run('kamere-sve', 'Sve kamere – uživo i snimci', 'Kamerna dozvola: sve kamere uživo i snimci.', 0, 0, now, now);
     db.prepare("UPDATE roles SET kind = 'camera' WHERE id = 'kamere-sve'").run();
     insertCam.run('kamere-sve', 'all', '', 1, 1);
 
@@ -384,10 +414,10 @@ export function getRole(id: string): RoleRow | undefined {
 export function createRole(name: string, description: string, kind: RoleKind = 'standard'): RoleRow {
   initRolesSchema();
   const cleanName = (name || '').trim();
-  if (!cleanName) throw new Error('Naziv role je obavezan');
+  if (!cleanName) throw new Error(kind === 'camera' ? 'Naziv dozvole je obavezan' : 'Naziv role je obavezan');
   const db = getDb();
-  const dup = db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE').get(cleanName);
-  if (dup) throw new Error('Rola sa tim nazivom već postoji');
+  const dup = db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE AND kind = ?').get(cleanName, kind === 'camera' ? 'camera' : 'standard');
+  if (dup) throw new Error(kind === 'camera' ? 'Dozvola sa tim nazivom već postoji' : 'Rola sa tim nazivom već postoji');
   const id = newId('role');
   const now = new Date().toISOString();
   db.prepare(
@@ -404,8 +434,8 @@ export function updateRole(id: string, name: string, description: string): RoleR
   const cleanName = (name || '').trim();
   if (!cleanName) throw new Error('Naziv role je obavezan');
   const db = getDb();
-  const dup = db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE AND id <> ?').get(cleanName, id);
-  if (dup) throw new Error('Rola sa tim nazivom već postoji');
+  const dup = db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE AND id <> ? AND kind = ?').get(cleanName, id, existing.kind);
+  if (dup) throw new Error(existing.kind === 'camera' ? 'Dozvola sa tim nazivom već postoji' : 'Rola sa tim nazivom već postoji');
   db.prepare('UPDATE roles SET name = ?, description = ?, updated_at = ? WHERE id = ?')
     .run(existing.isSystem ? existing.name : cleanName, (description || '').trim(), new Date().toISOString(), id);
   bumpAccessVersion();
@@ -452,7 +482,7 @@ export function setRolePermissions(roleId: string, perms: RolePermission[]): voi
   const role = getRole(roleId);
   if (!role) throw new Error('Rola nije pronađena');
   if (role.isSuperAdmin) throw new Error('Dozvole Super admin role se ne menjaju (ima sve dozvole)');
-  if (role.kind === 'camera') throw new Error('Kamerna rola nema dozvole za sekcije; ona određuje samo pristup kamerama');
+  if (role.kind === 'camera') throw new Error('Kamerna dozvola nema dozvole za sekcije; ona određuje samo pristup kamerama');
 
   const clean: RolePermission[] = [];
   const seen = new Set<string>();
@@ -600,7 +630,7 @@ export function setRoleCameraAccess(roleId: string, rules: RoleCameraAccess[]): 
   const role = getRole(roleId);
   if (!role) throw new Error('Rola nije pronađena');
   if (role.isSuperAdmin) throw new Error('Super admin ima pristup svim kamerama');
-  if (role.kind !== 'camera') throw new Error('Pristup kamerama se podešava samo kamernim rolama (VIDEO NADZOR → Dozvole za pristup)');
+  if (role.kind !== 'camera') throw new Error('Pristup kamerama se podešava samo u kamernim dozvolama (VIDEO NADZOR → Dozvole za pristup)');
 
   const merged = new Map<string, RoleCameraAccess>();
   for (const r of rules || []) {

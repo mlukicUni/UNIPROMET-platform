@@ -283,7 +283,7 @@
     const shareBtn = $('mon-btn-share');
     shareBtn.style.display = S.canShare ? '' : 'none';
     shareBtn.disabled = !tab || shared;
-    shareBtn.title = shared ? 'Tuđi deljeni tab ne možete dalje deliti' : 'Podeli tab sa rolama';
+    shareBtn.title = shared ? 'Tuđi deljeni tab ne možete dalje deliti' : 'Podeli tab sa dozvolama za kamere';
     shareBtn.classList.toggle('is-on', !!(tab && !shared && tab.sharedWith && tab.sharedWith.length));
 
     const badge = $('mon-shared-badge');
@@ -599,7 +599,7 @@
         { act: 'rename', icon: 'text-cursor-input', label: 'Preimenuj' },
         { act: 'edit', icon: 'pencil', label: 'Izmeni šablon i kamere' },
         { act: 'duplicate', icon: 'copy', label: 'Dupliraj' },
-        ...(S.canShare ? [{ act: 'share', icon: 'share-2', label: 'Podeli sa rolama…' }] : []),
+        ...(S.canShare ? [{ act: 'share', icon: 'share-2', label: 'Podeli sa dozvolama…' }] : []),
         { sep: true },
         ...common,
         { act: 'delete', icon: 'trash-2', label: 'Obriši tab', danger: true }
@@ -796,7 +796,7 @@
   function renderShareList(chosen) {
     const list = $('mon-share-list');
     if (!SH.roles.length) {
-      list.innerHTML = '<div class="mon-picker-empty">Nema kamernih rola. Prave se u VIDEO NADZOR → Dozvole za pristup.</div>';
+      list.innerHTML = '<div class="mon-picker-empty">Nema kamernih dozvola. Prave se u VIDEO NADZOR → Dozvole za pristup.</div>';
       return;
     }
     list.innerHTML = SH.roles.map(r => {
@@ -819,7 +819,7 @@
 
   function updateShareFooter() {
     const n = $('mon-share-list').querySelectorAll('input:checked').length;
-    $('mon-share-footer').textContent = n ? `Izabrano rola: ${n}` : 'Tab nije podeljen ni sa jednom rolom';
+    $('mon-share-footer').textContent = n ? `Izabrano dozvola: ${n}` : 'Tab nije podeljen ni sa jednom dozvolom';
     $('mon-btn-share-save').disabled = !SH.roles.length;
   }
 
@@ -833,7 +833,7 @@
       if (tab) tab.sharedWith = data.sharedWith || [];
       closeModalEl('modal-mon-share');
       renderTabs();
-      notify(roleIds.length ? `Tab je podeljen sa rolama: ${(data.sharedWith || []).map(s => s.roleName).join(', ')}` : 'Deljenje taba je uklonjeno', 'success');
+      notify(roleIds.length ? `Tab je podeljen sa dozvolama: ${(data.sharedWith || []).map(s => s.roleName).join(', ')}` : 'Deljenje taba je uklonjeno', 'success');
     } catch (err) {
       notify(err.message, 'error');
     } finally {

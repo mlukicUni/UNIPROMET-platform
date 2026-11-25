@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.18] - 2026-11-25
+- Nazivi su razdvojeni: u SERVER → Korisnici i role ostaju **role**, a u VIDEO NADZOR → Dozvole za pristup to su sada **dozvole** (kamerne dozvole): u svim tekstovima, pregledima, izvozu u Excel i deljenju Monitoring tabova. Naziv rola i kamernih dozvola je jedinstven samo unutar svoje vrste, pa se npr. rola i dozvola mogu zvati isto („Video nadzor – Supervizor“). Pri pokretanju se tabela rola jednom obnavlja (uklanja se ograničenje jedinstvenog naziva za sve role zajedno); postojeći podaci, dodele i prava ostaju netaknuti. Pri prvoj deobi rola na produkciji, kamerna dozvola dobija isti naziv kao rola iz koje je nastala.
+
 ## [1.3.17] - 2026-11-25
 - Role su podeljene na dve vrste. Standardne role (SERVER → Korisnici i role) određuju samo ko može da otvori koju sekciju i stranicu, a pristup kamerama se podešava u kamernim rolama u novoj podsekciji VIDEO NADZOR → Dozvole za pristup (uživo i snimci, sve kamere / snimač / grupa / pojedinačna kamera, dodele korisnicima i AD grupama, grupe kamera). Kamerna rola sama otvara Listu kamera i Monitoring, pa korisnik kojem treba samo pogled na kamere ne mora da ima i standardnu rolu. Pri prvom pokretanju svaka postojeća rola koja ima prava na kamere deli se automatski na standardnu (zadržava dozvole za sekcije) i novu kamernu „<naziv> (kamere)“ sa istim pravima na kamere i istim dodelama, tako da niko ne dobija niti gubi pristup; deljenja Monitoring tabova prelaze na kamernu rolu.
 - Nova posebna dozvola „Dozvole za pristup (kamerne role)“ u katalogu (VIDEO NADZOR): ko je ima (Izmena) sme da pravi i menja kamerne role, grupe kamera i njihove dodele, ali ne i standardne role. Ne nasleđuje se sa nivoa cele sekcije VIDEO NADZOR. Pažnja: ko upravlja kamernim rolama može sebi da dodeli bilo koju kameru, pa je dozvolu treba davati samo pouzdanim osobama.
