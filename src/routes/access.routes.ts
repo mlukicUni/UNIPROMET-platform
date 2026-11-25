@@ -42,6 +42,10 @@ accessRouter.get('/catalog', (_req: Request, res: Response) => {
   res.json({ success: true, sections: PERMISSION_CATALOG, rolesTab: ROLES_TAB });
 });
 
+/** „dozvola“ za kamerne, „rola“ za standardne (nazivi u evidenciji) */
+const kw = (r: { kind: string }) => (r.kind === 'camera' ? 'dozvola' : 'rola');
+const KW = (r: { kind: string }) => (r.kind === 'camera' ? 'Dozvola' : 'Rola');
+
 /* ---------- Role ---------- */
 accessRouter.get('/roles', (req: Request, res: Response) => {
   try {
@@ -73,10 +77,10 @@ accessRouter.post('/roles', (req: Request, res: Response) => {
     // Ograničeni upravljači: samo role kojima sme da upravlja (kopija) i samo vrsta role koju sme da pravi
     if (!req.access?.isSuperAdmin) {
       if (copyFrom && !canManageRole(req.access!, String(copyFrom))) {
-        return fail(res, new Error('Možete da kopirate samo role kojima upravljate.'), 403);
+        return fail(res, new Error('Možete da kopirate samo role i dozvole kojima upravljate.'), 403);
       }
       if (!copyFrom && kind === 'camera' && !req.access?.isCameraRoleAdmin) {
-        return fail(res, new Error('Nemate pravo da pravite kamerne role.'), 403);
+        return fail(res, new Error('Nemate pravo da pravite kamerne dozvole.'), 403);
       }
       if (!copyFrom && kind === 'standard' && !req.access?.isDmsRoleAdmin) {
         return fail(res, new Error('Standardne role pravi samo Super admin (ili DMS administrator za DMS role).'), 403);
@@ -85,7 +89,7 @@ accessRouter.post('/roles', (req: Request, res: Response) => {
     const role = copyFrom ? duplicateRole(String(copyFrom), name) : createRole(name, description, kind);
     writeAudit(
       req.sessionUser || null, 'role.create', 'role', role.id,
-      `Napravljena ${role.kind === 'camera' ? 'kamerna ' : ''}rola „${role.name}“${copyFrom ? ' (kopija)' : ''}`
+      `Napravljena ${role.kind === 'camera' ? 'kamerna dozvola' : 'rola'} „${role.name}“${copyFrom ? ' (kopija)' : ''}`
     );
     res.status(201).json({ success: true, role });
   } catch (err) {
@@ -98,7 +102,7 @@ accessRouter.put('/roles/:id', (req: Request, res: Response) => {
     const { name, description } = req.body || {};
     const role = updateRole(req.params.id, name, description);
     if (!role) return fail(res, new Error('Rola nije pronađena'), 404);
-    writeAudit(req.sessionUser || null, 'role.update', 'role', role.id, `Izmenjena rola „${role.name}“`);
+    writeAudit(req.sessionUser || null, 'role.update', 'role', role.id, `Izmenjena ${kw(role)} „${role.name}“`);
     res.json({ success: true, role });
   } catch (err) {
     fail(res, err);
@@ -110,7 +114,7 @@ accessRouter.delete('/roles/:id', (req: Request, res: Response) => {
     const role = getRole(req.params.id);
     if (!role) return fail(res, new Error('Rola nije pronađena'), 404);
     deleteRole(role.id);
-    writeAudit(req.sessionUser || null, 'role.delete', 'role', role.id, `Obrisana rola „${role.name}“`);
+    writeAudit(req.sessionUser || null, 'role.delete', 'role', role.id, `Obrisana ${kw(role)} „${role.name}“`);
     res.json({ success: true });
   } catch (err) {
     fail(res, err);
@@ -130,7 +134,7 @@ accessRouter.put('/roles/:id/permissions', (req: Request, res: Response) => {
     const after = getRolePermissions(role.id);
     writeAudit(
       req.sessionUser || null, 'role.permissions', 'role', role.id,
-      `Rola „${role.name}“: dozvole ${before.length} → ${after.length} stavki`
+      `${KW(role)} „${role.name}“: dozvole ${before.length} → ${after.length} stavki`
     );
     res.json({ success: true, permissions: after });
   } catch (err) {
@@ -144,7 +148,7 @@ accessRouter.put('/roles/:id/cameras', (req: Request, res: Response) => {
     if (!role) return fail(res, new Error('Rola nije pronađena'), 404);
     setRoleCameraAccess(role.id, req.body?.rules || []);
     const after = getRoleCameraAccess(role.id);
-    writeAudit(req.sessionUser || null, 'role.cameras', 'role', role.id, `Rola „${role.name}“: ${after.length} pravila pristupa kamerama`);
+    writeAudit(req.sessionUser || null, 'role.cameras', 'role', role.id, `${KW(role)} „${role.name}“: ${after.length} pravila pristupa kamerama`);
     res.json({ success: true, cameraAccess: after });
   } catch (err) {
     fail(res, err);
@@ -163,7 +167,7 @@ accessRouter.post('/roles/:id/assignments', (req: Request, res: Response) => {
     );
     writeAudit(
       req.sessionUser || null, 'role.assign', 'role', role.id,
-      `Rola „${role.name}“ dodeljena: ${a.principalType === 'user' ? 'korisnik' : 'AD grupa'} ${a.displayName || a.principalId}`
+      `${KW(role)} „${role.name}“ dodeljena: ${a.principalType === 'user' ? 'korisnik' : 'AD grupa'} ${a.displayName || a.principalId}`
     );
     res.status(201).json({ success: true, assignment: a });
   } catch (err) {
@@ -179,7 +183,7 @@ accessRouter.delete('/roles/:id/assignments/:aid', (req: Request, res: Response)
     if (!removed) return fail(res, new Error('Dodela nije pronađena'), 404);
     writeAudit(
       req.sessionUser || null, 'role.unassign', 'role', role.id,
-      `Rola „${role.name}“ oduzeta: ${removed.principalType === 'user' ? 'korisnik' : 'AD grupa'} ${removed.displayName || removed.principalId}`
+      `${KW(role)} „${role.name}“ oduzeta: ${removed.principalType === 'user' ? 'korisnik' : 'AD grupa'} ${removed.displayName || removed.principalId}`
     );
     res.json({ success: true });
   } catch (err) {
@@ -240,7 +244,7 @@ accessRouter.post('/camera-overview/export', async (req: Request, res: Response)
     const filters = Array.isArray(req.body?.filters) ? req.body.filters.slice(0, 12).map((f: unknown) => String(f)) : [];
     if (keys && keys.length === 0) return fail(res, new Error('Nema stavki za izvoz u trenutnom prikazu.'));
     const wb = buildOverviewWorkbook(buildOverview(), view, keys, filters);
-    const names: Record<string, string> = { roles: 'Role', users: 'Korisnici', cameras: 'Kamere' };
+    const names: Record<string, string> = { roles: 'Dozvole', users: 'Korisnici', cameras: 'Kamere' };
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="Unipromet_Pristup_kamerama_${names[view]}_${new Date().toISOString().slice(0, 10)}.xlsx"`);
     await wb.xlsx.write(res);

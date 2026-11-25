@@ -207,9 +207,9 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
   if (view === 'roles') {
     const roles = overview.roles.filter(r => pick(r.id));
     const tabs = withTabs<OvRole>(roles, r => [r.name], r => ({
-      title: `UNIPROMET DOO ČAČAK — ROLA: ${r.name}`,
+      title: `UNIPROMET DOO ČAČAK — DOZVOLA: ${r.name}`,
       sections: [
-        { title: 'Podaci o roli', cols: KV, rows: [['Rola', r.name], ['Opis', r.description], ['Pristup kamerama', r.scope.join('; ')], ['Kamera uživo', r.liveCount], ['Kamera snimci', r.playbackCount]] },
+        { title: 'Podaci o dozvoli', cols: KV, rows: [['Dozvola', r.name], ['Opis', r.description], ['Pristup kamerama', r.scope.join('; ')], ['Kamera uživo', r.liveCount], ['Kamera snimci', r.playbackCount]] },
         { title: `Korisnici (direktno): ${r.users.length}`, cols: [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }], rows: r.users.map(u => [u.name, u.email]) },
         { title: `AD grupe: ${r.groups.length}`, cols: [{ header: 'AD grupa', width: 36 }], rows: r.groups.map(g => [g.name]) },
         { title: `Poznati članovi AD grupa: ${r.groupMembers.length}`, cols: [{ header: 'AD grupa', width: 36 }, { header: 'Član', width: 30 }, { header: 'E-pošta', width: 38 }], rows: r.groupMembers.map(m => [m.group, m.name, m.email]) },
@@ -217,21 +217,21 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
       ]
     }));
     const sum: Col[] = [
-      { header: 'Rola', width: 32 }, { header: 'Opis', width: 40 }, { header: 'Pristup kamerama', width: 44 },
+      { header: 'Dozvola', width: 32 }, { header: 'Opis', width: 40 }, { header: 'Pristup kamerama', width: 44 },
       { header: 'Korisnika (direktno)', width: 18, center: true }, { header: 'AD grupa', width: 12, center: true },
       { header: 'Poznatih članova AD grupa', width: 22, center: true }, { header: 'Kamera uživo', width: 14, center: true }, { header: 'Kamera snimci', width: 14, center: true }
     ];
     const nameOf = new Map((tabs || []).map(t => [t.item.id, t.name]));
-    addSheet(wb, logoId, 'Pregled', 'UNIPROMET DOO ČAČAK — KAMERNE ROLE', `${stamp}   |   Broj rola: ${roles.length}${tail}${note(roles.length)}`, sum,
+    addSheet(wb, logoId, 'Pregled', 'UNIPROMET DOO ČAČAK — KAMERNE ROLE', `${stamp}   |   Broj dozvola: ${roles.length}${tail}${note(roles.length)}`, sum,
       roles.map(r => [nameOf.has(r.id) ? { text: r.name, link: link(nameOf.get(r.id)!) } : r.name, r.description, r.scope.join('; '), r.users.length, r.groups.length, r.groupMembers.length, r.liveCount, r.playbackCount]));
     if (tabs) tabs.forEach(t => t.make());
     else {
       const n = roles.length;
-      const tbl = (name: string, title: string, cols: Col[], rows: Cell[][]) => addSheet(wb, logoId, name, `UNIPROMET DOO ČAČAK — ${title}`, `${stamp}   |   Broj rola: ${n}   |   Redova u tabeli: ${rows.length}${tail}`, cols, rows);
-      tbl('Korisnici rola', 'KAMERNE ROLE: KORISNICI (DIREKTNO)', [{ header: 'Rola', width: 30 }, { header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }], roles.flatMap(r => r.users.map(u => [r.name, u.name, u.email] as Cell[])));
-      tbl('AD grupe rola', 'KAMERNE ROLE: AD GRUPE', [{ header: 'Rola', width: 30 }, { header: 'AD grupa', width: 36 }], roles.flatMap(r => r.groups.map(g => [r.name, g.name] as Cell[])));
-      tbl('Članovi AD grupa', 'KAMERNE ROLE: POZNATI ČLANOVI AD GRUPA', [{ header: 'Rola', width: 30 }, { header: 'AD grupa', width: 36 }, { header: 'Član', width: 30 }, { header: 'E-pošta', width: 38 }], roles.flatMap(r => r.groupMembers.map(m => [r.name, m.group, m.name, m.email] as Cell[])));
-      tbl('Kamere rola', 'KAMERNE ROLE: KAMERE', [{ header: 'Rola', width: 30 }, ...CAM_COLS, UZ, SN], roles.flatMap(r => byOrder(r.cameras).map(c => [r.name, ...camInfo(c.id), yn(c.live), yn(c.playback)] as Cell[])));
+      const tbl = (name: string, title: string, cols: Col[], rows: Cell[][]) => addSheet(wb, logoId, name, `UNIPROMET DOO ČAČAK — ${title}`, `${stamp}   |   Broj dozvola: ${n}   |   Redova u tabeli: ${rows.length}${tail}`, cols, rows);
+      tbl('Korisnici dozvole', 'KAMERNE DOZVOLE: KORISNICI (DIREKTNO)', [{ header: 'Dozvola', width: 30 }, { header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }], roles.flatMap(r => r.users.map(u => [r.name, u.name, u.email] as Cell[])));
+      tbl('AD grupe dozvole', 'KAMERNE DOZVOLE: AD GRUPE', [{ header: 'Dozvola', width: 30 }, { header: 'AD grupa', width: 36 }], roles.flatMap(r => r.groups.map(g => [r.name, g.name] as Cell[])));
+      tbl('Članovi AD grupa', 'KAMERNE DOZVOLE: POZNATI ČLANOVI AD GRUPA', [{ header: 'Dozvola', width: 30 }, { header: 'AD grupa', width: 36 }, { header: 'Član', width: 30 }, { header: 'E-pošta', width: 38 }], roles.flatMap(r => r.groupMembers.map(m => [r.name, m.group, m.name, m.email] as Cell[])));
+      tbl('Kamere dozvole', 'KAMERNE DOZVOLE: KAMERE', [{ header: 'Dozvola', width: 30 }, ...CAM_COLS, UZ, SN], roles.flatMap(r => byOrder(r.cameras).map(c => [r.name, ...camInfo(c.id), yn(c.live), yn(c.playback)] as Cell[])));
     }
   } else if (view === 'users') {
     const users = overview.users.filter(u => pick(u.key));
@@ -245,11 +245,11 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
           ]
         },
         {
-          title: `Role: ${u.roles.length + (u.superAdmin ? 1 : 0)}`, cols: [{ header: 'Rola', width: 34 }, { header: 'Dobija je', width: 44 }],
+          title: `Dozvole: ${u.roles.length + (u.superAdmin ? 1 : 0)}`, cols: [{ header: 'Dozvola', width: 34 }, { header: 'Dobija je', width: 44 }],
           rows: [...u.roles.flatMap(r => r.via.map(v => [r.name, v] as Cell[])), ...(u.superAdmin ? [['Super admin', 'ugrađeno pravilo (sve kamere)']] : [])]
         },
         {
-          title: `Kamere: ${u.allCameras ? overview.cameras.length : u.cameras.length}`, cols: [...CAM_COLS, UZ, SN, { header: 'Preko rola', width: 40 }],
+          title: `Kamere: ${u.allCameras ? overview.cameras.length : u.cameras.length}`, cols: [...CAM_COLS, UZ, SN, { header: 'Preko dozvola', width: 40 }],
           rows: u.allCameras
             ? overview.cameras.map(c => [...camInfo(c.id), 'Da', 'Da', 'Super admin'] as Cell[])
             : byOrder(u.cameras).map(c => [...camInfo(c.id), yn(c.live), yn(c.playback), c.roles.join(', ')] as Cell[])
@@ -259,7 +259,7 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
     const sum: Col[] = [
       { header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, { header: 'Super admin', width: 14, center: true },
       { header: 'Prijavljen na platformu', width: 22, center: true }, { header: 'Poslednja prijava', width: 22 },
-      { header: 'Broj rola', width: 12, center: true }, { header: 'Kamera uživo', width: 14, center: true }, { header: 'Kamera snimci', width: 14, center: true }
+      { header: 'Broj dozvola', width: 12, center: true }, { header: 'Kamera uživo', width: 14, center: true }, { header: 'Kamera snimci', width: 14, center: true }
     ];
     const nameOf = new Map((tabs || []).map(t => [t.item.key, t.name]));
     addSheet(wb, logoId, 'Pregled', 'UNIPROMET DOO ČAČAK — KORISNICI KAMERA', `${stamp}   |   Broj korisnika: ${users.length}${tail}${note(users.length)}`, sum,
@@ -269,13 +269,13 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
     else {
       const n = users.length;
       const tbl = (name: string, title: string, cols: Col[], rows: Cell[][]) => addSheet(wb, logoId, name, `UNIPROMET DOO ČAČAK — ${title}`, `${stamp}   |   Broj korisnika: ${n}   |   Redova u tabeli: ${rows.length}${tail}`, cols, rows);
-      tbl('Role korisnika', 'KORISNICI KAMERA: ROLE', [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, { header: 'Rola', width: 32 }, { header: 'Dobija je', width: 40 }],
+      tbl('Dozvole korisnika', 'KORISNICI KAMERA: DOZVOLE', [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, { header: 'Dozvola', width: 32 }, { header: 'Dobija je', width: 40 }],
         users.flatMap(u => {
           const rows = u.roles.flatMap(r => r.via.map(v => [u.name, u.email, r.name, v] as Cell[]));
           if (u.superAdmin) rows.push([u.name, u.email, 'Super admin', 'ugrađeno pravilo (sve kamere)']);
           return rows;
         }));
-      tbl('Kamere korisnika', 'KORISNICI KAMERA: KAMERE', [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, ...CAM_COLS, UZ, SN, { header: 'Preko rola', width: 40 }],
+      tbl('Kamere korisnika', 'KORISNICI KAMERA: KAMERE', [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, ...CAM_COLS, UZ, SN, { header: 'Preko dozvola', width: 40 }],
         users.flatMap(u => u.allCameras
           ? overview.cameras.map(c => [u.name, u.email, ...camInfo(c.id), 'Da', 'Da', 'Super admin'] as Cell[])
           : byOrder(u.cameras).map(c => [u.name, u.email, ...camInfo(c.id), yn(c.live), yn(c.playback), c.roles.join(', ')] as Cell[])));
@@ -286,19 +286,19 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
       title: `UNIPROMET DOO ČAČAK — KAMERA: ${c.position || c.name}`,
       sections: [
         { title: 'Podaci o kameri', cols: KV, rows: [['Kamera', c.position || c.name], ['IP / Mrežni slot', c.ip], ['Lokacija', c.location], ['Snimač', c.recorder], ['Tip', c.type]] },
-        { title: `Role: ${c.roles.length}`, cols: [{ header: 'Rola', width: 34 }, UZ, SN], rows: c.roles.map(r => [r.name, yn(r.live), yn(r.playback)]) },
+        { title: `Dozvole: ${c.roles.length}`, cols: [{ header: 'Dozvola', width: 34 }, UZ, SN], rows: c.roles.map(r => [r.name, yn(r.live), yn(r.playback)]) },
         {
-          title: `AD grupe: ${c.adGroups.length}`, cols: [{ header: 'AD grupa', width: 36 }, { header: 'Preko role', width: 34 }],
+          title: `AD grupe: ${c.adGroups.length}`, cols: [{ header: 'AD grupa', width: 36 }, { header: 'Preko dozvole', width: 34 }],
           rows: c.roles.flatMap(r => (overview.roles.find(x => x.id === r.id)?.groups || []).map(g => [g.name, r.name] as Cell[]))
         },
         {
-          title: `Korisnici: ${c.users.length}`, cols: [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, UZ, SN, { header: 'Preko rola', width: 40 }, { header: 'Super admin', width: 14, center: true }],
+          title: `Korisnici: ${c.users.length}`, cols: [{ header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, UZ, SN, { header: 'Preko dozvola', width: 40 }, { header: 'Super admin', width: 14, center: true }],
           rows: c.users.map(u => [u.name, u.email, yn(u.live), yn(u.playback), (u.roles || []).join(', '), yn(!!u.superAdmin)])
         }
       ]
     }));
     const sum: Col[] = [
-      ...CAM_COLS, { header: 'Kamernih rola', width: 14, center: true }, { header: 'AD grupa', width: 12, center: true },
+      ...CAM_COLS, { header: 'Kamernih dozvola', width: 14, center: true }, { header: 'AD grupa', width: 12, center: true },
       { header: 'Korisnika uživo', width: 16, center: true }, { header: 'Korisnika snimci', width: 16, center: true }
     ];
     const nameOf = new Map((tabs || []).map(t => [t.item.id, t.name]));
@@ -312,10 +312,10 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
     else {
       const n = rows.length;
       const tbl = (name: string, title: string, cols: Col[], r: Cell[][]) => addSheet(wb, logoId, name, `UNIPROMET DOO ČAČAK — ${title}`, `${stamp}   |   Broj kamera: ${n}   |   Redova u tabeli: ${r.length}${tail}`, cols, r);
-      tbl('Role kamera', 'PRISTUP PO KAMERAMA: ROLE', [...CAM_COLS, { header: 'Rola', width: 32 }, UZ, SN], rows.flatMap(c => c.roles.map(r => [...camInfo(c.id), r.name, yn(r.live), yn(r.playback)] as Cell[])));
-      tbl('AD grupe kamera', 'PRISTUP PO KAMERAMA: AD GRUPE', [...CAM_COLS, { header: 'AD grupa', width: 36 }, { header: 'Preko role', width: 32 }],
+      tbl('Dozvole kamere', 'PRISTUP PO KAMERAMA: DOZVOLE', [...CAM_COLS, { header: 'Dozvola', width: 32 }, UZ, SN], rows.flatMap(c => c.roles.map(r => [...camInfo(c.id), r.name, yn(r.live), yn(r.playback)] as Cell[])));
+      tbl('AD grupe kamera', 'PRISTUP PO KAMERAMA: AD GRUPE', [...CAM_COLS, { header: 'AD grupa', width: 36 }, { header: 'Preko dozvole', width: 32 }],
         rows.flatMap(c => c.roles.flatMap(r => (overview.roles.find(x => x.id === r.id)?.groups || []).map(g => [...camInfo(c.id), g.name, r.name] as Cell[]))));
-      tbl('Korisnici kamera', 'PRISTUP PO KAMERAMA: KORISNICI', [...CAM_COLS, { header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, UZ, SN, { header: 'Preko rola', width: 40 }, { header: 'Super admin', width: 14, center: true }],
+      tbl('Korisnici kamera', 'PRISTUP PO KAMERAMA: KORISNICI', [...CAM_COLS, { header: 'Korisnik', width: 30 }, { header: 'E-pošta', width: 38 }, UZ, SN, { header: 'Preko dozvola', width: 40 }, { header: 'Super admin', width: 14, center: true }],
         rows.flatMap(c => c.users.map(u => [...camInfo(c.id), u.name, u.email, yn(u.live), yn(u.playback), (u.roles || []).join(', '), yn(!!u.superAdmin)] as Cell[])));
     }
   }

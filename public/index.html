@@ -1483,7 +1483,7 @@
                   <button type="button" class="mon-tool-btn mon-tool-icon" id="mon-btn-hidden" style="display: none;" title="Sakriveni deljeni tabovi"><i data-lucide="eye-off"></i></button>
                   <button type="button" class="mon-tool-btn" id="mon-btn-edit" title="Izmeni tab (naziv, šablon, kamere)"><i data-lucide="pencil"></i><span>Izmeni</span></button>
                   <button type="button" class="mon-tool-btn" id="mon-btn-sync-peer" data-super-only style="display: none;" title="Privremeno: povuci monitoring tabove sa drugog servera"><i data-lucide="download-cloud"></i><span>Povuci tabove</span></button>
-                  <button type="button" class="mon-tool-btn" id="mon-btn-share" style="display: none;" title="Podeli tab sa rolama"><i data-lucide="share-2"></i><span>Podeli</span></button>
+                  <button type="button" class="mon-tool-btn" id="mon-btn-share" style="display: none;" title="Podeli tab sa dozvolama za kamere"><i data-lucide="share-2"></i><span>Podeli</span></button>
                   <div class="mon-tool-group">
                     <button type="button" class="mon-tool-btn" id="mon-btn-rotation" title="Pokreni / zaustavi rotaciju tabova"><i data-lucide="repeat"></i><span>Rotacija</span></button>
                     <button type="button" class="mon-tool-btn mon-tool-icon" id="mon-btn-rotation-settings" title="Podešavanja rotacije"><i data-lucide="settings-2"></i></button>
@@ -3732,14 +3732,14 @@
               <div class="eq-category-pills-bar" id="ar-main-pills" style="margin-top: 14px; margin-bottom: 4px;">
                 <button type="button" class="eq-pill-btn active" data-ar-tab="roles">
                   <i data-lucide="shield"></i>
-                  <span>Role</span>
+                  <span data-t-cam="Dozvole">Role</span>
                   <span class="eq-pill-count" id="ar-badge-roles">--</span>
                 </button>
-                <button type="button" class="eq-pill-btn" data-ar-tab="ov-roles" title="Šta pripada svakoj kamernoj roli">
+                <button type="button" class="eq-pill-btn" data-ar-tab="ov-roles" title="Šta pripada svakoj kamernoj dozvoli">
                   <i data-lucide="shield"></i>
-                  <span>Pregled rola</span>
+                  <span>Pregled dozvola</span>
                 </button>
-                <button type="button" class="eq-pill-btn" data-ar-tab="ov-users" title="Ko koristi kamere, kroz koje role i koje kamere vidi">
+                <button type="button" class="eq-pill-btn" data-ar-tab="ov-users" title="Ko koristi kamere, kroz koje dozvole i koje kamere vidi">
                   <i data-lucide="users"></i>
                   <span>Pregled korisnika</span>
                 </button>
@@ -3765,11 +3765,11 @@
                   <div class="network-filters-toolbar" style="margin-top: 14px;">
                     <div class="search-input-wrap" style="flex: 1; min-width: 260px;">
                       <i data-lucide="search" class="search-icon"></i>
-                      <input type="text" id="ar-search-roles" placeholder="Pretraži role po nazivu ili opisu..." class="printer-search-input" style="width: 100%;">
+                      <input type="text" id="ar-search-roles" placeholder="Pretraži role po nazivu ili opisu..." data-tp-cam="Pretraži dozvole po nazivu ili opisu..." class="printer-search-input" style="width: 100%;">
                     </div>
-                    <button class="btn-yellow-solid-sm" id="ar-btn-new-role" title="Napravi novu rolu">
+                    <button class="btn-yellow-solid-sm" id="ar-btn-new-role" title="Napravi novu rolu" data-ttl-cam="Napravi novu dozvolu">
                       <i data-lucide="plus-circle"></i>
-                      <span>Nova rola</span>
+                      <span data-t-cam="Nova dozvola">Nova rola</span>
                     </button>
                   </div>
 
@@ -3777,7 +3777,7 @@
                     <table class="inv-camera-table" id="ar-table-roles">
                       <thead>
                         <tr>
-                          <th style="min-width: 200px;">ROLA</th>
+                          <th style="min-width: 200px;" data-t-cam="DOZVOLA">ROLA</th>
                           <th style="min-width: 260px;">OPIS</th>
                           <th class="ar-col-perm" style="width: 110px; text-align: center;">DOZVOLE</th>
                           <th class="ar-col-cam" style="width: 120px; text-align: center;">KAMERE</th>
@@ -3798,7 +3798,7 @@
                   <div class="ar-editor-head">
                     <button type="button" class="btn-dark-outline-sm" id="ar-btn-back">
                       <i data-lucide="arrow-left"></i>
-                      <span>Sve role</span>
+                      <span data-t-cam="Sve dozvole">Sve role</span>
                     </button>
                     <div class="ar-editor-title">
                       <h5 id="ar-editor-name">Rola</h5>
@@ -3843,7 +3843,7 @@
                   <div class="dict-subpanel" id="ar-edit-cameras">
                     <div class="ar-hint">
                       <i data-lucide="info"></i>
-                      <span>Odaberite koje kamere rola vidi: <b>sve</b>, sve kamere jednog <b>snimača</b> ili <b>pojedinačne</b> kamere. Ako treba sličan skup kamera za drugu grupu korisnika, napravite kopiju role (dugme sa dve stranice u listi rola). Za svaku stavku posebno se dozvoljava <b>Uživo</b> i <b>Snimci</b> (uključuje preuzimanje klipa).</span>
+                      <span>Odaberite koje kamere dozvola otvara: <b>sve</b>, sve kamere jednog <b>snimača</b> ili <b>pojedinačne</b> kamere. Ako treba sličan skup kamera za drugu grupu korisnika, napravite kopiju dozvole (dugme sa dve stranice u listi dozvola). Za svaku stavku posebno se dozvoljava <b>Uživo</b> i <b>Snimci</b> (uključuje preuzimanje klipa).</span>
                     </div>
                     <div class="network-filters-toolbar" style="margin-top: 10px;">
                       <div class="search-input-wrap" style="flex: 1; min-width: 240px;">
@@ -3862,7 +3862,7 @@
                   <!-- Dodele -->
                   <div class="dict-subpanel" id="ar-edit-assign">
                     <div class="network-filters-toolbar" style="margin-top: 10px;">
-                      <span class="text-dim text-xs" style="flex: 1;">Rolu dobijaju navedeni korisnici i svi članovi navedenih AD grupa. Članstvo u grupama se osvežava automatski.</span>
+                      <span class="text-dim text-xs" style="flex: 1;" data-t-cam="Dozvolu dobijaju navedeni korisnici i svi članovi navedenih AD grupa. Članstvo u grupama se osvežava automatski.">Rolu dobijaju navedeni korisnici i svi članovi navedenih AD grupa. Članstvo u grupama se osvežava automatski.</span>
                       <button class="btn-yellow-solid-sm" id="ar-btn-add-user"><i data-lucide="user-plus"></i><span>Dodaj korisnika</span></button>
                       <button class="btn-yellow-solid-sm" id="ar-btn-add-group"><i data-lucide="users-round"></i><span>Dodaj AD grupu</span></button>
                     </div>
@@ -3886,7 +3886,7 @@
                   <div class="dict-subpanel" id="ar-edit-basic">
                     <div class="ar-basic-form">
                       <div class="form-group">
-                        <label for="ar-basic-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Naziv role <span style="color: #ef4444;">*</span></label>
+                        <label for="ar-basic-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> <span data-t-cam="Naziv dozvole">Naziv role</span> <span style="color: #ef4444;">*</span></label>
                         <div class="modal-input-wrap">
                           <i data-lucide="tag" class="modal-input-icon"></i>
                           <input type="text" id="ar-basic-name" class="glass-input has-icon" maxlength="80">
@@ -3901,7 +3901,7 @@
                       <div class="ar-basic-actions">
                         <button class="btn-yellow-solid-sm" id="ar-btn-save-basic"><i data-lucide="check"></i><span>Sačuvaj</span></button>
                         <button class="btn-dark-outline-sm" id="ar-btn-duplicate"><i data-lucide="copy"></i><span>Napravi kopiju</span></button>
-                        <button class="btn-danger-solid-sm" id="ar-btn-delete-role"><i data-lucide="trash-2"></i><span>Obriši rolu</span></button>
+                        <button class="btn-danger-solid-sm" id="ar-btn-delete-role"><i data-lucide="trash-2"></i><span data-t-cam="Obriši dozvolu">Obriši rolu</span></button>
                       </div>
                     </div>
                   </div>
@@ -4713,7 +4713,7 @@
 
         <div class="modal-body-content" style="padding: 20px 24px; display: flex; flex-direction: column; gap: 16px;">
           <div class="form-group">
-            <label for="ar-role-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Naziv role <span style="color: #ef4444;">*</span></label>
+            <label for="ar-role-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> <span data-t-cam="Naziv dozvole">Naziv role</span> <span style="color: #ef4444;">*</span></label>
             <div class="modal-input-wrap">
               <i data-lucide="tag" class="modal-input-icon"></i>
               <input type="text" id="ar-role-name" class="glass-input has-icon" placeholder="npr. Video nadzor – Kraljevo" maxlength="80" required>
@@ -4722,11 +4722,11 @@
           <div class="form-group">
             <label for="ar-role-desc"><i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Opis</label>
             <div class="modal-input-wrap">
-              <textarea id="ar-role-desc" class="glass-textarea" rows="2" maxlength="300" placeholder="Kome je rola namenjena i šta dozvoljava..."></textarea>
+              <textarea id="ar-role-desc" class="glass-textarea" rows="2" maxlength="300" placeholder="Kome je rola namenjena i šta dozvoljava..." data-tp-cam="Kome je dozvola namenjena i koje kamere otvara..."></textarea>
             </div>
           </div>
           <div class="form-group">
-            <label for="ar-role-copy"><i data-lucide="copy" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Kopiraj dozvole iz role</label>
+            <label for="ar-role-copy"><i data-lucide="copy" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> <span data-t-cam="Kopiraj kamere iz dozvole">Kopiraj dozvole iz role</span></label>
             <div class="modal-input-wrap">
               <i data-lucide="copy" class="modal-input-icon"></i>
               <select id="ar-role-copy" class="glass-select has-icon">
@@ -4738,7 +4738,7 @@
 
         <div class="modal-bottom-actions" style="justify-content: flex-end; padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.2); gap: 10px;">
           <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
-          <button type="submit" class="btn-yellow-solid-sm"><i data-lucide="check"></i><span>Napravi rolu</span></button>
+          <button type="submit" class="btn-yellow-solid-sm"><i data-lucide="check"></i><span data-t-cam="Napravi dozvolu">Napravi rolu</span></button>
         </div>
       </form>
     </div>
@@ -4898,21 +4898,21 @@
     </div>
   </div>
 
-  <!-- MONITORING: DELJENJE TABA SA ROLAMA -->
+  <!-- MONITORING: DELJENJE TABA SA DOZVOLAMA -->
   <div class="modal-overlay" id="modal-mon-share" style="display: none;">
     <div class="modal-window modal-glass eq-modal-window" style="max-width: 560px; width: 95vw;">
       <div class="modal-header">
         <div class="modal-title-wrap">
           <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="share-2"></i></div>
           <div>
-            <h3 class="modal-title">Podeli tab sa rolama</h3>
+            <h3 class="modal-title">Podeli tab sa dozvolama za kamere</h3>
             <p class="modal-subtitle" id="mon-share-sub"></p>
           </div>
         </div>
         <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 12px;">
-        <p class="mon-gallery-note" style="margin: 0;">Tab se deli sa kamernim rolama (VIDEO NADZOR → Dozvole za pristup). Članovi izabranih rola vide ovaj tab pored svojih. Tab mogu samo da gledaju; mogu da naprave svoju kopiju ili da ga sakriju za sebe.</p>
+        <p class="mon-gallery-note" style="margin: 0;">Tab se deli sa kamernim dozvolama (VIDEO NADZOR → Dozvole za pristup). Članovi izabranih dozvola vide ovaj tab pored svojih. Tab mogu samo da gledaju; mogu da naprave svoju kopiju ili da ga sakriju za sebe.</p>
         <div class="mon-rot-list" id="mon-share-list"></div>
       </div>
       <div class="modal-bottom-actions mon-modal-footer">
@@ -8445,12 +8445,12 @@
   <!-- Switches Telemetry Module -->
   <script src="/js/switches.js"></script>
   <!-- Korisnici i role (Super admin) Module -->
-  <script src="/js/accessOverview.js?v=20261130b"></script>
-  <script src="/js/accessRoles.js?v=20261126"></script>
+  <script src="/js/accessOverview.js?v=20261201"></script>
+  <script src="/js/accessRoles.js?v=20261201"></script>
 
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js?v=20261124_status"></script>
-  <script src="/js/monitoring.js?v=20261125_share"></script>
+  <script src="/js/monitoring.js?v=20261201"></script>
   <script src="/js/monitoringQuickAdd.js?v=20261123_tpl"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>

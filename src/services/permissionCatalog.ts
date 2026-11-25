@@ -106,7 +106,7 @@ export const PERMISSION_CATALOG: SectionDef[] = [
         actions: [{ key: 'deljenje', label: 'Deljenje tabova sa rolama' }]
       },
       // Posebno pravo: upravljanje kamernim rolama; ne nasleđuje se sa nivoa cele sekcije (Izmena = pun pristup kamerama)
-      { key: 'video.dozvole', label: 'Dozvole za pristup (kamerne role)', tab: 'cctv_access', actions: [], explicitOnly: true }
+      { key: 'video.dozvole', label: 'Dozvole za pristup kamerama', tab: 'cctv_access', actions: [], explicitOnly: true }
     ]
   },
   {

@@ -21,7 +21,7 @@
     'ov-cams': { q: '', sel: [], sug: { items: [], active: -1, total: 0 }, f: { loc: '', rec: '', type: '', role: '', access: '' }, open: new Set(), shell: false }
   };
   const META = {
-    'ov-roles': { view: 'roles', panel: 'ar-panel-ov-roles', title: 'rola', hint: 'Kucajte naziv role i izaberite je iz liste (možete dodati više)...' },
+    'ov-roles': { view: 'roles', panel: 'ar-panel-ov-roles', title: 'dozvola', hint: 'Kucajte naziv dozvole i izaberite je iz liste (možete dodati više)...' },
     'ov-users': { view: 'users', panel: 'ar-panel-ov-users', title: 'korisnika', hint: 'Kucajte ime i prezime i izaberite osobu iz liste (možete dodati više)...' },
     'ov-cams': { view: 'cameras', panel: 'ar-panel-ov-cams', title: 'kamera', hint: 'Kucajte kameru, IP adresu ili lokaciju i izaberite iz liste (možete dodati više)...' }
   };
@@ -101,7 +101,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
         select(`${p}-right`, 'Pravo', [['', 'Uživo i snimci'], ['playback', 'Ima snimke'], ['liveonly', 'Samo uživo']]) +
         select(`${p}-loc`, 'Lokacija', [['', 'Sve lokacije']]);
     } else if (tab === 'ov-users') {
-      filters = select(`${p}-role`, 'Rola', [['', 'Sve role']]) +
+      filters = select(`${p}-role`, 'Dozvola', [['', 'Sve dozvole']]) +
         select(`${p}-source`, 'Izvor', [['', 'Svi izvori'], ['direct', 'Direktno dodeljeni'], ['ad', 'Preko AD grupe'], ['super', 'Super admini']]) +
         select(`${p}-right`, 'Pravo', [['', 'Uživo i snimci'], ['playback', 'Ima snimke'], ['liveonly', 'Samo uživo']]) +
         select(`${p}-loc`, 'Lokacija', [['', 'Sve lokacije']]) +
@@ -110,8 +110,8 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
       filters = select(`${p}-loc`, 'Lokacija', [['', 'Sve lokacije']]) +
         select(`${p}-rec`, 'Snimač', [['', 'Svi snimači']]) +
         select(`${p}-type`, 'Tip', [['', 'Svi tipovi']]) +
-        select(`${p}-role`, 'Rola', [['', 'Sve role']]) +
-        select(`${p}-access`, 'Pristup', [['', 'Svi pristupi'], ['any', 'Ima kamernu rolu'], ['none', 'Bez kamerne role (samo Super admini)'], ['multi', 'U više kamernih rola'], ['playback', 'Ima snimke (kamerne role)'], ['liveonly', 'Samo uživo (kamerne role)']]);
+        select(`${p}-role`, 'Dozvola', [['', 'Sve dozvole']]) +
+        select(`${p}-access`, 'Pristup', [['', 'Svi pristupi'], ['any', 'Ima kamernu dozvolu'], ['none', 'Bez kamerne dozvole (samo Super admini)'], ['multi', 'U više kamernih dozvola'], ['playback', 'Ima snimke (kamerne dozvole)'], ['liveonly', 'Samo uživo (kamerne dozvole)']]);
     }
     return `
       <div class="network-filters-toolbar" style="margin-top: 14px; flex-wrap: wrap;">
@@ -215,7 +215,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
   function fillFilterOptions(tab) {
     const f = V[tab].f;
     const locs = [['', 'Sve lokacije'], ...D.locations.map(l => [l, l])];
-    const roles = [['', 'Sve role'], ...D.data.roles.map(r => [r.id, r.name])];
+    const roles = [['', 'Sve dozvole'], ...D.data.roles.map(r => [r.id, r.name])];
     if (tab === 'ov-roles') fillSelect(`${tab}-loc`, locs, f.loc);
     if (tab === 'ov-users') { fillSelect(`${tab}-role`, roles, f.role); fillSelect(`${tab}-loc`, locs, f.loc); }
     if (tab === 'ov-cams') {
@@ -382,7 +382,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
     const label = (id, sel) => { const el = $(`${tab}-${id}`); return el && el.selectedOptions[0] ? el.selectedOptions[0].textContent : ''; };
     if (st.sel.length) out.push(`Izabrano: ${st.sel.map(s => s.label).join(', ')}`);
     if (!st.sel.length && st.q.trim()) out.push(`Pretraga: ${st.q.trim()}`);
-    const names = { assign: 'Dodela', right: 'Pravo', loc: 'Lokacija', role: 'Rola', source: 'Izvor', rec: 'Snimač', type: 'Tip', access: 'Pristup' };
+    const names = { assign: 'Dodela', right: 'Pravo', loc: 'Lokacija', role: 'Dozvola', source: 'Izvor', rec: 'Snimač', type: 'Tip', access: 'Pristup' };
     Object.keys(st.f).forEach(k => {
       if (k === 'supers') { if (!st.f.supers) out.push('Bez Super admina'); return; }
       if (st.f[k]) out.push(`${names[k]}: ${label(k)}`);
@@ -425,7 +425,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
 
   function renderRoles(rows, tab) {
     const total = D.data.cameras.length;
-    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:230px;">ROLA</th><th style="min-width:200px;">PRISTUP KAMERAMA</th><th style="min-width:180px;">KORISNICI</th><th style="min-width:160px;">AD GRUPE</th><th style="width:110px;text-align:center;">UŽIVO</th><th style="width:110px;text-align:center;">SNIMCI</th></tr>`;
+    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:230px;">DOZVOLA</th><th style="min-width:200px;">PRISTUP KAMERAMA</th><th style="min-width:180px;">KORISNICI</th><th style="min-width:160px;">AD GRUPE</th><th style="width:110px;text-align:center;">UŽIVO</th><th style="width:110px;text-align:center;">SNIMCI</th></tr>`;
     $(`${tab}-body`).innerHTML = rows.map(r => {
       const open = V[tab].open.has(r.id);
       const main = `<tr>
@@ -460,7 +460,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
 
   function renderUsers(rows, tab) {
     const total = D.data.cameras.length;
-    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:260px;">KORISNIK</th><th style="min-width:220px;">ROLE</th><th style="min-width:340px;">KAMERE KOJE VIDI</th><th style="width:100px;text-align:center;">UŽIVO</th><th style="width:100px;text-align:center;">SNIMCI</th></tr>`;
+    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:260px;">KORISNIK</th><th style="min-width:220px;">DOZVOLE</th><th style="min-width:340px;">KAMERE KOJE VIDI</th><th style="width:100px;text-align:center;">UŽIVO</th><th style="width:100px;text-align:center;">SNIMCI</th></tr>`;
     $(`${tab}-body`).innerHTML = rows.map(u => {
       const open = V[tab].open.has(u.key);
       const badges = (u.superAdmin ? ' <span class="ar-tag">Super admin</span>' : '') + (!u.loggedIn ? ' <span class="ar-tag ar-tag-dim" title="Još se nije prijavio na platformu">nije se prijavio</span>' : '');
@@ -481,13 +481,13 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
         ? '<div class="ar-tree-empty">Super admin vidi sve kamere (uživo i snimke).</div>'
         : camGroupsHtml(u.cameras, (it) => ` · preko: ${it.roles.join(', ')}`);
       return main + `<tr class="ar-ov-detail"><td colspan="5">
-        <div class="ar-ov-block"><h6>Role${login ? ` <span class="text-dim text-xs">· ${esc(login)}</span>` : ''}</h6>${roles || '<span class="text-dim text-xs">—</span>'}</div>
+        <div class="ar-ov-block"><h6>Dozvole${login ? ` <span class="text-dim text-xs">· ${esc(login)}</span>` : ''}</h6>${roles || '<span class="text-dim text-xs">—</span>'}</div>
         <div class="ar-ov-block"><h6>Kamere (${u.allCameras ? total : u.cameras.length})</h6>${cams}</div></td></tr>`;
     }).join('');
   }
 
   function renderCams(rows, tab) {
-    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:240px;">KAMERA</th><th style="min-width:170px;">LOKACIJA / SNIMAČ</th><th style="min-width:200px;">ROLE</th><th style="min-width:160px;">AD GRUPE</th><th style="min-width:200px;">KORISNICI</th></tr>`;
+    $(`${tab}-head`).innerHTML = `<tr><th style="min-width:240px;">KAMERA</th><th style="min-width:170px;">LOKACIJA / SNIMAČ</th><th style="min-width:200px;">DOZVOLE</th><th style="min-width:160px;">AD GRUPE</th><th style="min-width:200px;">KORISNICI</th></tr>`;
     $(`${tab}-body`).innerHTML = rows.map(c => {
       const open = V[tab].open.has(c.id);
       const noAccess = c.roles.every(r => r.superAdmin);
@@ -502,7 +502,7 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
       const roleLines = c.roles.map(r => `<div class="ar-ov-line"><span class="ar-pill is-role">${esc(r.name)}</span> ${flags(r)}</div>`).join('');
       const userLines = c.users.map(u => `<span class="ar-ov-cam" title="${esc(u.email)}"><i data-lucide="user"></i><span>${esc(u.name)}</span>${flags(u)}</span>`).join('');
       return main + `<tr class="ar-ov-detail"><td colspan="5">
-        <div class="ar-ov-block"><h6>Role (${c.roles.length})</h6>${roleLines || '<span class="text-dim text-xs">Nijedna kamerna rola ne daje pristup ovoj kameri.</span>'}</div>
+        <div class="ar-ov-block"><h6>Dozvole (${c.roles.length})</h6>${roleLines || '<span class="text-dim text-xs">Nijedna kamerna dozvola ne daje pristup ovoj kameri.</span>'}</div>
         <div class="ar-ov-block"><h6>Korisnici (${c.users.length})</h6>${userLines ? `<div class="ar-ov-cams">${userLines}</div>` : '<span class="text-dim text-xs">—</span>'}</div></td></tr>`;
     }).join('');
   }
@@ -527,10 +527,10 @@ const matches = (blob, q) => { const t = tokens(q); return t.every(w => blob.inc
     const supers = D.data.superAdmins.length;
     if (tab === 'ov-cams') {
       note.style.display = '';
-      note.innerHTML = `<i data-lucide="info"></i><span>Super admini (${supers}) vide sve kamere i uračunati su kao ugrađena rola „Super admin“. Korisnici iz AD grupa navedeni su samo ako su se bar jednom prijavili na platformu.</span>`;
+      note.innerHTML = `<i data-lucide="info"></i><span>Super admini (${supers}) vide sve kamere i uračunati su kao ugrađena dozvola „Super admin“. Korisnici iz AD grupa navedeni su samo ako su se bar jednom prijavili na platformu.</span>`;
     } else if (tab === 'ov-roles') {
       note.style.display = '';
-      note.innerHTML = '<i data-lucide="info"></i><span>Uz kamerne role prikazana je i ugrađena rola „Super admin“ (sve kamere). Pretraga traži samo po nazivu role. Članovi AD grupa navedeni su samo ako su se bar jednom prijavili na platformu.</span>';
+      note.innerHTML = '<i data-lucide="info"></i><span>Uz kamerne dozvole prikazana je i ugrađena dozvola „Super admin“ (sve kamere). Pretraga traži samo po nazivu dozvole. Članovi AD grupa navedeni su samo ako su se bar jednom prijavili na platformu.</span>';
     } else {
       note.style.display = '';
       note.innerHTML = '<i data-lucide="info"></i><span>Korisnici iz AD grupa navedeni su samo ako su se bar jednom prijavili na platformu; direktno dodeljeni se vide uvek.</span>';
