@@ -69,14 +69,9 @@ function canShare(req: Request): boolean {
   return !!req.access && hasAction(req.access, SHARE_ACTION);
 }
 
-/** Role koje imaju pristup stranici Monitoring (Super admin rola ili bar nivo „Pregled“); samo sa njima se tab može deliti */
+/** Tab se deli sa kamernim rolama (one same otvaraju Monitoring i određuju koje kamere članovi vide) */
 function rolesWithMonitoringAccess() {
-  return listRoles().filter(role => {
-    if (role.isSuperAdmin) return true;
-    const grants = new Map(getRolePermissions(role.id).map(p => [p.key, { level: p.level, actions: new Set(p.actions) }]));
-    const fake = { isSuperAdmin: false, grants } as unknown as EffectiveAccess;
-    return levelFor(fake, 'video.monitoring') !== 'none';
-  });
+  return listRoles('camera').filter(role => getRoleCameraAccess(role.id).length > 0);
 }
 
 /** Role korisnika (bez ugrađene Super admin oznake, koja nije prava rola u bazi) */

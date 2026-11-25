@@ -30,6 +30,7 @@
     equipment_dictionaries: 'evidencija.sifarnici',
     cctv_cameras: 'video.lista',
     cctv_monitoring: 'video.monitoring',
+    cctv_access: 'video.dozvole',
     cameras: 'video.lista',
     ai_agent_prototype: 'noleko.agent_prototip',
     ai_dev_plan: 'noleko.razvojni_plan',
@@ -87,6 +88,7 @@
     actions: [],
     canManageRoles: false,
     rolesScope: 'none',
+    canManageCameraRoles: false,
     cameras: { all: { live: false, playback: false }, byId: {}, byIp: {} }
   };
 

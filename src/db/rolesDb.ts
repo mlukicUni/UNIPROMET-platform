@@ -18,10 +18,14 @@ import {
 export type PrincipalType = 'user' | 'ad_group';
 export type CameraScope = 'all' | 'recorder' | 'group' | 'camera';
 
+/** standard = dozvole za sekcije; camera = pristup kamerama (VIDEO NADZOR → Dozvole za pristup) */
+export type RoleKind = 'standard' | 'camera';
+
 export interface RoleRow {
   id: string;
   name: string;
   description: string;
+  kind: RoleKind;
   isSuperAdmin: boolean;
   isSystem: boolean;
   createdAt: string;
@@ -185,8 +189,49 @@ export function initRolesSchema(): void {
   `);
 
   schemaReady = true;
+  ensureRoleKind();
+  migrateCameraGroupRules();
   seedDefaultRoles();
   migrateDmsRoleAction();
+}
+
+/**
+ * Role su podeljene na dve vrste: standardne (dozvole za sekcije) i kamerne (pristup kamerama).
+ * Kolona se dodaje jednom; tada se svaka standardna rola koja ima pravila za kamere deli na dve:
+ * standardna zadržava dozvole za sekcije, a nova kamerna rola „<naziv> (kamere)“ preuzima pravila za kamere
+ * i dodele, pa niko ne dobija niti gubi pristup.
+ */
+function ensureRoleKind(): void {
+  const db = getDb();
+  const cols = db.prepare('PRAGMA table_info(roles)').all() as { name: string }[];
+  if (cols.some(c => c.name === 'kind')) return;
+
+  db.exec('CREATE TABLE IF NOT EXISTS role_split_map (standard_id TEXT PRIMARY KEY, camera_id TEXT NOT NULL, shares_done INTEGER DEFAULT 0)');
+  const tx = db.transaction(() => {
+    db.exec("ALTER TABLE roles ADD COLUMN kind TEXT NOT NULL DEFAULT 'standard'");
+    const roles = db.prepare('SELECT * FROM roles WHERE is_super_admin = 0').all() as RoleDbRow[];
+    const now = new Date().toISOString();
+    for (const r of roles) {
+      const rules = db.prepare('SELECT COUNT(*) AS c FROM role_camera_access WHERE role_id = ?').get(r.id) as { c: number };
+      if (rules.c === 0) continue;
+
+      let name = `${r.name} (kamere)`;
+      for (let i = 2; db.prepare('SELECT 1 FROM roles WHERE name = ? COLLATE NOCASE').get(name); i++) name = `${r.name} (kamere ${i})`;
+      const camId = newId('role');
+      db.prepare(
+        "INSERT INTO roles (id, name, description, is_super_admin, is_system, created_at, updated_at, kind) VALUES (?, ?, ?, 0, 0, ?, ?, 'camera')"
+      ).run(camId, name, r.description || '', now, now);
+      db.prepare('UPDATE role_camera_access SET role_id = ? WHERE role_id = ?').run(camId, r.id);
+      db.prepare(`
+        INSERT INTO role_assignments (role_id, principal_type, principal_id, display_name, email, created_at, created_by)
+        SELECT ?, principal_type, principal_id, display_name, email, created_at, 'migracija' FROM role_assignments WHERE role_id = ?
+      `).run(camId, r.id);
+      db.prepare('INSERT OR REPLACE INTO role_split_map (standard_id, camera_id, shares_done) VALUES (?, ?, 0)').run(r.id, camId);
+      console.log(`[Roles] Rola „${r.name}“ podeljena: kamerna rola „${name}“`);
+    }
+  });
+  tx();
+  bumpAccessVersion();
 }
 
 /**
@@ -215,6 +260,34 @@ function migrateDmsRoleAction(): void {
   console.log(`[Roles] „Upravljanje DMS rolama“ prebačeno sa akcije na poseban red za ${rows.length} rola`);
 }
 
+/**
+ * Ručne grupe kamera su ukinute (ista stvar se radi kopiranjem role). Pravila pristupa po grupi
+ * pretvaraju se u pravila po kameri za sve članove grupe, pa niko ne gubi pristup; grupe se brišu.
+ */
+function migrateCameraGroupRules(): void {
+  const db = getDb();
+  const rules = db.prepare("SELECT id, role_id, target_id, can_live, can_playback FROM role_camera_access WHERE scope = 'group'")
+    .all() as { id: number; role_id: string; target_id: string; can_live: number; can_playback: number }[];
+  const groups = (db.prepare('SELECT COUNT(*) AS c FROM camera_groups').get() as { c: number }).c;
+  if (rules.length === 0 && groups === 0) return;
+  db.transaction(() => {
+    for (const r of rules) {
+      const members = db.prepare('SELECT camera_id FROM camera_group_members WHERE group_id = ?').all(r.target_id) as { camera_id: string }[];
+      for (const m of members) {
+        db.prepare(`
+          INSERT INTO role_camera_access (role_id, scope, target_id, can_live, can_playback) VALUES (?, 'camera', ?, ?, ?)
+          ON CONFLICT(role_id, scope, target_id) DO UPDATE SET
+            can_live = MAX(can_live, excluded.can_live), can_playback = MAX(can_playback, excluded.can_playback)
+        `).run(r.role_id, m.camera_id, r.can_live, r.can_playback);
+      }
+      db.prepare('DELETE FROM role_camera_access WHERE id = ?').run(r.id);
+    }
+    db.exec('DELETE FROM camera_group_members; DELETE FROM camera_groups;');
+  })();
+  console.log(`[Roles] Grupe kamera ukinute: ${rules.length} pravila pretvoreno u pravila po kameri`);
+  bumpAccessVersion();
+}
+
 function newId(prefix: string): string {
   return `${prefix}-${Date.now().toString(36)}-${crypto.randomBytes(3).toString('hex')}`;
 }
@@ -239,9 +312,11 @@ function seedDefaultRoles(): void {
   const tx = db.transaction(() => {
     insertRole.run('super-admin', 'Super admin', 'Pun pristup svim sekcijama i kamerama, upravljanje rolama.', 1, 1, now, now);
 
-    insertRole.run('video-nadzor-pregled', 'Video nadzor – pregled', 'Pregled liste kamera i monitoringa; sve kamere uživo i snimci.', 0, 0, now, now);
+    insertRole.run('video-nadzor-pregled', 'Video nadzor – pregled', 'Pregled stranica sekcije VIDEO NADZOR.', 0, 0, now, now);
     insertPerm.run('video-nadzor-pregled', 'video', 'view', '[]');
-    insertCam.run('video-nadzor-pregled', 'all', '', 1, 1);
+    insertRole.run('kamere-sve', 'Sve kamere – uživo i snimci', 'Kamerna rola: sve kamere uživo i snimci.', 0, 0, now, now);
+    db.prepare("UPDATE roles SET kind = 'camera' WHERE id = 'kamere-sve'").run();
+    insertCam.run('kamere-sve', 'all', '', 1, 1);
 
     insertRole.run('evidencija-pregled', 'Evidencija – pregled', 'Samo pregled svih stranica sekcije EVIDENCIJA.', 0, 0, now, now);
     insertPerm.run('evidencija-pregled', 'evidencija', 'view', '[]');
@@ -259,6 +334,7 @@ interface RoleDbRow {
   id: string;
   name: string;
   description: string | null;
+  kind?: string | null;
   is_super_admin: number;
   is_system: number;
   created_at: string;
@@ -270,6 +346,7 @@ function rowToRole(r: RoleDbRow): RoleRow {
     id: r.id,
     name: r.name,
     description: r.description || '',
+    kind: r.kind === 'camera' ? 'camera' : 'standard',
     isSuperAdmin: r.is_super_admin === 1,
     isSystem: r.is_system === 1,
     createdAt: r.created_at,
@@ -277,7 +354,7 @@ function rowToRole(r: RoleDbRow): RoleRow {
   };
 }
 
-export function listRoles(): (RoleRow & { assignmentCount: number; permissionCount: number; cameraRuleCount: number })[] {
+export function listRoles(kind?: RoleKind): (RoleRow & { assignmentCount: number; permissionCount: number; cameraRuleCount: number })[] {
   initRolesSchema();
   const db = getDb();
   const rows = db.prepare(`
@@ -288,12 +365,14 @@ export function listRoles(): (RoleRow & { assignmentCount: number; permissionCou
     FROM roles r
     ORDER BY r.is_super_admin DESC, r.name COLLATE NOCASE ASC
   `).all() as (RoleDbRow & { assignment_count: number; permission_count: number; camera_rule_count: number })[];
-  return rows.map(r => ({
-    ...rowToRole(r),
-    assignmentCount: r.assignment_count,
-    permissionCount: r.permission_count,
-    cameraRuleCount: r.camera_rule_count
-  }));
+  return rows
+    .map(r => ({
+      ...rowToRole(r),
+      assignmentCount: r.assignment_count,
+      permissionCount: r.permission_count,
+      cameraRuleCount: r.camera_rule_count
+    }))
+    .filter(r => !kind || r.kind === kind);
 }
 
 export function getRole(id: string): RoleRow | undefined {
@@ -302,7 +381,7 @@ export function getRole(id: string): RoleRow | undefined {
   return row ? rowToRole(row) : undefined;
 }
 
-export function createRole(name: string, description: string): RoleRow {
+export function createRole(name: string, description: string, kind: RoleKind = 'standard'): RoleRow {
   initRolesSchema();
   const cleanName = (name || '').trim();
   if (!cleanName) throw new Error('Naziv role je obavezan');
@@ -312,8 +391,8 @@ export function createRole(name: string, description: string): RoleRow {
   const id = newId('role');
   const now = new Date().toISOString();
   db.prepare(
-    'INSERT INTO roles (id, name, description, is_super_admin, is_system, created_at, updated_at) VALUES (?, ?, ?, 0, 0, ?, ?)'
-  ).run(id, cleanName, (description || '').trim(), now, now);
+    'INSERT INTO roles (id, name, description, is_super_admin, is_system, created_at, updated_at, kind) VALUES (?, ?, ?, 0, 0, ?, ?, ?)'
+  ).run(id, cleanName, (description || '').trim(), now, now, kind === 'camera' ? 'camera' : 'standard');
   bumpAccessVersion();
   return getRole(id)!;
 }
@@ -347,9 +426,9 @@ export function duplicateRole(id: string, newName: string): RoleRow {
   initRolesSchema();
   const src = getRole(id);
   if (!src) throw new Error('Rola nije pronađena');
-  const created = createRole(newName, src.description);
-  setRolePermissions(created.id, getRolePermissions(id));
-  setRoleCameraAccess(created.id, getRoleCameraAccess(id));
+  const created = createRole(newName, src.description, src.kind);
+  if (src.kind === 'camera') setRoleCameraAccess(created.id, getRoleCameraAccess(id));
+  else setRolePermissions(created.id, getRolePermissions(id));
   return created;
 }
 
@@ -373,6 +452,7 @@ export function setRolePermissions(roleId: string, perms: RolePermission[]): voi
   const role = getRole(roleId);
   if (!role) throw new Error('Rola nije pronađena');
   if (role.isSuperAdmin) throw new Error('Dozvole Super admin role se ne menjaju (ima sve dozvole)');
+  if (role.kind === 'camera') throw new Error('Kamerna rola nema dozvole za sekcije; ona određuje samo pristup kamerama');
 
   const clean: RolePermission[] = [];
   const seen = new Set<string>();
@@ -520,10 +600,11 @@ export function setRoleCameraAccess(roleId: string, rules: RoleCameraAccess[]): 
   const role = getRole(roleId);
   if (!role) throw new Error('Rola nije pronađena');
   if (role.isSuperAdmin) throw new Error('Super admin ima pristup svim kamerama');
+  if (role.kind !== 'camera') throw new Error('Pristup kamerama se podešava samo kamernim rolama (VIDEO NADZOR → Dozvole za pristup)');
 
   const merged = new Map<string, RoleCameraAccess>();
   for (const r of rules || []) {
-    if (!['all', 'recorder', 'group', 'camera'].includes(r.scope)) throw new Error(`Nevažeći opseg: ${r.scope}`);
+    if (!['all', 'recorder', 'camera'].includes(r.scope)) throw new Error(`Nevažeći opseg: ${r.scope}`);
     const target = r.scope === 'all' ? '' : String(r.targetId || '').trim();
     if (r.scope !== 'all' && !target) throw new Error('Nedostaje cilj za pravilo pristupa kamerama');
     if (!r.canLive && !r.canPlayback) continue;

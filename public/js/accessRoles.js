@@ -38,12 +38,12 @@
     loading: false,
     catalog: [],
     roles: [],
-    groups: [],
-    tree: { recorders: [], unassigned: [], groups: [], totalCameras: 0 },
+    tree: { recorders: [], unassigned: [], totalCameras: 0 },
     camRec: new Map(),        // cameraId -> recorderId | null
     camInfo: new Map(),       // cameraId -> {id,name,ip,position}
-    groupMembers: new Map(),  // groupId -> Set(cameraId)
     known: { users: [], groups: [] },
+    /** 'standard' = SERVER → Korisnici i role; 'camera' = VIDEO NADZOR → Dozvole za pristup (ista stranica, premeštena u drugi tab) */
+    mode: 'standard',
     mainTab: 'roles',
     rolesSearch: '',
     editor: {
@@ -58,7 +58,6 @@
       openRecorders: new Set()
     },
     audit: { items: [], total: 0, offset: 0, q: '', action: '' },
-    groupModal: { id: null, members: new Set(), search: '', openRecorders: new Set() },
     assignMode: 'user',
     confirmCb: null,
     timers: {}
@@ -141,7 +140,8 @@
   const maxLvl = (a, b) => (rank(a) >= rank(b) ? a : b);
 
   /** Član grupe DMS-Admins: radi samo sa DMS rolama i dozvolama iz sekcije DMS (server proverava isto) */
-  const dmsOnly = () => !!(window.UniAccess && window.UniAccess.rolesScope === 'dms');
+  const dmsOnly = () => S.mode === 'standard' && !!(window.UniAccess && window.UniAccess.rolesScope === 'dms');
+  const camMode = () => S.mode === 'camera';
 
   /** DMS administratoru sakriva kamere, grupe kamera, proveru korisnika i evidenciju */
   function applyScope() {
@@ -160,11 +160,13 @@
     S.loading = true;
     try {
       applyScope();
+      const noTree = { recorders: [], unassigned: [] };
       const [cat, roles, tree, known] = await Promise.all([
-        api(`${API}/catalog`),
-        api(`${API}/roles`),
-        // DMS administrator ne radi sa kamerama
-        dmsOnly() ? Promise.resolve({ recorders: [], unassigned: [], groups: [] }) : api(`${API}/camera-tree`),
+        // Kamerne role nemaju dozvole za sekcije: katalog im ne treba (upravljač kamernih rola ga ni ne sme da traži)
+        camMode() ? Promise.resolve({ sections: [] }) : api(`${API}/catalog`),
+        api(`${API}/roles?kind=${S.mode}`),
+        // Stablo kamera i grupe kamera samo u kamernom prikazu
+        camMode() ? api(`${API}/camera-tree`) : Promise.resolve(noTree),
         api(`${API}/known`)
       ]);
       // DMS administrator u matrici dozvola vidi samo sekciju DMS
@@ -173,11 +175,14 @@
       applyTree(tree);
       S.known = { users: known.users || [], groups: known.groups || [] };
       renderRolesList();
-      renderGroups();
       updateBadges();
       if (S.editor.role) {
         renderPerms();
         renderCamTree();
+      }
+      if (window.AccessOverviewModule) {
+        window.AccessOverviewModule.invalidate();
+        if (camMode() && S.mainTab.startsWith('ov-')) window.AccessOverviewModule.show(S.mainTab, true);
       }
     } catch (err) {
       console.error('[AccessRoles] Greška pri učitavanju:', err);
@@ -189,7 +194,6 @@
 
   function applyTree(tree) {
     S.tree = tree;
-    S.groups = tree.groups || [];
     S.camRec = new Map();
     S.camInfo = new Map();
     (tree.recorders || []).forEach(r => r.cameras.forEach(c => {
@@ -200,11 +204,11 @@
       S.camRec.set(c.id, null);
       S.camInfo.set(c.id, c);
     });
-    S.groupMembers = new Map(S.groups.map(g => [g.id, new Set(g.members)]));
   }
 
   async function refreshRoles() {
-    const roles = await api(`${API}/roles`);
+    const roles = await api(`${API}/roles?kind=${S.mode}`);
+    if (window.AccessOverviewModule) window.AccessOverviewModule.invalidate();
     S.roles = roles.roles || [];
     renderRolesList();
     updateBadges();
@@ -213,15 +217,12 @@
   async function refreshTree() {
     const tree = await api(`${API}/camera-tree`);
     applyTree(tree);
-    renderGroups();
     updateBadges();
   }
 
   function updateBadges() {
     const br = $('ar-badge-roles');
-    const bg = $('ar-badge-groups');
     if (br) br.textContent = S.roles.length;
-    if (bg) bg.textContent = S.groups.length;
   }
 
   /* ==========================================================================
@@ -252,13 +253,13 @@
     document.querySelectorAll('#ar-main-pills [data-ar-tab]').forEach(b => {
       b.classList.toggle('active', b.getAttribute('data-ar-tab') === tab);
     });
-    ['roles', 'groups', 'check', 'audit'].forEach(t => {
+    ['roles', 'ov-roles', 'ov-users', 'ov-cams', 'check', 'audit'].forEach(t => {
       const p = $(`ar-panel-${t}`);
       if (p) p.classList.toggle('active', t === tab);
     });
     if (tab === 'audit') loadAudit(true);
     if (tab === 'check') fillKnownDatalist();
-    if (tab === 'groups') renderGroups();
+    if (tab.startsWith('ov-') && window.AccessOverviewModule) window.AccessOverviewModule.show(tab, false);
     icons();
   }
 
@@ -283,12 +284,14 @@
     if (!tbody) return;
     const items = S.roles.filter(r => UniSearch.match(S.rolesSearch, r.name, r.description));
     const limited = dmsOnly();
-    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : 'rola'}`;
+    if (countEl) countEl.textContent = `Prikazano: ${items.length} od ${S.roles.length} ${limited ? 'DMS rola' : camMode() ? 'kamernih rola' : 'rola'}`;
 
     if (items.length === 0) {
       const empty = limited && S.roles.length === 0
         ? 'Nema DMS rola. Napravite rolu dugmetom „Nova rola“ i dajte joj dozvole iz sekcije DMS Analiza podataka.'
-        : 'Nema rola za dati pojam.';
+        : camMode() && S.roles.length === 0
+          ? 'Nema kamernih rola. Napravite rolu dugmetom „Nova rola“, odaberite kamere koje vidi i dodelite je korisnicima ili AD grupama.'
+          : 'Nema rola za dati pojam.';
       tbody.innerHTML = `<tr><td colspan="6"><div class="ar-tree-empty">${empty}</div></td></tr>`;
       return;
     }
@@ -310,8 +313,8 @@
             </div>
           </td>
           <td style="color:#cbd5e1; font-size:0.82rem;">${esc(r.description || '—')}</td>
-          <td style="text-align:center;">${perms}</td>
-          <td style="text-align:center;">${cams}</td>
+          <td class="ar-col-perm" style="text-align:center;">${perms}</td>
+          <td class="ar-col-cam" style="text-align:center;">${cams}</td>
           <td style="text-align:center;"><span class="ar-num-badge ${r.assignmentCount ? 'is-on' : ''}">${r.assignmentCount}</span></td>
           <td style="text-align:center;">
             <div class="inv-actions-cell" style="justify-content:center;">
@@ -327,7 +330,11 @@
 
   function openNewRoleModal(copyFromId) {
     const sel = $('ar-role-copy');
-    sel.innerHTML = '<option value="">— Prazna rola (bez dozvola) —</option>' +
+    const head = $('form-ar-role').querySelector('.modal-title');
+    const sub = $('form-ar-role').querySelector('.modal-subtitle');
+    if (head) head.textContent = camMode() ? 'Nova kamerna rola' : 'Nova rola';
+    if (sub) sub.textContent = camMode() ? 'Naziv i opis; kamere i dodele se podešavaju posle snimanja' : 'Naziv i opis; dozvole se podešavaju posle snimanja';
+    sel.innerHTML = `<option value="">— Prazna rola (${camMode() ? 'bez kamera' : 'bez dozvola'}) —</option>` +
       S.roles.filter(r => !r.isSuperAdmin).map(r => `<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
     sel.value = copyFromId && S.roles.some(r => r.id === copyFromId && !r.isSuperAdmin) ? copyFromId : '';
     const src = S.roles.find(r => r.id === copyFromId);
@@ -343,7 +350,7 @@
     if (!name) return;
     try {
       const copyFrom = $('ar-role-copy').value || undefined;
-      const res = await api(`${API}/roles`, 'POST', { name, description: $('ar-role-desc').value.trim(), copyFrom });
+      const res = await api(`${API}/roles`, 'POST', { name, description: $('ar-role-desc').value.trim(), copyFrom, kind: S.mode });
       closeModalEl('modal-ar-role');
       notify(`Rola „${res.role.name}“ je napravljena.`, 'success');
       await refreshRoles();
@@ -396,7 +403,7 @@
       renderCamTree();
       renderAssignments();
       renderBasic();
-      switchEdit(E.role.isSuperAdmin ? 'assign' : 'perms');
+      switchEdit(E.role.isSuperAdmin ? 'assign' : camMode() ? 'cameras' : 'perms');
       icons();
     } catch (err) {
       notify(err.message, 'error');
@@ -563,7 +570,7 @@
 
   /* ---------------------------- KAMERE (stablo) ---------------------------- */
   function buildCamState(rules) {
-    const st = { all: { live: false, playback: false }, recorder: new Map(), group: new Map(), camera: new Map() };
+    const st = { all: { live: false, playback: false }, recorder: new Map(), camera: new Map() };
     for (const r of rules) {
       const v = { live: !!r.canLive, playback: !!r.canPlayback };
       if (r.scope === 'all') st.all = v;
@@ -575,7 +582,7 @@
   function camStateToRules(st) {
     const rules = [];
     if (st.all.live || st.all.playback) rules.push({ scope: 'all', targetId: '', canLive: st.all.live, canPlayback: st.all.playback });
-    for (const scope of ['recorder', 'group', 'camera']) {
+    for (const scope of ['recorder', 'camera']) {
       for (const [id, v] of st[scope]) {
         if (v.live || v.playback) rules.push({ scope, targetId: id, canLive: v.live, canPlayback: v.playback });
       }
@@ -598,15 +605,12 @@
     else st[scope].set(id, cur);
   }
 
-  /** Da li je kamera pokrivena "višim" pravilom (sve / snimač / grupa) za dati tip prava */
+  /** Da li je kamera pokrivena "višim" pravilom (sve kamere / snimač) za dati tip prava */
   function cameraCovered(camId, kind) {
     const st = S.editor.cam;
     if (st.all[kind]) return true;
     const rec = S.camRec.get(camId);
     if (rec && st.recorder.get(rec) && st.recorder.get(rec)[kind]) return true;
-    for (const [gid, v] of st.group) {
-      if (v[kind] && S.groupMembers.get(gid) && S.groupMembers.get(gid).has(camId)) return true;
-    }
     return false;
   }
 
@@ -659,7 +663,7 @@
 
     // Snimači
     const recorders = S.tree.recorders || [];
-    html += `<div class="ar-tree-title">Grupe po snimaču (automatske)</div>`;
+    html += `<div class="ar-tree-title">Snimači</div>`;
     let shownRec = 0;
     for (const r of recorders) {
       const recMatch = UniSearch.match(q, r.name, r.location);
@@ -682,18 +686,6 @@
       }
     }
     if (recorders.length && shownRec === 0) html += `<div class="ar-tree-empty">Nijedan snimač ni kamera ne odgovara pretrazi.</div>`;
-
-    // Ručne grupe
-    const groups = S.groups.filter(g => UniSearch.match(q, g.name));
-    if (groups.length) {
-      html += `<div class="ar-tree-title">Ručne grupe kamera</div>`;
-      for (const g of groups) {
-        html += `<div class="ar-row is-head">
-          <div class="ar-row-main"><i data-lucide="layers"></i><span>${esc(g.name)}</span><span class="ar-row-sub">${g.members.length} kamera${g.description ? ' · ' + esc(g.description) : ''}</span></div>
-          <div class="ar-togs">${togHtml('group', g.id, 'live', st.all.live)}${togHtml('group', g.id, 'playback', st.all.playback)}</div>
-        </div>`;
-      }
-    }
 
     // Kamere bez snimača
     const unassigned = (S.tree.unassigned || []).filter(c => camMatches(c, q));
@@ -928,130 +920,6 @@
   /* ==========================================================================
      GRUPE KAMERA
      ========================================================================== */
-  function renderGroups() {
-    const tbody = $('ar-tbody-groups');
-    if (!tbody) return;
-    if (S.groups.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="4"><div class="ar-tree-empty">Nema ručnih grupa. Napravite grupu, npr. „Sve blagajne“.</div></td></tr>`;
-    } else {
-      tbody.innerHTML = S.groups.map(g => `
-        <tr>
-          <td style="font-weight:600; color:#fff;"><i data-lucide="layers" style="width:14px;height:14px;color:var(--yellow-primary);vertical-align:-2px;"></i> ${esc(g.name)}</td>
-          <td style="color:#cbd5e1; font-size:0.82rem;">${esc(g.description || '—')}</td>
-          <td style="text-align:center;"><span class="ar-num-badge ${g.members.length ? 'is-on' : ''}">${g.members.length}</span></td>
-          <td style="text-align:center;">
-            <div class="inv-actions-cell" style="justify-content:center;">
-              <button class="btn-inv-action btn-edit" data-edit-group="${esc(g.id)}" title="Izmeni grupu"><i data-lucide="pencil"></i></button>
-              <button class="btn-inv-action btn-danger btn-delete" data-delete-group="${esc(g.id)}" title="Obriši grupu"><i data-lucide="trash-2"></i></button>
-            </div>
-          </td>
-        </tr>`).join('');
-    }
-
-    const auto = $('ar-auto-groups');
-    const recs = S.tree.recorders || [];
-    auto.innerHTML = `<div class="ar-auto-groups-title">Automatske grupe po snimaču (${recs.length})</div>
-      <div class="ar-auto-chips">${recs.map(r => `<span class="ar-auto-chip"><i data-lucide="hard-drive" style="width:12px;height:12px;"></i>${esc(r.name)} <span>${r.cameras.length}</span></span>`).join('')}</div>`;
-    icons();
-  }
-
-  function openGroupModal(id) {
-    const G = S.groupModal;
-    const g = id ? S.groups.find(x => x.id === id) : null;
-    G.id = id || null;
-    G.members = new Set(g ? g.members : []);
-    G.search = '';
-    G.openRecorders = new Set();
-    $('ar-group-id').value = id || '';
-    $('ar-group-title').textContent = g ? `Izmena grupe: ${g.name}` : 'Nova grupa kamera';
-    $('ar-group-name').value = g ? g.name : '';
-    $('ar-group-desc').value = g ? (g.description || '') : '';
-    $('ar-group-search').value = '';
-    renderGroupTree();
-    openModalEl('modal-ar-group');
-    setTimeout(() => $('ar-group-name').focus(), 60);
-  }
-
-  function renderGroupTree() {
-    const G = S.groupModal;
-    const q = (G.search || '').trim();
-    let html = '';
-
-    const camRow = (c) => `<label class="ar-row ar-cam-row" style="cursor:pointer;">
-      <div class="ar-row-main"><input type="checkbox" class="ar-check" data-gcam="${esc(c.id)}" ${G.members.has(c.id) ? 'checked' : ''}><span>${esc(c.name)}</span><span class="ar-row-sub">${esc(c.position || '')} · ${esc(c.ip)}</span></div>
-    </label>`;
-
-    for (const r of (S.tree.recorders || [])) {
-      const recMatch = UniSearch.match(q, r.name);
-      const cams = r.cameras.filter(c => recMatch || camMatches(c, q));
-      if (!recMatch && cams.length === 0) continue;
-      const open = q ? true : G.openRecorders.has(r.id);
-      const selected = r.cameras.filter(c => G.members.has(c.id)).length;
-      html += `<div class="ar-row is-head">
-        <div class="ar-row-main">
-          <button type="button" class="ar-expander ${open ? 'open' : ''}" data-grec-toggle="${esc(r.id)}"><i data-lucide="chevron-right"></i></button>
-          <input type="checkbox" class="ar-check" data-grec-all="${esc(r.id)}" ${selected === r.cameras.length && r.cameras.length ? 'checked' : ''} title="Izaberi sve kamere snimača">
-          <span>${esc(r.name)}</span>
-          <span class="ar-row-sub">${esc(r.location || '')} · izabrano ${selected}/${r.cameras.length}</span>
-        </div>
-      </div>`;
-      if (open) html += cams.map(camRow).join('');
-    }
-
-    const unassigned = (S.tree.unassigned || []).filter(c => camMatches(c, q));
-    if (unassigned.length) {
-      html += `<div class="ar-tree-title">Kamere bez snimača</div>` + unassigned.map(camRow).join('');
-    }
-    if (!html) html = '<div class="ar-tree-empty">Nema kamera za dati pojam.</div>';
-
-    $('ar-group-tree').innerHTML = html;
-    $('ar-group-count').innerHTML = `Izabrano: <b>${G.members.size}</b> kamera`;
-    icons();
-  }
-
-  async function submitGroup(e) {
-    e.preventDefault();
-    const G = S.groupModal;
-    const body = {
-      name: $('ar-group-name').value.trim(),
-      description: $('ar-group-desc').value.trim(),
-      members: [...G.members]
-    };
-    if (!body.name) return;
-    try {
-      if (G.id) await api(`${API}/camera-groups/${encodeURIComponent(G.id)}`, 'PUT', body);
-      else await api(`${API}/camera-groups`, 'POST', body);
-      closeModalEl('modal-ar-group');
-      notify('Grupa kamera je sačuvana.', 'success');
-      await refreshTree();
-      if (S.editor.role) renderCamTree();
-    } catch (err) {
-      notify(err.message, 'error');
-    }
-  }
-
-  async function deleteGroup(id) {
-    const g = S.groups.find(x => x.id === id);
-    if (!g) return;
-    const ok = await askConfirm({
-      title: 'Brisanje grupe kamera',
-      text: `Grupa „${g.name}“ biće obrisana i uklonjena iz svih rola koje je koriste. Same kamere ostaju.`,
-      okLabel: 'Obriši grupu'
-    });
-    if (!ok) return;
-    try {
-      await api(`${API}/camera-groups/${encodeURIComponent(id)}`, 'DELETE');
-      notify('Grupa je obrisana.', 'success');
-      await refreshTree();
-      await refreshRoles();
-    } catch (err) {
-      notify(err.message, 'error');
-    }
-  }
-
-  /* ==========================================================================
-     PROVERI KORISNIKA
-     ========================================================================== */
   function fillKnownDatalist() {
     const dl = $('ar-check-known');
     if (!dl) return;
@@ -1275,45 +1143,6 @@
     $('ar-btn-duplicate').addEventListener('click', () => openNewRoleModal(S.editor.role.id));
     $('ar-btn-delete-role').addEventListener('click', () => deleteRole(S.editor.role.id));
 
-    // Grupe kamera
-    $('ar-btn-new-group').addEventListener('click', () => openGroupModal(null));
-    $('ar-tbody-groups').addEventListener('click', (e) => {
-      const ed = e.target.closest('[data-edit-group]');
-      if (ed) return openGroupModal(ed.getAttribute('data-edit-group'));
-      const del = e.target.closest('[data-delete-group]');
-      if (del) return deleteGroup(del.getAttribute('data-delete-group'));
-    });
-    $('form-ar-group').addEventListener('submit', submitGroup);
-    $('ar-group-search').addEventListener('input', (e) => {
-      S.groupModal.search = e.target.value;
-      debounce('grouptree', renderGroupTree, 150);
-    });
-    $('ar-group-tree').addEventListener('click', (e) => {
-      const ex = e.target.closest('[data-grec-toggle]');
-      if (ex) {
-        const id = ex.getAttribute('data-grec-toggle');
-        const set = S.groupModal.openRecorders;
-        if (set.has(id)) set.delete(id); else set.add(id);
-        renderGroupTree();
-      }
-    });
-    $('ar-group-tree').addEventListener('change', (e) => {
-      const G = S.groupModal;
-      const one = e.target.closest('[data-gcam]');
-      if (one) {
-        const id = one.getAttribute('data-gcam');
-        if (one.checked) G.members.add(id); else G.members.delete(id);
-        renderGroupTree();
-        return;
-      }
-      const all = e.target.closest('[data-grec-all]');
-      if (all) {
-        const rec = (S.tree.recorders || []).find(r => r.id === all.getAttribute('data-grec-all'));
-        if (rec) rec.cameras.forEach(c => { if (all.checked) G.members.add(c.id); else G.members.delete(c.id); });
-        renderGroupTree();
-      }
-    });
-
     // Provera korisnika
     $('ar-btn-check').addEventListener('click', runCheck);
     $('ar-check-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') runCheck(); });
@@ -1346,7 +1175,44 @@
   /* ==========================================================================
      JAVNI INTERFEJS
      ========================================================================== */
-  function onTabActivated() {
+  /** Ista stranica služi za dva taba: dobija jedan od dva domaćina i prebacuje se u odgovarajući prikaz */
+  function setMode(mode) {
+    const box = $('ar-panel-box');
+    const host = $(mode === 'camera' ? 'tab-cctv_access' : 'tab-access_roles');
+    if (!box || !host) return;
+    if (box.parentElement !== host) host.appendChild(box);
+    if (S.mode !== mode) {
+      S.mode = mode;
+      S.mainTab = 'roles';
+      S.rolesSearch = '';
+      S.roles = [];
+      S.editor.role = null;
+      S.editor.permsDirty = false;
+      S.editor.camDirty = false;
+      const ed = $('ar-role-editor');
+      const list = $('ar-roles-list-view');
+      if (ed) ed.style.display = 'none';
+      if (list) list.style.display = 'block';
+      const search = $('ar-search-roles');
+      if (search) search.value = '';
+    }
+    box.setAttribute('data-ar-mode', mode);
+    const cam = mode === 'camera';
+    const title = $('ar-title');
+    const desc = $('ar-desc');
+    if (title) title.textContent = cam ? 'Dozvole za pristup' : 'Korisnici i role';
+    if (desc) desc.textContent = cam
+      ? 'Kamerne role: koje kamere (uživo i snimci) vide korisnici i AD grupe'
+      : 'Dozvole za sekcije i stranice platforme po rolama, korisnicima i AD grupama';
+    document.querySelectorAll('#ar-main-pills [data-ar-tab]').forEach(b => b.classList.toggle('active', b.getAttribute('data-ar-tab') === S.mainTab));
+    ['roles', 'ov-roles', 'ov-users', 'ov-cams', 'check', 'audit'].forEach(t => {
+      const p = $(`ar-panel-${t}`);
+      if (p) p.classList.toggle('active', t === S.mainTab);
+    });
+  }
+
+  function onTabActivated(mode) {
+    setMode(mode === 'camera' ? 'camera' : 'standard');
     if (!S.initialized) {
       S.initialized = true;
       bindEvents();

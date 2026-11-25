@@ -14,18 +14,16 @@ import {
   removeRoleAssignment,
   getRoleCameraAccess,
   setRoleCameraAccess,
-  listCameraGroups,
-  createCameraGroup,
-  updateCameraGroup,
-  deleteCameraGroup,
   listKnownUsers,
   findKnownUserByEmail,
   listAudit,
   writeAudit
 } from '../db/rolesDb';
 import { PERMISSION_CATALOG, ROLES_TAB } from '../services/permissionCatalog';
-import { computeAccess, describeAccess, searchAdPrincipals, isDmsOnlyRole, permissionsAreDmsOnly } from '../services/accessService';
+import { computeAccess, describeAccess, searchAdPrincipals, isDmsOnlyRole, permissionsAreDmsOnly, canManageRole } from '../services/accessService';
 import { UserGroup } from '../services/authService';
+import { buildOverview } from '../services/cameraAccessOverview';
+import { buildOverviewWorkbook, OverviewView } from '../services/cameraAccessExport';
 import { fetchUserGroupsFromGraph } from '../services/graphService';
 
 /**
@@ -47,9 +45,10 @@ accessRouter.get('/catalog', (_req: Request, res: Response) => {
 /* ---------- Role ---------- */
 accessRouter.get('/roles', (req: Request, res: Response) => {
   try {
-    const roles = listRoles();
-    // DMS administrator (grupa DMS-Admins) vidi samo DMS role
-    res.json({ success: true, roles: req.access?.isSuperAdmin ? roles : roles.filter(r => isDmsOnlyRole(r.id)) });
+    const kind = req.query.kind === 'camera' ? 'camera' : req.query.kind === 'standard' ? 'standard' : undefined;
+    const roles = listRoles(kind);
+    // DMS administrator vidi samo DMS role, a upravljač kamernih rola samo kamerne role
+    res.json({ success: true, roles: req.access?.isSuperAdmin ? roles : roles.filter(r => req.access && canManageRole(req.access, r.id)) });
   } catch (err) {
     fail(res, err, 500);
   }
@@ -70,12 +69,24 @@ accessRouter.get('/roles/:id', (req: Request, res: Response) => {
 accessRouter.post('/roles', (req: Request, res: Response) => {
   try {
     const { name, description, copyFrom } = req.body || {};
-    // DMS administrator sme da kopira samo DMS rolu (prazna nova rola je uvek DMS rola)
-    if (copyFrom && !req.access?.isSuperAdmin && !isDmsOnlyRole(String(copyFrom))) {
-      return fail(res, new Error('Možete da kopirate samo DMS rolu.'), 403);
+    const kind = req.body?.kind === 'camera' ? 'camera' : 'standard';
+    // Ograničeni upravljači: samo role kojima sme da upravlja (kopija) i samo vrsta role koju sme da pravi
+    if (!req.access?.isSuperAdmin) {
+      if (copyFrom && !canManageRole(req.access!, String(copyFrom))) {
+        return fail(res, new Error('Možete da kopirate samo role kojima upravljate.'), 403);
+      }
+      if (!copyFrom && kind === 'camera' && !req.access?.isCameraRoleAdmin) {
+        return fail(res, new Error('Nemate pravo da pravite kamerne role.'), 403);
+      }
+      if (!copyFrom && kind === 'standard' && !req.access?.isDmsRoleAdmin) {
+        return fail(res, new Error('Standardne role pravi samo Super admin (ili DMS administrator za DMS role).'), 403);
+      }
     }
-    const role = copyFrom ? duplicateRole(String(copyFrom), name) : createRole(name, description);
-    writeAudit(req.sessionUser || null, 'role.create', 'role', role.id, `Napravljena rola „${role.name}“${copyFrom ? ' (kopija)' : ''}`);
+    const role = copyFrom ? duplicateRole(String(copyFrom), name) : createRole(name, description, kind);
+    writeAudit(
+      req.sessionUser || null, 'role.create', 'role', role.id,
+      `Napravljena ${role.kind === 'camera' ? 'kamerna ' : ''}rola „${role.name}“${copyFrom ? ' (kopija)' : ''}`
+    );
     res.status(201).json({ success: true, role });
   } catch (err) {
     fail(res, err);
@@ -203,7 +214,7 @@ accessRouter.get('/camera-tree', (_req: Request, res: Response) => {
         .filter(r => byRecorder.has(r.id))
         .map(r => ({ id: r.id, name: r.name, location: r.location || '', ip: r.ip, cameras: byRecorder.get(r.id)! })),
       unassigned,
-      groups: listCameraGroups(),
+      groups: [],
       totalCameras: cams.length
     });
   } catch (err) {
@@ -211,42 +222,31 @@ accessRouter.get('/camera-tree', (_req: Request, res: Response) => {
   }
 });
 
-accessRouter.get('/camera-groups', (_req: Request, res: Response) => {
-  res.json({ success: true, groups: listCameraGroups() });
-});
-
-accessRouter.post('/camera-groups', (req: Request, res: Response) => {
+/* ---------- Pregledi dozvola za kamere (po rolama, korisnicima i kamerama) ---------- */
+accessRouter.get('/camera-overview', (_req: Request, res: Response) => {
   try {
-    const { name, description, members } = req.body || {};
-    const g = createCameraGroup(name, description, members || []);
-    writeAudit(req.sessionUser || null, 'cameragroup.create', 'camera_group', g.id, `Napravljena grupa kamera „${g.name}“ (${g.members.length} kamera)`);
-    res.status(201).json({ success: true, group: g });
+    res.json({ success: true, ...buildOverview() });
   } catch (err) {
-    fail(res, err);
+    fail(res, err, 500);
   }
 });
 
-accessRouter.put('/camera-groups/:id', (req: Request, res: Response) => {
+/** Izvoz u Excel: klijent šalje pregled i ključeve prikazanih stavki; podaci se uvek računaju ponovo na serveru */
+accessRouter.post('/camera-overview/export', async (req: Request, res: Response) => {
   try {
-    const { name, description, members } = req.body || {};
-    const g = updateCameraGroup(req.params.id, name, description, members || []);
-    if (!g) return fail(res, new Error('Grupa kamera nije pronađena'), 404);
-    writeAudit(req.sessionUser || null, 'cameragroup.update', 'camera_group', g.id, `Izmenjena grupa kamera „${g.name}“ (${g.members.length} kamera)`);
-    res.json({ success: true, group: g });
+    const view = String(req.body?.view || '') as OverviewView;
+    if (!['roles', 'users', 'cameras'].includes(view)) return fail(res, new Error('Nepoznat pregled'));
+    const keys = Array.isArray(req.body?.keys) ? req.body.keys.slice(0, 5000).map((k: unknown) => String(k)) : null;
+    const filters = Array.isArray(req.body?.filters) ? req.body.filters.slice(0, 12).map((f: unknown) => String(f)) : [];
+    if (keys && keys.length === 0) return fail(res, new Error('Nema stavki za izvoz u trenutnom prikazu.'));
+    const wb = buildOverviewWorkbook(buildOverview(), view, keys, filters);
+    const names: Record<string, string> = { roles: 'Role', users: 'Korisnici', cameras: 'Kamere' };
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="Unipromet_Pristup_kamerama_${names[view]}_${new Date().toISOString().slice(0, 10)}.xlsx"`);
+    await wb.xlsx.write(res);
+    res.end();
   } catch (err) {
-    fail(res, err);
-  }
-});
-
-accessRouter.delete('/camera-groups/:id', (req: Request, res: Response) => {
-  try {
-    const g = listCameraGroups().find(x => x.id === req.params.id);
-    if (!g) return fail(res, new Error('Grupa kamera nije pronađena'), 404);
-    deleteCameraGroup(g.id);
-    writeAudit(req.sessionUser || null, 'cameragroup.delete', 'camera_group', g.id, `Obrisana grupa kamera „${g.name}“`);
-    res.json({ success: true });
-  } catch (err) {
-    fail(res, err);
+    fail(res, err, 500);
   }
 });
 

@@ -33,7 +33,7 @@
   <link rel="stylesheet" href="/css/components/equipment.css">
   <link rel="stylesheet" href="/css/components/dictionaries.css">
   <link rel="stylesheet" href="/css/components/access.css">
-  <link rel="stylesheet" href="/css/components/access-roles.css">
+  <link rel="stylesheet" href="/css/components/access-roles.css?v=20261130">
   <link rel="stylesheet" href="/css/components/monitoring.css?v=20261124_tabs">
   <link rel="stylesheet" href="/css/components/ai-agent.css">
   <link rel="stylesheet" href="/css/components/noleko-docs.css">
@@ -233,6 +233,11 @@
                 </svg>
               </div>
               <span class="nav-label">Monitoring</span>
+            </button>
+
+            <button class="nav-tab-btn access-hidden" data-tab="cctv_access">
+              <div class="nav-icon-wrap"><i data-lucide="key-round"></i></div>
+              <span class="nav-label">Dozvole za pristup</span>
             </button>
           </div>
         </div>
@@ -3693,17 +3698,23 @@
         </section>
 
         <!-- ========================================================== -->
+        <!-- TAB: DOZVOLE ZA PRISTUP (kamerne role) - prazan domaćin; stranicu iz taba Korisnici i role -->
+        <!-- premešta accessRoles.js pri otvaranju                      -->
+        <!-- ========================================================== -->
+        <section id="tab-cctv_access" class="tab-view"></section>
+
+        <!-- ========================================================== -->
         <!-- TAB: KORISNICI I ROLE (samo Super admin)                   -->
         <!-- ========================================================== -->
         <section id="tab-access_roles" class="tab-view">
-          <div class="panel-box full-span">
+          <div class="panel-box full-span" id="ar-panel-box" data-ar-mode="standard">
 
             <div class="panel-box-header">
               <div class="panel-title-with-icon">
                 <div class="yellow-icon-square"><i data-lucide="shield-check"></i></div>
                 <div>
-                  <h4>Korisnici i role</h4>
-                  <p class="panel-desc">Pristup sekcijama platforme i kamerama po rolama, pojedincima i AD grupama</p>
+                  <h4 id="ar-title">Korisnici i role</h4>
+                  <p class="panel-desc" id="ar-desc">Dozvole za sekcije i stranice platforme po rolama, korisnicima i AD grupama</p>
                 </div>
               </div>
 
@@ -3724,10 +3735,17 @@
                   <span>Role</span>
                   <span class="eq-pill-count" id="ar-badge-roles">--</span>
                 </button>
-                <button type="button" class="eq-pill-btn" data-ar-tab="groups">
-                  <i data-lucide="camera"></i>
-                  <span>Grupe kamera</span>
-                  <span class="eq-pill-count" id="ar-badge-groups">--</span>
+                <button type="button" class="eq-pill-btn" data-ar-tab="ov-roles" title="Šta pripada svakoj kamernoj roli">
+                  <i data-lucide="shield"></i>
+                  <span>Pregled rola</span>
+                </button>
+                <button type="button" class="eq-pill-btn" data-ar-tab="ov-users" title="Ko koristi kamere, kroz koje role i koje kamere vidi">
+                  <i data-lucide="users"></i>
+                  <span>Pregled korisnika</span>
+                </button>
+                <button type="button" class="eq-pill-btn" data-ar-tab="ov-cams" title="Ko sve može da gleda svaku kameru">
+                  <i data-lucide="cctv"></i>
+                  <span>Pregled kamera</span>
                 </button>
                 <button type="button" class="eq-pill-btn" data-ar-tab="check">
                   <i data-lucide="user-search"></i>
@@ -3761,8 +3779,8 @@
                         <tr>
                           <th style="min-width: 200px;">ROLA</th>
                           <th style="min-width: 260px;">OPIS</th>
-                          <th style="width: 110px; text-align: center;">DOZVOLE</th>
-                          <th style="width: 120px; text-align: center;">KAMERE</th>
+                          <th class="ar-col-perm" style="width: 110px; text-align: center;">DOZVOLE</th>
+                          <th class="ar-col-cam" style="width: 120px; text-align: center;">KAMERE</th>
                           <th style="width: 110px; text-align: center;">DODELE</th>
                           <th style="width: 130px; text-align: center;">AKCIJE</th>
                         </tr>
@@ -3825,7 +3843,7 @@
                   <div class="dict-subpanel" id="ar-edit-cameras">
                     <div class="ar-hint">
                       <i data-lucide="info"></i>
-                      <span>Odaberite koje kamere rola vidi: <b>sve</b>, cele <b>grupe</b> (po snimaču ili ručne) ili <b>pojedinačne</b> kamere. Za svaku stavku posebno se dozvoljava <b>Uživo</b> i <b>Snimci</b> (uključuje preuzimanje klipa).</span>
+                      <span>Odaberite koje kamere rola vidi: <b>sve</b>, sve kamere jednog <b>snimača</b> ili <b>pojedinačne</b> kamere. Ako treba sličan skup kamera za drugu grupu korisnika, napravite kopiju role (dugme sa dve stranice u listi rola). Za svaku stavku posebno se dozvoljava <b>Uživo</b> i <b>Snimci</b> (uključuje preuzimanje klipa).</span>
                     </div>
                     <div class="network-filters-toolbar" style="margin-top: 10px;">
                       <div class="search-input-wrap" style="flex: 1; min-width: 240px;">
@@ -3890,27 +3908,10 @@
                 </div>
               </div>
 
-              <!-- ====================== GRUPE KAMERA ====================== -->
-              <div class="dict-subpanel" id="ar-panel-groups">
-                <div class="network-filters-toolbar" style="margin-top: 14px;">
-                  <span class="text-dim text-xs" style="flex: 1; min-width: 240px;">Grupe po snimaču (automatske) postoje uvek; ovde se prave ručne grupe, npr. „Sve blagajne“. Ista kamera može biti u više grupa.</span>
-                  <button class="btn-yellow-solid-sm" id="ar-btn-new-group"><i data-lucide="plus-circle"></i><span>Nova grupa</span></button>
-                </div>
-                <div class="inv-table-wrapper" style="margin-top: 14px; min-height: 220px;">
-                  <table class="inv-camera-table">
-                    <thead>
-                      <tr>
-                        <th style="min-width: 200px;">NAZIV GRUPE</th>
-                        <th style="min-width: 240px;">OPIS</th>
-                        <th style="width: 120px; text-align: center;">KAMERA</th>
-                        <th style="width: 110px; text-align: center;">AKCIJE</th>
-                      </tr>
-                    </thead>
-                    <tbody id="ar-tbody-groups"></tbody>
-                  </table>
-                </div>
-                <div class="ar-auto-groups" id="ar-auto-groups"></div>
-              </div>
+              <!-- ====================== PREGLEDI DOZVOLA ZA KAMERE (accessOverview.js) ====================== -->
+              <div class="dict-subpanel" id="ar-panel-ov-roles"></div>
+              <div class="dict-subpanel" id="ar-panel-ov-users"></div>
+              <div class="dict-subpanel" id="ar-panel-ov-cams"></div>
 
               <!-- ====================== PROVERI KORISNIKA ====================== -->
               <div class="dict-subpanel" id="ar-panel-check">
@@ -3938,7 +3939,6 @@
                       <option value="">Svi događaji</option>
                       <option value="camera.">Kamere (uživo, snimci, klipovi)</option>
                       <option value="role.">Izmene rola i dodela</option>
-                      <option value="cameragroup.">Grupe kamera</option>
                       <option value="auth.">Prijave</option>
                       <option value="access.denied">Odbijen pristup</option>
                     </select>
@@ -4782,58 +4782,6 @@
     </div>
   </div>
 
-  <!-- Grupa kamera -->
-  <div class="modal-overlay" id="modal-ar-group" style="display: none;">
-    <div class="modal-window modal-glass eq-modal-window" style="max-width: 760px; width: 95vw;">
-      <form id="form-ar-group" autocomplete="off">
-        <input type="hidden" id="ar-group-id" value="">
-        <div class="modal-header">
-          <div class="modal-title-wrap">
-            <div class="modal-icon-circle" style="background: rgba(255, 184, 0, 0.15); color: var(--yellow-primary);"><i data-lucide="layers"></i></div>
-            <div>
-              <h3 class="modal-title" id="ar-group-title">Grupa kamera</h3>
-              <p class="modal-subtitle">Izaberite kamere koje čine grupu</p>
-            </div>
-          </div>
-          <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
-        </div>
-
-        <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 14px;">
-          <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 14px;">
-            <div class="form-group">
-              <label for="ar-group-name"><i data-lucide="tag" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Naziv grupe <span style="color: #ef4444;">*</span></label>
-              <div class="modal-input-wrap">
-                <i data-lucide="tag" class="modal-input-icon"></i>
-                <input type="text" id="ar-group-name" class="glass-input has-icon" maxlength="80" placeholder="npr. Sve blagajne" required>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="ar-group-desc"><i data-lucide="file-text" style="width: 14px; height: 14px; color: var(--yellow-primary);"></i> Opis</label>
-              <div class="modal-input-wrap">
-                <i data-lucide="file-text" class="modal-input-icon"></i>
-                <input type="text" id="ar-group-desc" class="glass-input has-icon" maxlength="200">
-              </div>
-            </div>
-          </div>
-
-          <div class="network-filters-toolbar">
-            <div class="search-input-wrap" style="flex: 1; min-width: 200px;">
-              <i data-lucide="search" class="search-icon"></i>
-              <input type="text" id="ar-group-search" class="printer-search-input" style="width: 100%;" placeholder="Pretraži kamere...">
-            </div>
-            <span class="ar-cam-summary" id="ar-group-count"></span>
-          </div>
-          <div id="ar-group-tree" class="ar-tree ar-tree-modal"></div>
-        </div>
-
-        <div class="modal-bottom-actions" style="justify-content: flex-end; padding: 14px 24px; border-top: 1px solid rgba(255, 255, 255, 0.08); background: rgba(0, 0, 0, 0.2); gap: 10px;">
-          <button type="button" class="btn-dark-outline-sm btn-modal-cancel"><span>Otkaži</span></button>
-          <button type="submit" class="btn-yellow-solid-sm"><i data-lucide="check"></i><span>Sačuvaj grupu</span></button>
-        </div>
-      </form>
-    </div>
-  </div>
-
   <!-- Potvrda (brisanje, oduzimanje) -->
   <div class="modal-overlay" id="modal-ar-confirm" style="display: none;">
     <div class="modal-window modal-glass modal-danger eq-modal-window" style="max-width: 460px; width: 95vw;">
@@ -4964,7 +4912,7 @@
         <button class="modal-close-icon" type="button" title="Zatvori"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body-content" style="padding: 18px 24px; display: flex; flex-direction: column; gap: 12px;">
-        <p class="mon-gallery-note" style="margin: 0;">Članovi izabranih rola vide ovaj tab pored svojih. Tab mogu samo da gledaju; mogu da naprave svoju kopiju ili da ga sakriju za sebe.</p>
+        <p class="mon-gallery-note" style="margin: 0;">Tab se deli sa kamernim rolama (VIDEO NADZOR → Dozvole za pristup). Članovi izabranih rola vide ovaj tab pored svojih. Tab mogu samo da gledaju; mogu da naprave svoju kopiju ili da ga sakriju za sebe.</p>
         <div class="mon-rot-list" id="mon-share-list"></div>
       </div>
       <div class="modal-bottom-actions mon-modal-footer">
@@ -8477,7 +8425,7 @@
   </nav>
 
   <!-- Role & Permissions (client-side view of /auth/me access) - must load first -->
-  <script src="/js/access.js"></script>
+  <script src="/js/access.js?v=20261125"></script>
   <!-- VideoRTC / go2rtc 25 FPS Streaming Client -->
   <script type="module" src="/js/core/video-stream.js"></script>
   <!-- Equipment Inventory Module -->
@@ -8497,11 +8445,12 @@
   <!-- Switches Telemetry Module -->
   <script src="/js/switches.js"></script>
   <!-- Korisnici i role (Super admin) Module -->
-  <script src="/js/accessRoles.js"></script>
+  <script src="/js/accessOverview.js?v=20261130b"></script>
+  <script src="/js/accessRoles.js?v=20261126"></script>
 
   <!-- Monitoring (lični tabovi sa gridovima kamera) -->
   <script src="/js/monitoringCore.js?v=20261124_status"></script>
-  <script src="/js/monitoring.js?v=20261124_tabs"></script>
+  <script src="/js/monitoring.js?v=20261125_share"></script>
   <script src="/js/monitoringQuickAdd.js?v=20261123_tpl"></script>
   <script src="/js/core/markdown.js"></script>
   <script src="/js/aiAgent.js"></script>
@@ -8522,7 +8471,7 @@
   <script src="/js/dms/signatures.js?v=20261105"></script>
   <script src="/js/dms/table-fullscreen.js?v=20261105"></script>
   <script src="/js/dms/paging.js?v=20261106"></script>
-  <script src="/js/app.js?v=20261124_status"></script>
+  <script src="/js/app.js?v=20261125_roles"></script>
 </body>
 
 </html>
