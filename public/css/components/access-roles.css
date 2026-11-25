@@ -830,3 +830,172 @@
   cursor: default;
   opacity: 0.75;
 }
+
+/* Ista stranica služi za dva taba: Korisnici i role (standardne role) i Dozvole za pristup (kamerne role) */
+#ar-panel-box[data-ar-mode="camera"] .ar-col-perm,
+#ar-panel-box[data-ar-mode="camera"] [data-ar-edit="perms"],
+#ar-panel-box[data-ar-mode="camera"] [data-ar-tab="check"],
+#ar-panel-box[data-ar-mode="camera"] [data-ar-tab="audit"],
+#ar-panel-box[data-ar-mode="standard"] .ar-col-cam,
+#ar-panel-box[data-ar-mode="standard"] [data-ar-edit="cameras"],
+#ar-panel-box[data-ar-mode="standard"] [data-ar-tab="groups"] {
+  display: none !important;
+}
+
+/* Pregledi dozvola za kamere (po rolama, korisnicima i kamerama) */
+#ar-panel-box[data-ar-mode="standard"] [data-ar-tab^="ov-"] { display: none !important; }
+
+.ar-ov-filters { gap: 10px; align-items: center; }
+.ar-ov-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+.ar-ov-check input { accent-color: var(--yellow-primary); }
+.ar-ov-sub {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+.ar-ov-table td { vertical-align: top; }
+.ar-ov-detail > td {
+  background: rgba(255, 255, 255, 0.025);
+  padding: 14px 18px 16px 34px;
+}
+.ar-ov-block + .ar-ov-block { margin-top: 14px; }
+.ar-ov-block h6 {
+  margin: 0 0 8px;
+  font-size: 0.74rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.ar-ov-line { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ar-ov-loc { margin: 10px 0 6px; font-size: 0.8rem; color: #e2e8f0; }
+.ar-ov-loc:first-child { margin-top: 0; }
+.ar-ov-cams { display: flex; flex-wrap: wrap; gap: 6px; }
+.ar-ov-cam {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+.ar-ov-cam i, .ar-ov-cam svg { width: 13px; height: 13px; color: #94a3b8; }
+.ar-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.05);
+}
+.ar-flag.on { color: #0f172a; background: #34d399; }
+.ar-tag-dim { opacity: 0.7; }
+.ar-tag-warn { background: rgba(239, 68, 68, 0.15); color: #fca5a5; border-color: rgba(239, 68, 68, 0.35); }
+
+.ar-pill.is-more { cursor: pointer; background: rgba(255, 184, 0, 0.1); border-color: rgba(255, 184, 0, 0.3); color: var(--yellow-light); }
+.ar-pill.is-more:hover { background: rgba(255, 184, 0, 0.2); }
+
+/* Polje za pretragu sa pilulama i predlozima (kao primaoci u Outlook-u) */
+.ar-ov-search {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 4px 12px 4px 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  cursor: text;
+}
+.ar-ov-search:focus-within { border-color: rgba(255, 184, 0, 0.6); box-shadow: 0 0 0 2px rgba(255, 184, 0, 0.12); }
+.ar-ov-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: #94a3b8; pointer-events: none; }
+.ar-ov-chips { display: contents; }
+.ar-ov-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 3px 4px 3px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  background: rgba(255, 184, 0, 0.12);
+  border: 1px solid rgba(255, 184, 0, 0.35);
+  color: var(--yellow-light);
+}
+.ar-ov-chip > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ov-chip i, .ar-ov-chip svg { width: 13px; height: 13px; flex-shrink: 0; }
+.ar-ov-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 0.95rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.ar-ov-chip button:hover { background: rgba(239, 68, 68, 0.45); color: #fff; }
+.ar-ov-search-input {
+  flex: 1;
+  min-width: 140px;
+  height: 30px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 0.86rem;
+}
+.ar-ov-search-input::placeholder { color: #64748b; }
+.ar-ov-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 60;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px;
+  border-radius: 10px;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+}
+.ar-ov-sug-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.ar-ov-sug-item i, .ar-ov-sug-item svg { width: 16px; height: 16px; color: #94a3b8; flex-shrink: 0; }
+.ar-ov-sug-item.is-active, .ar-ov-sug-item:hover { background: rgba(255, 184, 0, 0.12); }
+.ar-ov-sug-text { display: flex; flex-direction: column; min-width: 0; }
+.ar-ov-sug-text b { font-size: 0.84rem; color: #f1f5f9; }
+.ar-ov-sug-text span { font-size: 0.72rem; color: #94a3b8; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ar-ov-sug-empty { padding: 8px 12px; font-size: 0.78rem; color: #94a3b8; }

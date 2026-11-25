@@ -64,6 +64,8 @@ export interface EffectiveAccess {
   isSuperAdmin: boolean;
   /** Član AD grupe DMS-Admins (a nije Super admin): u „Korisnici i role“ vidi i dodeljuje samo DMS role */
   isDmsRoleAdmin: boolean;
+  /** Ima pravo „Dozvole za pristup“ (Izmena): upravlja kamernim rolama i grupama kamera */
+  isCameraRoleAdmin: boolean;
   hasAnyAccess: boolean;
   roles: AppliedRole[];
   perms: PermDetail[];
@@ -77,6 +79,12 @@ const norm = (s: string | undefined | null) => (s || '').trim().toLowerCase();
 
 /** AD grupa čiji članovi dodeljuju DMS role (poređenje po imenu, bez obzira na velika/mala slova) */
 export const DMS_ROLE_ADMIN_GROUP = 'DMS-Admins';
+
+/** Stavka u rolama koja daje pravo upravljanja kamernim rolama (VIDEO NADZOR → Dozvole za pristup) */
+export const CAMERA_ROLE_ADMIN_ITEM = 'video.dozvole';
+
+/** Stranice koje kamerna rola sama otvara (da bi korisnik video kamere, nije mu potrebna i standardna rola) */
+const CAMERA_ROLE_PAGES = ['video.lista', 'video.monitoring'];
 
 /** Stavka u rolama koja daje isto što i članstvo u DMS-Admins (upravljanje DMS rolama); ne nasleđuje se sa sekcije */
 export const DMS_ROLE_ADMIN_ITEM = 'dms.role';
@@ -98,9 +106,21 @@ export function permissionsAreDmsOnly(perms: { key: string; actions?: string[] }
  */
 export function isDmsOnlyRole(roleId: string): boolean {
   const role = getRole(roleId);
-  if (!role || role.isSuperAdmin || role.isSystem) return false;
+  if (!role || role.isSuperAdmin || role.isSystem || role.kind === 'camera') return false;
   if (!permissionsAreDmsOnly(getRolePermissions(role.id))) return false;
   return getRoleCameraAccess(role.id).length === 0;
+}
+
+/**
+ * Da li korisnik sme da upravlja datom rolom: Super admin svim rolama, DMS administrator samo DMS rolama,
+ * a upravljač kamernih rola samo kamernim rolama.
+ */
+export function canManageRole(access: EffectiveAccess, roleId: string): boolean {
+  if (access.isSuperAdmin) return true;
+  const role = getRole(roleId);
+  if (!role || role.isSuperAdmin || role.isSystem) return false;
+  if (role.kind === 'camera') return access.isCameraRoleAdmin;
+  return access.isDmsRoleAdmin && isDmsOnlyRole(roleId);
 }
 
 function userMatches(a: RoleAssignment, user: { id?: string; email?: string }): boolean {
@@ -167,8 +187,13 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
     for (const p of getRolePermissions(r.id)) {
       perms.push({ roleName: r.name, key: p.key, level: p.level, actions: p.actions });
     }
-    for (const c of allRules.filter(x => x.roleId === r.id)) {
+    const rules = allRules.filter(x => x.roleId === r.id);
+    for (const c of rules) {
       camRules.push({ roleName: r.name, scope: c.scope, targetId: c.targetId, canLive: c.canLive, canPlayback: c.canPlayback });
+    }
+    // Kamerna rola sa bar jednim pravilom sama otvara Listu kamera i Monitoring (pregled)
+    if (roleById.get(r.id)?.kind === 'camera' && rules.length > 0) {
+      for (const key of CAMERA_ROLE_PAGES) perms.push({ roleName: r.name, key, level: 'view', actions: [] });
     }
   }
 
@@ -201,9 +226,12 @@ export function computeAccess(user: { id?: string; name?: string; email?: string
   const groupIds = [...new Set(camRules.filter(c => c.scope === 'group').map(c => c.targetId))];
   const groupMembers = getCameraGroupMembersMap(groupIds);
 
+  const isCameraRoleAdmin = !isSuperAdmin && levelRank(grants.get(CAMERA_ROLE_ADMIN_ITEM)?.level || 'none') >= levelRank('edit');
+
   return {
     isSuperAdmin,
     isDmsRoleAdmin,
+    isCameraRoleAdmin,
     // DMS administrator bez ijedne role i dalje ulazi na platformu (stranica „Korisnici i role“)
     hasAnyAccess: isSuperAdmin || isDmsRoleAdmin || grants.size > 0,
     roles,
@@ -397,6 +425,8 @@ export interface ClientAccess {
   canManageRoles: boolean;
   /** 'all' = Super admin (sve role), 'dms' = DMS-Admins (samo dodela DMS rola), 'none' */
   rolesScope: 'all' | 'dms' | 'none';
+  /** Sme da upravlja kamernim rolama i grupama kamera (VIDEO NADZOR → Dozvole za pristup) */
+  canManageCameraRoles: boolean;
   cameras: {
     all: { live: boolean; playback: boolean };
     byId: Record<string, { live: boolean; playback: boolean }>;
@@ -434,6 +464,7 @@ export function buildClientAccess(access: EffectiveAccess): ClientAccess {
     actions: access.isSuperAdmin ? ['*'] : [...access.allActions],
     canManageRoles: access.isSuperAdmin || access.isDmsRoleAdmin,
     rolesScope: access.isSuperAdmin ? 'all' : access.isDmsRoleAdmin ? 'dms' : 'none',
+    canManageCameraRoles: access.isSuperAdmin || access.isCameraRoleAdmin,
     cameras: { all, byId, byIp }
   };
 }

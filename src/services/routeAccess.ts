@@ -11,7 +11,8 @@ import {
   canAccessCamera,
   lookupCameraById,
   lookupCameraByIp,
-  isDmsOnlyRole
+  isDmsOnlyRole,
+  canManageRole
 } from './accessService';
 import { writeAudit } from '../db/rolesDb';
 import { PermissionLevel } from './permissionCatalog';
@@ -84,14 +85,21 @@ const RULES: Rule[] = [
   // Članovi AD grupe DMS-Admins: pravljenje, izmena, brisanje i dodela DMS rola (dozvole samo iz sekcije DMS,
   // proverava access.routes). Role van DMS-a za njih ne postoje.
   { m: 'GET', p: '/access/catalog', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
-  { m: 'GET', p: '/access/known', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
-  { m: 'GET', p: '/access/ad/search', spec: { custom: ({ access }) => access.isDmsRoleAdmin } },
-  { m: 'GET,POST', p: '/access/roles', spec: { custom: ({ access }) => access.isDmsRoleAdmin } }, // lista: samo DMS role; kopija: samo od DMS role
-  { m: 'GET,PUT,DELETE', p: '/access/roles/:id', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
+  // Upravljači kamernih rola (stavka „Dozvole za pristup“): samo kamerne role, grupe kamera i dodele tih rola
+  { m: 'GET', p: '/access/known', spec: { custom: ({ access }) => access.isDmsRoleAdmin || access.isCameraRoleAdmin } },
+  { m: 'GET', p: '/access/ad/search', spec: { custom: ({ access }) => access.isDmsRoleAdmin || access.isCameraRoleAdmin } },
+  // lista i pravljenje: ruta sama sužava na role koje korisnik sme da vidi, odnosno da pravi
+  { m: 'GET,POST', p: '/access/roles', spec: { custom: ({ access }) => access.isDmsRoleAdmin || access.isCameraRoleAdmin } },
+  { m: 'GET,PUT,DELETE', p: '/access/roles/:id', spec: { custom: ({ access, params }) => canManageRole(access, params.id) } },
   { m: 'PUT', p: '/access/roles/:id/permissions', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
-  { m: 'POST', p: '/access/roles/:id/assignments', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
-  { m: 'DELETE', p: '/access/roles/:id/assignments/:aid', spec: { custom: ({ access, params }) => access.isDmsRoleAdmin && isDmsOnlyRole(params.id) } },
-  // Sve ostalo (pristup kamerama, grupe kamera, provera korisnika, evidencija) samo Super admin
+  { m: 'PUT', p: '/access/roles/:id/cameras', spec: { custom: ({ access, params }) => canManageRole(access, params.id) } },
+  { m: 'POST', p: '/access/roles/:id/assignments', spec: { custom: ({ access, params }) => canManageRole(access, params.id) } },
+  { m: 'DELETE', p: '/access/roles/:id/assignments/:aid', spec: { custom: ({ access, params }) => canManageRole(access, params.id) } },
+  { m: 'GET', p: '/access/camera-tree', spec: { custom: ({ access }) => access.isCameraRoleAdmin } },
+  // Pregledi dozvola (po rolama, korisnicima i kamerama) i izvoz u Excel
+  { m: 'GET', p: '/access/camera-overview', spec: { custom: ({ access }) => access.isCameraRoleAdmin } },
+  { m: 'POST', p: '/access/camera-overview/export', spec: { custom: ({ access }) => access.isCameraRoleAdmin } },
+  // Sve ostalo (provera korisnika, evidencija) samo Super admin
   { m: '*', p: '/access/**', spec: { superOnly: true } },
 
   /* ---------- Video gateway (go2rtc proxy) ---------- */

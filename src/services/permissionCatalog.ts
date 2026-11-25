@@ -104,7 +104,9 @@ export const PERMISSION_CATALOG: SectionDef[] = [
       {
         key: 'video.monitoring', label: 'Monitoring', tab: 'cctv_monitoring',
         actions: [{ key: 'deljenje', label: 'Deljenje tabova sa rolama' }]
-      }
+      },
+      // Posebno pravo: upravljanje kamernim rolama; ne nasleđuje se sa nivoa cele sekcije (Izmena = pun pristup kamerama)
+      { key: 'video.dozvole', label: 'Dozvole za pristup (kamerne role)', tab: 'cctv_access', actions: [], explicitOnly: true }
     ]
   },
   {

@@ -340,6 +340,10 @@ function setupNavigationHandlers() {
       title: 'Monitoring Video Nadzora',
       subtitle: 'Centralni nadzorni interfejs za monitoring i kontrolu kamera u realnom vremenu'
     },
+    cctv_access: {
+      title: 'Dozvole za Pristup Kamerama',
+      subtitle: 'Kamerne role: koje kamere (uživo i snimci) vide korisnici i AD grupe'
+    },
     equipment: {
       title: 'Evidencija Opreme',
       subtitle: 'Centralni registar IT opreme sa live Navision statusom zaduženja i istorijatom'
@@ -420,6 +424,7 @@ function setupNavigationHandlers() {
     switches: 'mreza',
     cctv_cameras: 'video_nadzor',
     cctv_monitoring: 'video_nadzor',
+    cctv_access: 'video_nadzor',
     equipment: 'evidencija',
     network_equipment: 'evidencija',
     equipment_nodes: 'evidencija',
@@ -681,9 +686,9 @@ function setupNavigationHandlers() {
       }
     }
 
-    if (tabId === 'access_roles') {
+    if (tabId === 'access_roles' || tabId === 'cctv_access') {
       if (window.AccessRolesModule && typeof window.AccessRolesModule.onTabActivated === 'function') {
-        window.AccessRolesModule.onTabActivated();
+        window.AccessRolesModule.onTabActivated(tabId === 'cctv_access' ? 'camera' : 'standard');
       }
     }
 

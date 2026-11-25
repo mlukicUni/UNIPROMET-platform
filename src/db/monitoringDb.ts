@@ -153,6 +153,7 @@ export function initMonitoringSchema(): void {
   migratePresetLayouts();
   initRolesSchema();
   // Deljenja obrisanih rola i obrisanih tabova više nemaju smisla
+  migrateSharesToCameraRoles();
   getDb().exec(`
     DELETE FROM monitoring_tab_shares WHERE role_id NOT IN (SELECT id FROM roles);
     DELETE FROM monitoring_tab_shares WHERE tab_id NOT IN (SELECT id FROM monitoring_tabs);
@@ -343,6 +344,25 @@ export function reorderTabs(owner: string, ids: unknown): MonitoringTab[] {
 export const MAX_SHARE_ROLES = 50;
 
 /** Role sa kojima su podeljeni tabovi vlasnika: mapa tabId -> role */
+/**
+ * Posle deobe rola na standardne i kamerne, deljenja sa starom rolom prelaze na njenu kamernu rolu
+ * (članovi su isti, jer su dodele kopirane). Radi se jednom po podeljenoj roli.
+ */
+function migrateSharesToCameraRoles(): void {
+  const db = getDb();
+  const has = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'role_split_map'").get();
+  if (!has) return;
+  db.transaction(() => {
+    db.exec(`
+      INSERT OR IGNORE INTO monitoring_tab_shares (tab_id, role_id, shared_by, created_at)
+        SELECT s.tab_id, m.camera_id, s.shared_by, s.created_at
+        FROM monitoring_tab_shares s JOIN role_split_map m ON m.standard_id = s.role_id AND m.shares_done = 0;
+      DELETE FROM monitoring_tab_shares WHERE role_id IN (SELECT standard_id FROM role_split_map WHERE shares_done = 0);
+      UPDATE role_split_map SET shares_done = 1 WHERE shares_done = 0;
+    `);
+  })();
+}
+
 export function listSharesForOwner(owner: string): Map<string, TabShare[]> {
   initRolesSchema();
   const rows = getDb().prepare(`

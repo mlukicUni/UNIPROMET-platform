@@ -796,7 +796,7 @@
   function renderShareList(chosen) {
     const list = $('mon-share-list');
     if (!SH.roles.length) {
-      list.innerHTML = '<div class="mon-picker-empty">Nema definisanih rola.</div>';
+      list.innerHTML = '<div class="mon-picker-empty">Nema kamernih rola. Prave se u VIDEO NADZOR → Dozvole za pristup.</div>';
       return;
     }
     list.innerHTML = SH.roles.map(r => {
