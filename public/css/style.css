@@ -12,7 +12,7 @@
 @import url('components/tables.css');
 @import url('components/scheduler.css');
 @import url('components/live-stream.css');
-@import url('components/equipment.css');
+/* components/equipment.css se učitava posebnim <link>-om u HTML-u (index.html, monitor.html), ne više ovde */
 
 :root {
   /* Color Palette */

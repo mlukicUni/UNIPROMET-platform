@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import fs from 'fs';
@@ -56,6 +57,18 @@ function resolveGatewayTargetPath(targetUrl: string): string {
   });
 }
 
+// Kompresija odgovora (gzip/brotli za tekstualne odgovore: HTML, JS, CSS, JSON).
+// Preskaču se strimovi koji se ne smeju baferovati: SSE, MJPEG, video gateway.
+app.use(compression({
+  filter: (req, res) => {
+    const url = req.originalUrl || req.url || '';
+    if (url.startsWith('/api/video-gateway') || url.includes('/live-stream')) return false;
+    const type = String(res.getHeader('Content-Type') || '');
+    if (type.includes('text/event-stream') || type.includes('multipart/x-mixed-replace')) return false;
+    return compression.filter(req, res);
+  }
+}));
+
 // Middleware
 app.use(cors());
 app.use(cookieParser());
@@ -77,7 +90,10 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const duration = Date.now() - start;
-    if (!req.url.startsWith('/css') && !req.url.startsWith('/js') && !req.url.startsWith('/favicon')) {
+    // Pozadinski „ping“ zahtevi (telemetrija, status kamera, video) ne ulaze u log
+    const quiet = req.originalUrl.startsWith('/api/status') || req.originalUrl.startsWith('/api/stats')
+      || req.originalUrl.startsWith('/api/cameras/status') || req.originalUrl.startsWith('/api/video-gateway');
+    if (!quiet && !req.url.startsWith('/css') && !req.url.startsWith('/js') && !req.url.startsWith('/favicon')) {
       console.log(`[${new Date().toLocaleTimeString()}] ${req.method} ${req.originalUrl} - ${res.statusCode} (${duration}ms)`);
     }
   });
@@ -171,10 +187,16 @@ app.use('/api/video-gateway', (req, res) => {
 app.use(express.static(publicPath, {
   index: false,
   setHeaders: (res, filePath) => {
+    // Biblioteke i fontovi imaju verziju u imenu fajla: čuvaju se godinu dana bez provere
+    const normalized = filePath.replace(/\\/g, '/');
+    if (normalized.includes('/public/vendor/') || normalized.includes('/public/fonts/')) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      return;
+    }
     if (filePath.endsWith('.js') || filePath.endsWith('.css') || filePath.endsWith('.html')) {
-      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-      res.setHeader('Pragma', 'no-cache');
-      res.setHeader('Expires', '0');
+      // no-cache = browser sme da čuva kopiju, ali pre svakog korišćenja pita server (ETag → 304 bez prenosa tela).
+      // Posle deploya korisnik odmah dobija novi kod, a nepromenjeni fajlovi se ne preuzimaju ponovo.
+      res.setHeader('Cache-Control', 'no-cache');
     }
   }
 }));
@@ -304,6 +326,24 @@ function attachWebSocketProxy(server: http.Server | https.Server) {
   });
 }
 
+/**
+ * Duže zadržavanje veze: podrazumevano Node zatvara neaktivnu vezu posle 5 s, pa svaki sledeći
+ * zahtev ponovo ide kroz TLS rukovanje. 65 s je iznad uobičajenog kašnjenja između klikova.
+ */
+function applyKeepAlive(server: http.Server | https.Server) {
+  server.keepAliveTimeout = 65_000;
+  server.headersTimeout = 66_000;
+}
+
+// Neuhvaćene greške iz zadataka u pozadini: zapisuju se u log, a rad servera se ne prekida.
+process.on('unhandledRejection', (reason) => {
+  console.error('[Server] Neuhvaćeno odbijeno obećanje:', reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Neuhvaćena greška, server se restartuje:', err);
+  process.exit(1);
+});
+
 // Start Dual Server (HTTP on 0.0.0.0:3000 for LAN, HTTPS on 3443 for Secure SSO)
 async function startServer() {
   const localIps = getLocalIpAddresses();
@@ -316,6 +356,7 @@ async function startServer() {
   try {
     const ssl = await getOrCreateSslCertificate();
     const httpsServer = https.createServer({ key: ssl.key, cert: ssl.cert }, app);
+    applyKeepAlive(httpsServer);
     attachWebSocketProxy(httpsServer);
 
     // Dedicated HTTP redirect app for plain HTTP connections on port 3000
@@ -361,6 +402,7 @@ async function startServer() {
   } catch (err: any) {
     console.warn('[Server] Note: SSL certificate initialization skipped:', err?.message);
     const fallbackServer = http.createServer(app);
+    applyKeepAlive(fallbackServer);
     attachWebSocketProxy(fallbackServer);
     fallbackServer.listen(PORT, '0.0.0.0');
   }

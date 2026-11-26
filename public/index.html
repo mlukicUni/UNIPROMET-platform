@@ -10,13 +10,13 @@
   <!-- Favicon -->
   <link rel="icon" type="image/png" href="/assets/favicon.png">
 
-  <!-- Google Fonts: Outfit & Inter & JetBrains Mono -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Fontovi: Outfit, Inter, JetBrains Mono (lokalno, bez spoljnih zahteva) -->
+  <link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/outfit-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/fonts.css">
+
+  <!-- Lucide Icons (lokalna, zakucana verzija 1.81.0) -->
+  <script src="/vendor/lucide-1.81.0.min.js"></script>
 
   <!-- Odložena pretraga: sva polja za pretragu čekaju pauzu u kucanju (mora pre ostalih skripti) -->
   <script src="/js/core/search-delay.js"></script>

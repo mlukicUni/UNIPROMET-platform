@@ -13,6 +13,18 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.22] - 2026-11-26
+- Brže učitavanje platforme (optimizacija, faza 1; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
+  - Server sada kompresuje odgovore (brotli/gzip): početna stranica 470 → 64 KB, `app.js` 520 → ~100 KB, DMS izveštaj 5,5 MB → ~0,9 MB. Tokovi uživo (video, SSE osvežavanje) se ne kompresuju. Novi paket `compression`.
+  - JS/CSS/HTML više nisu `no-store`: pregledač ih čuva, ali pre svakog korišćenja pita server (ETag → odgovor 304 bez prenosa); posle ažuriranja servera korisnik i dalje odmah dobija novi kod.
+  - Ikone (Lucide), fontovi (Inter, Outfit, JetBrains Mono) i biblioteke DMS-a (SheetJS, Chart.js) služe se lokalno iz `public/vendor` i `public/fonts` (zakucane verzije), umesto sa interneta (unpkg, Google Fonts, cdnjs): prvi prikaz više ne čeka spoljne servere i radi i bez interneta.
+  - DMS: ispravljena provera keša izveštaja (regex bez `\`) zbog koje se svaki zahtev ponovo sinhrono parsirao 5–10 MB Excel/JSON i zamrzavao ceo server; sada se keš koristi (zahtev ~0,1 s, ponovni ~0,02 s).
+  - Klik na stavku menija više ne obrađuje se dvaput (bila su dva slušaoca): podaci se vuku i crtaju jednom, kamere se ne montiraju i razmontiraju dvaput, a stranica Switches šalje jedan prinudni SNMP poziv umesto dva.
+  - Telemetrija Kontrolne table (`/api/status`, `/api/stats`) osvežava se na 15 s (bilo 4 s) i samo dok je Dashboard otvoren i prozor vidljiv; pri povratku se osvežava odmah.
+  - Pozadinske čestice crtaju se na 30 fps (kretanje isto), miruju uz otvoren prozor ili stranice CCTV i Monitoring, i poštuju „smanji animacije“ sistema.
+  - Baza: `initSchema()` se izvršava jednom po vezi (ranije pri svakom čitanju kamera/štampača/snimača, pa i pri svakom video zahtevu); podešen keš, privremeni podaci u memoriji, ograničen WAL fajl i povremeno sažimanje (`wal_checkpoint`, `optimize`).
+  - Dnevnik servera u memoriji ograničen na 1000 zapisa; pozadinski zahtevi (status, statistika, status kamera, video) ne ulaze u log; veze ostaju otvorene do 65 s (manje ponovnih TLS rukovanja); neuhvaćena odbijena obećanja se samo beleže u log; servis dobija `NODE_ENV=production` (uz ponovno pokretanje `deploy/install-services.sh` na serveru).
+
 ## [1.3.21] - 2026-11-26
 - Dugme „Nazad“ (i „Napred“) pregledača radi na platformi: svaka promena stranice je novi korak u istoriji, pa Nazad vraća na stranicu koju si prethodno gledao, umesto da napusti platformu. Ponovni klik na istu stranicu, prvo učitavanje i preusmerenje (kad nemaš pravo na traženu stranicu) ne prave nove korake; ručna izmena adrese (npr. `#logs`) takođe menja stranicu. Nazad ne zatvara otvoren prozor niti vraća unutrašnje kartice stranice
 - AI platforma, faza 0 (plan: `docs/AI_PLATFORMA_PLAN.md`): uklonjena stranica NOLEKO AI → „AI agent prototip“ (stavka u meniju i u pravima rola, API `/api/ai-agent`, ekran, skripta i stil). Pri pokretanju servera jednom se brišu njegove tabele `ai_conversations` i `ai_messages`, prava `noleko.agent_prototip` u rolama i radni folder `data/ai-agent-workspace`. Logika pokretanja Claude CLI-ja je sačuvana u `src/services/ai/providers/claudeCliRunner.ts` kao osnova za rezervni provajder nove AI platforme. Stranice „AI razvojni plan“ i „Fazni razvoj“ ostaju.

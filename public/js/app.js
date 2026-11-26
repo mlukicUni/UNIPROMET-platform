@@ -171,8 +171,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   else fetchInitialData();
   initAuthWidget();
 
-  // Periodic Telemetry Polling (every 4s)
-  setInterval(fetchLiveTelemetry, 4000);
+  // Telemetrija (status servera i KPI) osvežava se na 15 s, ali samo dok je otvoren Dashboard i prozor je vidljiv.
+  // Pri povratku na Dashboard / u prozor odmah se osvežava (vidi activateTab i visibilitychange).
+  setInterval(fetchLiveTelemetry, 15000);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) fetchLiveTelemetry();
+  });
 });
 
 /* ==========================================================================
@@ -214,21 +218,49 @@ function initParticleCanvas() {
 
   createParticles();
 
-  function animate() {
+  // Čestice se crtaju na 30 fps (ne 60) i miruju dok je otvoren modal ili video stranica (CCTV, Monitoring),
+  // jer se pozadina koja se stalno menja ponovo spaja sa svim prozirnim/blur elementima iznad nje.
+  const reduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const FRAME_MS = 1000 / 30;
+  const HEAVY_TABS = ['tab-cctv_cameras', 'tab-cctv_monitoring'];
+  let lastFrame = 0;
+  let pauseCheckAt = 0;
+  let paused = false;
+
+  function isHeavyView() {
+    const active = document.querySelector('.tab-view.active');
+    if (active && HEAVY_TABS.includes(active.id)) return true;
+    return Array.from(document.querySelectorAll('.modal-overlay')).some(m => m.style.display === 'flex');
+  }
+
+  function animate(ts) {
+    if (!reduceMotion) requestAnimationFrame(animate); // reduce-motion: jedan nacrtan kadar, bez animacije
+    if (document.hidden) return;
+    const elapsed = ts - lastFrame;
+    if (elapsed < FRAME_MS) return;
+    lastFrame = ts;
+    if (ts >= pauseCheckAt) {
+      pauseCheckAt = ts + 500;
+      paused = isHeavyView();
+    }
+    if (paused) return;
+    // Brzina se računa prema proteklom vremenu, pa kretanje izgleda isto kao na 60 fps
+    const k = Math.min(3, elapsed / 16.67);
+
     ctx.clearRect(0, 0, width, height);
 
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
 
-      p.x += p.vx;
-      p.y += p.vy;
+      p.x += p.vx * k;
+      p.y += p.vy * k;
 
       if (p.x < 0) p.x = width;
       if (p.x > width) p.x = 0;
       if (p.y < 0) p.y = height;
       if (p.y > height) p.y = 0;
 
-      p.pulseAngle += p.pulseSpeed;
+      p.pulseAngle += p.pulseSpeed * k;
       p.alpha = p.baseAlpha + Math.sin(p.pulseAngle) * 0.2;
 
       const gradient = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius * 3);
@@ -265,10 +297,9 @@ function initParticleCanvas() {
       }
     }
 
-    requestAnimationFrame(animate);
   }
 
-  animate();
+  requestAnimationFrame(animate);
 }
 
 /* ==========================================================================
@@ -569,6 +600,9 @@ function setupNavigationHandlers() {
       }
     });
 
+    // Povratak na Dashboard: osveži telemetriju odmah (u pozadini se više ne osvežava)
+    if (tabId === 'dashboard') fetchLiveTelemetry();
+
     // Jedinstven loader: otvara se pre nego što moduli stranice zatraže podatke (js/core/page-loader.js)
     if (window.UniPageLoader) window.UniPageLoader.tabActivated(tabId);
 
@@ -792,20 +826,8 @@ function setupNavigationHandlers() {
     });
   }
 
-  // Individual button listeners
-  document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      activateTab(btn.getAttribute('data-tab'));
-    });
-  });
-
-  document.querySelectorAll('.m-nav-item').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.preventDefault();
-      activateTab(btn.getAttribute('data-tab'));
-    });
-  });
+  // Klik na stavku menija obrađuju samo delegati iznad (.sidebar-nav i .mobile-bottom-nav).
+  // Ranije su dugmad imala i svoje direktne slušaoce, pa se svaki klik obrađivao dvaput.
 
   window.activateTab = activateTab;
   window.switchTab = activateTab;
@@ -1298,6 +1320,10 @@ async function fetchInitialData() {
 
 async function fetchLiveTelemetry() {
   if (isFetching) return;
+  // Nema smisla osvežavati ono što se ne vidi
+  if (document.hidden) return;
+  const dash = document.getElementById('tab-dashboard');
+  if (dash && !dash.classList.contains('active')) return;
   isFetching = true;
   try {
     await Promise.all([
