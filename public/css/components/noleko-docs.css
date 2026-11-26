@@ -7,6 +7,14 @@
  * ==========================================================================
  */
 
+/* ---- Prazno stanje / učitavanje (preuzeto iz uklonjenog ai-agent.css) ---- */
+.ai-conv-empty {
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  text-align: center;
+  padding: 18px 6px;
+}
+
 /* ---- Alati u zaglavlju ---- */
 .plan-tools,
 .plan-tools-view,

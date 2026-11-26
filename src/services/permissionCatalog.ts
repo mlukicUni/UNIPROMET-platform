@@ -114,7 +114,6 @@ export const PERMISSION_CATALOG: SectionDef[] = [
     label: 'NOLEKO AI DEVELOPMENT',
     icon: 'brain',
     items: [
-      { key: 'noleko.agent_prototip', label: 'AI agent prototip', tab: 'ai_agent_prototype', actions: [] },
       { key: 'noleko.razvojni_plan', label: 'AI razvojni plan', tab: 'ai_dev_plan', actions: [] },
       { key: 'noleko.fazni_razvoj', label: 'Fazni razvoj', tab: 'ai_phased_dev', actions: [] }
     ]

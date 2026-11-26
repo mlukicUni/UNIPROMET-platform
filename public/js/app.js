@@ -376,10 +376,6 @@ function setupNavigationHandlers() {
       title: 'Korisnici i Role',
       subtitle: 'Pristup sekcijama platforme i kamerama po rolama, korisnicima i AD grupama'
     },
-    ai_agent_prototype: {
-      title: 'AI Agent Prototip',
-      subtitle: 'NOLEKO AI Development'
-    },
     ai_dev_plan: {
       title: 'AI Razvojni Plan',
       subtitle: 'NOLEKO AI Development'
@@ -432,7 +428,6 @@ function setupNavigationHandlers() {
     mts_numbers: 'evidencija',
     equipment_software: 'evidencija',
     equipment_dictionaries: 'evidencija',
-    ai_agent_prototype: 'noleko_ai',
     ai_dev_plan: 'noleko_ai',
     ai_phased_dev: 'noleko_ai',
     dms_analytics: 'dms',
@@ -513,20 +508,31 @@ function setupNavigationHandlers() {
     });
   }
 
-  function activateTab(tabId) {
+  // Istorija pregledača: svaka promena stranice je novi korak, pa dugme „Nazad“ vraća na prethodnu stranicu.
+  // Prvo učitavanje, vraćanje iz istorije i preusmerenje (nema prava) ne prave novi korak.
+  let historyReady = false;
+
+  function activateTab(requestedTab, opts) {
+    const fromHistory = !!(opts && opts.fromHistory);
+    let tabId = requestedTab;
     if (!tabId || !tabInfo[tabId]) tabId = 'dashboard';
 
     // Role: ako korisnik nema pravo na traženu stranicu, otvori prvu dozvoljenu
     if (window.UniAccess && !window.UniAccess.canOpenTab(tabId)) {
       tabId = window.UniAccess.firstAllowedTab();
     }
+    const redirected = tabId !== requestedTab;
     if (window.UniAccess) window.UniAccess.onTabActivated(tabId);
 
     // Store chosen tab in localStorage & URL hash so page refresh preserves it
     try {
       localStorage.setItem('unipromet_active_tab', tabId);
       if (window.location.hash !== `#${tabId}`) {
-        history.replaceState(null, '', `#${tabId}`);
+        if (!historyReady || fromHistory || redirected) {
+          history.replaceState(null, '', `#${tabId}`);
+        } else {
+          history.pushState({ tab: tabId }, '', `#${tabId}`);
+        }
       }
     } catch (e) {
       console.warn('LocalStorage error:', e);
@@ -704,12 +710,6 @@ function setupNavigationHandlers() {
       }
     }
 
-    if (tabId === 'ai_agent_prototype') {
-      if (window.AiAgentModule && typeof window.AiAgentModule.onTabActivated === 'function') {
-        window.AiAgentModule.onTabActivated();
-      }
-    }
-
     // Monitoring: strimovi i rotacija rade samo dok je stranica otvorena
     if (window.MonitoringModule) {
       if (tabId === 'cctv_monitoring') window.MonitoringModule.onTabActivated();
@@ -817,6 +817,13 @@ function setupNavigationHandlers() {
   const initialHash = window.location.hash.replace('#', '').trim();
   const savedTab = initialHash || localStorage.getItem('unipromet_active_tab') || 'dashboard';
   activateTab(savedTab);
+  historyReady = true;
+
+  // Dugme „Nazad“ / „Napred“ pregledača (i Alt+strelice) menja stranicu platforme
+  window.addEventListener('popstate', () => {
+    const tab = window.location.hash.replace('#', '').trim();
+    activateTab(tab || 'dashboard', { fromHistory: true });
+  });
   handleCameraDeepLink();
   // Prava i prva stranica su spremni: loader pokretanja ustupa mesto loaderu stranice (isti izgled)
   if (window.UniPageLoader) window.UniPageLoader.hideBoot();
