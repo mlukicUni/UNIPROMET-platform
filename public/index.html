@@ -5432,8 +5432,11 @@
               </label>
               <div class="modal-input-wrap">
                 <i data-lucide="hard-drive" class="modal-input-icon"></i>
-                <input type="text" id="input-inv-camera-recorder" list="recorders-datalist" class="glass-input has-icon" placeholder="npr. Hala 5, Uprava Moto, Cinkara..." required>
+                <select id="input-inv-camera-recorder" class="glass-input has-icon" required>
+                  <option value="">— Izaberite snimač —</option>
+                </select>
               </div>
+              <p class="text-dim text-xs" style="margin: 6px 2px 0;">Snimač se bira iz evidencije snimača (kamera se povezuje sa snimačem, ne sa upisanim tekstom). Kamera koja nije ni na jednom snimaču bira „Bez snimača“.</p>
               <datalist id="recorders-datalist">
                 <!-- Populated dynamically -->
               </datalist>
@@ -5479,7 +5482,7 @@
             </label>
             <div class="modal-input-wrap">
               <i data-lucide="map-pin" class="modal-input-icon"></i>
-              <input type="text" id="input-inv-camera-location" list="locations-datalist" class="glass-input has-icon" placeholder="npr. Cinkara, Hala 5... (ako ostane prazno, upisuje se snimač)">
+              <input type="text" id="input-inv-camera-location" list="locations-datalist" class="glass-input has-icon" placeholder="npr. Cinkara, Hala 5... (ako ostane prazno, uzima se naziv snimača)">
             </div>
             <datalist id="locations-datalist">
               <!-- Populated dynamically -->
@@ -8471,7 +8474,7 @@
   <script src="/js/dms/signatures.js?v=20261105"></script>
   <script src="/js/dms/table-fullscreen.js?v=20261105"></script>
   <script src="/js/dms/paging.js?v=20261106"></script>
-  <script src="/js/app.js?v=20261125_roles"></script>
+  <script src="/js/app.js?v=20261201_rec"></script>
 </body>
 
 </html>

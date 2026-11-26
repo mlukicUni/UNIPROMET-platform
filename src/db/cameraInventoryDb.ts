@@ -6,6 +6,8 @@ export interface CameraInventoryItem {
   ip: string;
   name: string;
   recorder: string;
+  /** Veza sa snimačem iz evidencije snimača (po ID-ju); null = kamera nije na snimaču. Naziv u polju `recorder` je samo kopija radi prikaza. */
+  recorderId?: string | null;
   /** Lokacija kamere (odvojeno od snimača); ako nije upisana, uzima se naziv snimača */
   location?: string;
   position: string;
@@ -25,6 +27,7 @@ interface CameraRow {
   ip: string;
   name: string;
   recorder: string | null;
+  recorder_id: string | null;
   location: string | null;
   position: string | null;
   type: string | null;
@@ -44,6 +47,7 @@ function rowToItem(row: CameraRow): CameraInventoryItem {
     ip: row.ip,
     name: row.name,
     recorder: row.recorder || 'Nedodeljeno',
+    recorderId: row.recorder_id || null,
     location: row.location || row.recorder || 'Nedodeljeno',
     position: row.position || '',
     type: (row.type as 'IP Kamera' | 'Analogna') || 'IP Kamera',
@@ -56,6 +60,33 @@ function rowToItem(row: CameraRow): CameraInventoryItem {
     createdAt: row.created_at,
     updatedAt: row.updated_at || undefined
   };
+}
+
+const UNASSIGNED = 'Nedodeljeno';
+
+export class UnknownRecorderError extends Error {
+  constructor(what: string) {
+    super(`Snimač „${what}“ ne postoji u evidenciji snimača. Izaberite snimač iz liste ili „Bez snimača“.`);
+    this.name = 'UnknownRecorderError';
+  }
+}
+
+/**
+ * Snimač kamere se uvek bira iz evidencije snimača i povezuje po ID-ju (ne samo po upisanom tekstu).
+ * recorderId: ID snimača; null = bez snimača; undefined = određuje se po nazivu (mora tačno da odgovara postojećem snimaču).
+ */
+function resolveRecorder(recorderId: string | null | undefined, recorderName: string | undefined): { id: string | null; name: string } {
+  const db = getDb();
+  if (recorderId) {
+    const r = db.prepare('SELECT id, name FROM recorders WHERE id = ?').get(recorderId) as { id: string; name: string } | undefined;
+    if (!r) throw new UnknownRecorderError(recorderId);
+    return { id: r.id, name: r.name };
+  }
+  const name = (recorderName || '').trim();
+  if (recorderId === null || !name || name.toLowerCase() === UNASSIGNED.toLowerCase()) return { id: null, name: UNASSIGNED };
+  const r = db.prepare('SELECT id, name FROM recorders WHERE name = ? COLLATE NOCASE').get(name) as { id: string; name: string } | undefined;
+  if (!r) throw new UnknownRecorderError(name);
+  return { id: r.id, name: r.name };
 }
 
 export function getAllCameraInventory(): CameraInventoryItem[] {
@@ -138,7 +169,8 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
   const duplicate = findCameraWithSameIp(cleanIp);
   if (duplicate) throw new DuplicateCameraIpError(duplicate);
   const cleanName = item.name?.trim() || item.position?.trim() || `Kamera ${cleanIp}`;
-  const cleanRecorder = item.recorder?.trim() || 'Nedodeljeno';
+  const resolvedRecorder = resolveRecorder(item.recorderId, item.recorder);
+  const cleanRecorder = resolvedRecorder.name;
   const cleanLocation = item.location?.trim() || cleanRecorder;
   const cleanPosition = item.position?.trim() || 'Pozicija kamere';
   const cleanType = item.type || (cleanIp.toLowerCase().includes('analog') ? 'Analogna' : 'IP Kamera');
@@ -150,8 +182,8 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
 
   const stmt = db.prepare(`
     INSERT INTO cameras (
-      id, ip, name, recorder, location, position, type, subnet, note, is_reserved, cred_profile, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      id, ip, name, recorder, recorder_id, location, position, type, subnet, note, is_reserved, cred_profile, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   stmt.run(
@@ -159,6 +191,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     cleanIp,
     cleanName,
     cleanRecorder,
+    resolvedRecorder.id,
     cleanLocation,
     cleanPosition,
     cleanType,
@@ -175,6 +208,7 @@ export function addCameraInventoryItem(item: Omit<CameraInventoryItem, 'id' | 'c
     ip: cleanIp,
     name: cleanName,
     recorder: cleanRecorder,
+    recorderId: resolvedRecorder.id,
     location: cleanLocation,
     position: cleanPosition,
     type: cleanType as 'IP Kamera' | 'Analogna',
@@ -201,6 +235,17 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     updatedAt: now
   };
   merged.credProfile = merged.credProfile === 2 ? 2 : 1;
+  // Snimač se menja samo kad je izričito zadat (ID ili drugačiji naziv); tada mora da postoji u evidenciji snimača
+  const normName = (s: string | undefined) => (s || '').trim().toLowerCase();
+  const recorderTouched = 'recorderId' in updates || (updates.recorder !== undefined && normName(updates.recorder) !== normName(existing.recorder));
+  if (recorderTouched) {
+    const r = resolveRecorder(updates.recorderId, updates.recorder ?? existing.recorder);
+    merged.recorder = r.name;
+    merged.recorderId = r.id;
+  } else {
+    merged.recorder = existing.recorder;
+    merged.recorderId = existing.recorderId ?? null;
+  }
   const duplicate = findCameraWithSameIp(merged.ip, existing.id);
   if (duplicate) throw new DuplicateCameraIpError(duplicate);
   // Ručno promenjena lozinka: ranije zabeležen rezultat provere više ne važi
@@ -209,7 +254,7 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
 
   const stmt = db.prepare(`
     UPDATE cameras SET
-      ip = ?, name = ?, recorder = ?, location = ?, position = ?, type = ?,
+      ip = ?, name = ?, recorder = ?, recorder_id = ?, location = ?, position = ?, type = ?,
       subnet = ?, note = ?, is_reserved = ?, cred_profile = ?, auth_status = ?, updated_at = ?
     WHERE id = ?
   `);
@@ -218,6 +263,7 @@ export function updateCameraInventoryItem(id: string, updates: Partial<CameraInv
     merged.ip.trim(),
     merged.name.trim(),
     merged.recorder.trim(),
+    merged.recorderId ?? null,
     (merged.location || '').trim() || merged.recorder.trim(),
     merged.position.trim(),
     merged.type,

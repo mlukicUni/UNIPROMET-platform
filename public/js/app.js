@@ -5625,6 +5625,24 @@ function getCameraCredChoice() {
   return checked ? Number(checked.value) : null;
 }
 
+/** Spisak snimača iz evidencije (veza kamere sa snimačem je po ID-ju); puni izbor u obrascu kamere */
+async function fillCameraRecorderSelect(selectedId, legacyName) {
+  const sel = document.getElementById('input-inv-camera-recorder');
+  if (!sel) return;
+  let recorders = [];
+  try {
+    const res = await fetch('/api/inventory/recorders', { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    recorders = (data.recorders || []).slice().sort((a, b) => String(a.name).localeCompare(String(b.name), 'sr'));
+  } catch (e) { /* ostaje samo „Bez snimača“ */ }
+  const noneLabel = legacyName && legacyName !== 'Nedodeljeno' ? `Bez snimača (trenutno upisano: ${legacyName})` : 'Bez snimača (samostalna kamera)';
+  sel.innerHTML = '<option value="">— Izaberite snimač —</option>' +
+    recorders.map(r => `<option value="${escapeHtml(r.id)}" data-name="${escapeHtml(r.name)}">${escapeHtml(r.name)}${r.location ? ' · ' + escapeHtml(r.location) : ''}</option>`).join('') +
+    `<option value="__none__" data-name="Nedodeljeno">${escapeHtml(noneLabel)}</option>`;
+  sel.value = selectedId === undefined ? '' : (selectedId || '__none__');
+  if (sel.value !== (selectedId === undefined ? '' : (selectedId || '__none__'))) sel.value = '__none__';
+}
+
 function openAddCameraModal() {
   const modal = document.getElementById('modal-inv-camera');
   const title = document.getElementById('modal-inv-camera-title');
@@ -5640,7 +5658,7 @@ function openAddCameraModal() {
   if (idInput) idInput.value = '';
   if (ipInput) ipInput.value = '';
   if (posInput) posInput.value = '';
-  if (recInput) recInput.value = '';
+  fillCameraRecorderSelect(undefined);
   if (noteInput) noteInput.value = '';
   const locInput = document.getElementById('input-inv-camera-location');
   if (locInput) {
@@ -5672,7 +5690,7 @@ function openEditCameraModal(id) {
   if (idInput) idInput.value = cam.id;
   if (ipInput) ipInput.value = cam.ip;
   if (posInput) posInput.value = cam.position;
-  if (recInput) recInput.value = cam.recorder;
+  fillCameraRecorderSelect(cam.recorderId || null, cam.recorder);
   if (noteInput) noteInput.value = cam.note || '';
   const locInput = document.getElementById('input-inv-camera-location');
   if (locInput) {
@@ -5691,10 +5709,13 @@ async function handleCameraFormSubmit(e) {
   const id = document.getElementById('input-inv-camera-id')?.value;
   const ip = document.getElementById('input-inv-camera-ip')?.value.trim();
   const position = document.getElementById('input-inv-camera-position')?.value.trim();
-  const recorder = document.getElementById('input-inv-camera-recorder')?.value.trim();
+  const recSelect = document.getElementById('input-inv-camera-recorder');
+  const recValue = recSelect ? recSelect.value : '';
+  const recorderId = recValue === '__none__' ? null : recValue;
+  const recorder = recSelect && recSelect.selectedOptions[0] ? (recSelect.selectedOptions[0].getAttribute('data-name') || '') : '';
   const note = document.getElementById('input-inv-camera-note')?.value.trim();
 
-  if (!ip || !position || !recorder) {
+  if (!ip || !position || !recValue) {
     showToast('Molimo popunite sva obavezna polja (IP, Naziv, Snimač)', 'error');
     return;
   }
@@ -5707,7 +5728,7 @@ async function handleCameraFormSubmit(e) {
 
   // Lokacija: ako ostane prazna, ista je kao snimač
   const location = document.getElementById('input-inv-camera-location')?.value.trim() || recorder;
-  const payload = { ip, position, recorder, location, note, credProfile };
+  const payload = { ip, position, recorder, recorderId, location, note, credProfile };
 
   try {
     const url = id ? `/api/inventory/cameras/${id}` : '/api/inventory/cameras';
@@ -5894,9 +5915,11 @@ function setupInventoryCamerasEventListeners() {
     returnToUnrecordedCamerasList();
   });
   document.getElementById('form-inv-camera')?.addEventListener('submit', handleCameraFormSubmit);
-  document.getElementById('input-inv-camera-recorder')?.addEventListener('input', (e) => {
+  document.getElementById('input-inv-camera-recorder')?.addEventListener('change', (e) => {
     const loc = document.getElementById('input-inv-camera-location');
-    if (loc && !loc.dataset.touched) loc.value = e.target.value;
+    const opt = e.target.selectedOptions[0];
+    const name = opt ? (opt.getAttribute('data-name') || '') : '';
+    if (loc && !loc.dataset.touched) loc.value = name === 'Nedodeljeno' ? '' : name;
   });
   document.getElementById('input-inv-camera-location')?.addEventListener('input', (e) => {
     e.target.dataset.touched = '1';

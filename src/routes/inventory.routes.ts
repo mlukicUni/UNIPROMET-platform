@@ -8,7 +8,8 @@ import {
   addCameraInventoryItem,
   updateCameraInventoryItem,
   deleteCameraInventoryItem,
-  DuplicateCameraIpError
+  DuplicateCameraIpError,
+  UnknownRecorderError
 } from '../db/cameraInventoryDb';
 import { getCameraCredentials } from '../services/cameraLiveService';
 import { parseAnalogIp, discoverAnalogChannels, importAnalogChannels } from '../services/analogChannels';
@@ -409,7 +410,7 @@ inventoryRouter.post('/cameras/probe', async (req: Request, res: Response) => {
 // POST /api/inventory/cameras - Add new camera to SQLite inventory
 inventoryRouter.post('/cameras', (req: Request, res: Response) => {
   try {
-    const { ip, name, recorder, location, position, type, subnet, note, isReserved, credProfile } = req.body;
+    const { ip, name, recorder, recorderId, location, position, type, subnet, note, isReserved, credProfile } = req.body;
     if (!ip || !ip.trim()) {
       return res.status(400).json({ error: 'IP adresa ili oznaka slota je obavezna' });
     }
@@ -421,6 +422,7 @@ inventoryRouter.post('/cameras', (req: Request, res: Response) => {
       ip: ip.trim(),
       name: name?.trim() || position?.trim() || `Kamera ${ip.trim()}`,
       recorder: recorder?.trim() || 'Nedodeljeno',
+      recorderId: typeof recorderId === 'string' && recorderId ? recorderId : (recorderId === null ? null : undefined),
       location: location?.trim() || recorder?.trim() || 'Nedodeljeno',
       position: position?.trim() || 'Pozicija kamere',
       type: type || (ip.toLowerCase().includes('analog') ? 'Analogna' : 'IP Kamera'),
@@ -436,6 +438,7 @@ inventoryRouter.post('/cameras', (req: Request, res: Response) => {
     if (err instanceof DuplicateCameraIpError) {
       return res.status(409).json({ error: err.message, existingId: err.existing.id });
     }
+    if (err instanceof UnknownRecorderError) return res.status(400).json({ error: err.message });
     console.error('Add camera error:', err);
     res.status(500).json({ error: 'Failed to add camera', details: err?.message });
   }
@@ -459,6 +462,7 @@ inventoryRouter.put('/cameras/:id', (req: Request, res: Response) => {
     if (err instanceof DuplicateCameraIpError) {
       return res.status(409).json({ error: err.message, existingId: err.existing.id });
     }
+    if (err instanceof UnknownRecorderError) return res.status(400).json({ error: err.message });
     console.error('Update camera error:', err);
     res.status(500).json({ error: 'Failed to update camera', details: err?.message });
   }
