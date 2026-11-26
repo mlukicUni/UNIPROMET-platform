@@ -6,6 +6,7 @@
 
 /* Modular Subsystem Imports */
 @import url('base/variables.css');
+@import url('base/scrollbars.css'); /* jedan izgled traka za skrolovanje na celoj platformi */
 @import url('components/modals.css');
 @import url('components/toolbars.css');
 @import url('components/tables.css');
@@ -235,20 +236,7 @@ select option {
   gap: 6px;
 }
 
-/* Custom Scrollbars */
-.sidebar-nav::-webkit-scrollbar,
-.content-scroll-container::-webkit-scrollbar,
-.terminal-container::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-.sidebar-nav::-webkit-scrollbar-thumb,
-.content-scroll-container::-webkit-scrollbar-thumb,
-.terminal-container::-webkit-scrollbar-thumb {
-  background: var(--border-medium);
-  border-radius: 999px;
-}
+/* Skrol trake: zajednički izgled za celu platformu u css/base/scrollbars.css */
 
 /* Sidebar Main Nav Section Accordion Groups */
 .nav-section-group {
@@ -2678,13 +2666,6 @@ select option {
   gap: 16px !important;
 }
 
-.modal-body-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-.modal-body-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
 
 .modal-section-badge {
   display: flex;
@@ -4889,43 +4870,7 @@ button:disabled svg.spin-fast {
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
   margin-top: 10px;
   width: 100%;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 184, 0, 0.4) rgba(15, 20, 30, 0.85);
-}
-
-/* Custom Luxury Gold/Dark Horizontal & Vertical Scrollbars */
-.inv-table-wrapper::-webkit-scrollbar,
-.table-scroll-wrapper::-webkit-scrollbar,
-#table-container-equipment::-webkit-scrollbar {
-  height: 6px;
-  width: 6px;
-  background: rgba(10, 14, 22, 0.95);
-  border-radius: 8px;
-}
-
-.inv-table-wrapper::-webkit-scrollbar-track,
-.table-scroll-wrapper::-webkit-scrollbar-track,
-#table-container-equipment::-webkit-scrollbar-track {
-  background: rgba(15, 20, 30, 0.75);
-  border-radius: 8px;
-  margin: 0 4px;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.inv-table-wrapper::-webkit-scrollbar-thumb,
-.table-scroll-wrapper::-webkit-scrollbar-thumb,
-#table-container-equipment::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, rgba(255, 184, 0, 0.4), rgba(255, 199, 0, 0.7));
-  border-radius: 8px;
-  border: 1px solid rgba(255, 184, 0, 0.3);
-  transition: all 0.2s ease;
-}
-
-.inv-table-wrapper::-webkit-scrollbar-thumb:hover,
-.table-scroll-wrapper::-webkit-scrollbar-thumb:hover,
-#table-container-equipment::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(90deg, rgba(255, 184, 0, 0.75), rgba(255, 199, 0, 1));
-  box-shadow: 0 0 10px rgba(255, 184, 0, 0.5);
+  /* skrol traka: zajednički izgled iz css/base/scrollbars.css */
 }
 
 .inv-camera-table,

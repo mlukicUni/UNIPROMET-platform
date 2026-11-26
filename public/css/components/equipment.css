@@ -104,17 +104,7 @@ tr:hover .eq-avatar {
   overflow-x: auto;
   padding: 4px 2px 8px 2px;
   margin-top: 14px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-}
-
-.eq-category-pills-bar::-webkit-scrollbar {
-  height: 4px;
-}
-
-.eq-category-pills-bar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  /* skrol traka: zajednički izgled iz css/base/scrollbars.css */
 }
 
 .eq-pill-btn {

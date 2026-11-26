@@ -407,37 +407,4 @@
   .plan-editor-preview { display: none; }
 }
 
-/* ---- Skrol trake u stilu platforme (zlatne, kao u tabelama) ---- */
-.plan-toc,
-.plan-history,
-.plan-doc,
-.plan-editor-input,
-.plan-editor-preview,
-.md-table-wrap,
-.md-doc pre {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 184, 0, 0.4) rgba(15, 20, 30, 0.85);
-}
-
-.plan-toc::-webkit-scrollbar,
-.plan-history::-webkit-scrollbar,
-.plan-doc::-webkit-scrollbar,
-.plan-editor-input::-webkit-scrollbar,
-.plan-editor-preview::-webkit-scrollbar,
-.md-table-wrap::-webkit-scrollbar,
-.md-doc pre::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-  background: rgba(10, 14, 22, 0.95);
-}
-
-.plan-toc::-webkit-scrollbar-thumb,
-.plan-history::-webkit-scrollbar-thumb,
-.plan-doc::-webkit-scrollbar-thumb,
-.plan-editor-input::-webkit-scrollbar-thumb,
-.plan-editor-preview::-webkit-scrollbar-thumb,
-.md-table-wrap::-webkit-scrollbar-thumb,
-.md-doc pre::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, rgba(255, 184, 0, 0.4), rgba(255, 199, 0, 0.7));
-  border-radius: 8px;
-}
+/* Skrol trake: zajednički izgled iz css/base/scrollbars.css */
