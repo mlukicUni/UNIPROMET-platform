@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.19] - 2026-11-26
+- Kamere i snimači: kamera se sada uvek povezuje sa snimačem iz evidencije (po ID-ju), a ne samo upisanim tekstom. U obrascu za dodavanje i izmenu kamere polje „Snimač“ je izbor iz evidencije snimača (uz opciju „Bez snimača“); server odbija snimač koji ne postoji i pri izmeni menja i naziv i vezu. Ranije ručno dodate kamere nisu bile povezane sa snimačem, pa su ispadale u „Kamere bez snimača“ i nisu ulazile u dozvole „po snimaču“. Povezano je pet kamera sa njihovim stvarnim snimačem (očitano sa snimača): CI - raskrsnica, Šator šrafovske robe 1 i 2 (Pogon 8 i BBC), Pogon 6 KV Unutra 16 i Hikvision 192.168.125.106 (KV Plava Hala).
+
 ## [1.3.18] - 2026-11-25
 - Nazivi su razdvojeni: u SERVER → Korisnici i role ostaju **role**, a u VIDEO NADZOR → Dozvole za pristup to su sada **dozvole** (kamerne dozvole): u svim tekstovima, pregledima, izvozu u Excel i deljenju Monitoring tabova. Naziv rola i kamernih dozvola je jedinstven samo unutar svoje vrste, pa se npr. rola i dozvola mogu zvati isto („Video nadzor – Supervizor“). Pri pokretanju se tabela rola jednom obnavlja (uklanja se ograničenje jedinstvenog naziva za sve role zajedno); postojeći podaci, dodele i prava ostaju netaknuti. Pri prvoj deobi rola na produkciji, kamerna dozvola dobija isti naziv kao rola iz koje je nastala.
 
