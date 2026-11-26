@@ -78,6 +78,11 @@ authRouter.get('/callback', async (req: Request, res: Response) => {
     const roleNames = access.roles.map(r => r.name).join(', ') || '-';
     addServerLog('success', `✓ Uspešna prijava: ${user.name} (${user.email}) - Role: ${roleNames}`, 'Auth');
     writeAudit(user, 'auth.login', 'user', user.email || user.id, `Prijava; role: ${roleNames}`);
+    const pendingCamera = String(req.cookies?.pending_camera || '');
+    if (/^[\w-]{1,64}$/.test(pendingCamera)) {
+      res.clearCookie('pending_camera');
+      return res.redirect(`/kamera/${encodeURIComponent(pendingCamera)}`);
+    }
     res.redirect('/?login=success');
   } else {
     const groupNames = (user.groups || []).map(g => g.name).join(', ') || 'Nema grupa';

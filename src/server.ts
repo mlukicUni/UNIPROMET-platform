@@ -14,7 +14,7 @@ import { getOrCreateSslCertificate } from './services/sslService';
 import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
 import { getCameraCredentials } from './services/cameraLiveService';
 import { getRecorderEndpointByIp, analogRtspPath } from './services/analogChannels';
-import { isUserAllowed, getAccess, hasLevel } from './services/accessService';
+import { isUserAllowed, getAccess, hasLevel, lookupCameraById, canAccessCamera } from './services/accessService';
 import { enforceRouteAccess, checkVideoGatewayAccess } from './services/routeAccess';
 import { initRolesSchema, writeAudit } from './db/rolesDb';
 import { initMonitoringSchema } from './db/monitoringDb';
@@ -180,6 +180,24 @@ app.use(express.static(publicPath, {
 // Dedicated Presentation Routes (/presentation, /prezentacija)
 app.get(['/presentation', '/prezentacija'], (req, res) => {
   res.sendFile(path.join(publicPath, 'presentation.html'));
+});
+
+// Veza ka jednoj kameri (npr. iz Excel izvoza dozvola): prijava po potrebi, pa Video nadzor sa otvorenom kamerom.
+// Ko nema pristup platformi ili pravo na tu kameru dobija poruku umesto video prikaza.
+app.get('/kamera/:id', (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^[\w-]{1,64}$/.test(id)) return res.redirect('/');
+  const user = getCurrentUser(req);
+  if (!user) {
+    // Posle prijave auth ruta vraća korisnika na ovu adresu
+    res.cookie('pending_camera', id, { ...sessionCookieOptions(req), maxAge: 10 * 60 * 1000 });
+    return res.redirect('/login');
+  }
+  if (!isUserAllowed(user)) return res.redirect('/access-denied');
+  const cam = lookupCameraById(id);
+  const access = getAccess(user);
+  const allowed = !!cam && (canAccessCamera(access, cam, 'live') || canAccessCamera(access, cam, 'playback'));
+  res.redirect(allowed ? `/?camera=${encodeURIComponent(id)}` : '/?camera_denied=1');
 });
 
 // Samostalni prozor jednog monitoring taba (bez menija platforme)
