@@ -495,28 +495,4 @@
   .ai-messages { padding: 16px; }
 }
 
-/* ---- Skrol trake u stilu platforme (zlatne, kao u tabelama) ---- */
-.ai-conv-list,
-.ai-messages,
-.ai-input,
-.ai-bubble pre {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 184, 0, 0.4) rgba(15, 20, 30, 0.85);
-}
-
-.ai-conv-list::-webkit-scrollbar,
-.ai-messages::-webkit-scrollbar,
-.ai-input::-webkit-scrollbar,
-.ai-bubble pre::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-  background: rgba(10, 14, 22, 0.95);
-}
-
-.ai-conv-list::-webkit-scrollbar-thumb,
-.ai-messages::-webkit-scrollbar-thumb,
-.ai-input::-webkit-scrollbar-thumb,
-.ai-bubble pre::-webkit-scrollbar-thumb {
-  background: linear-gradient(90deg, rgba(255, 184, 0, 0.4), rgba(255, 199, 0, 0.7));
-  border-radius: 8px;
-}
+/* Skrol trake: zajednički izgled iz css/base/scrollbars.css */

@@ -93,11 +93,7 @@
   border-top: 1px solid var(--border-subtle);
 }
 
-.dms-root ::-webkit-scrollbar,
-.dms-modal ::-webkit-scrollbar { width: 8px; height: 8px; }
-.dms-root ::-webkit-scrollbar-thumb,
-.dms-modal ::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 4px; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: var(--border-medium); border-radius: 4px; }
+/* Skrol trake: zajednički izgled iz css/base/scrollbars.css */
 
 /* ---------- Status učitavanja ---------- */
 .dms-status-badge {

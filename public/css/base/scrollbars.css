@@ -1,0 +1,66 @@
+/* ==========================================================================
+   UNIPROMET - TRAKE ZA SKROLOVANJE (važi za SVAKI element na platformi)
+   Jedan izgled svuda, i za buduće elemente: tanka zlatna traka na tamnoj podlozi
+   (isti stil kao ranije u tabelama). Lokalna pravila za izgled trake se NE pišu;
+   izuzetak je samo potpuno skrivena traka (scrollbar-width: none + display: none).
+
+   Napomena: Chrome/Edge/Opera ignorišu ::-webkit-scrollbar na elementu kome je zadat
+   scrollbar-color ili scrollbar-width, pa se ta dva svojstva zadaju samo Firefox-u.
+   ========================================================================== */
+
+:root {
+  --scrollbar-size: 8px;
+  --scrollbar-track: rgba(15, 20, 30, 0.85);
+  --scrollbar-thumb: linear-gradient(180deg, rgba(255, 184, 0, 0.45), rgba(255, 199, 0, 0.7));
+  --scrollbar-thumb-hover: linear-gradient(180deg, rgba(255, 184, 0, 0.8), rgba(255, 199, 0, 1));
+  --scrollbar-thumb-solid: rgba(255, 184, 0, 0.5); /* Firefox: samo jedna boja */
+}
+
+/* Chrome, Edge, Opera */
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+  background: transparent;
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+  border-radius: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  min-height: 32px;
+  min-width: 32px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
+/* Horizontalna traka: prelaz boje po širini */
+*::-webkit-scrollbar-thumb:horizontal {
+  background: linear-gradient(90deg, rgba(255, 184, 0, 0.45), rgba(255, 199, 0, 0.7));
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:horizontal:hover {
+  background: linear-gradient(90deg, rgba(255, 184, 0, 0.8), rgba(255, 199, 0, 1));
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox */
+@supports (-moz-appearance: none) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb-solid) var(--scrollbar-track);
+  }
+}

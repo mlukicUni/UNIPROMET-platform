@@ -13,6 +13,9 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.19.1] - 2026-11-26
+- Trake za skrolovanje imaju isti izgled na celoj platformi (tanka zlatna traka na tamnoj podlozi, kao ranije u tabelama), i u meniju, prozorima, listama, DMS-u, NOLEKO stranicama, na stranici za prijavu i u zasebnom prozoru Monitoringa. Pravilo je zajedničko za svaki element (`public/css/base/scrollbars.css`), pa i svaki budući element automatski dobija taj izgled; lokalna pravila za izgled trake su uklonjena
+
 ## [1.3.19] - 2026-11-26
 - Kamere i snimači: kamera se sada uvek povezuje sa snimačem iz evidencije (po ID-ju), a ne samo upisanim tekstom. U obrascu za dodavanje i izmenu kamere polje „Snimač“ je izbor iz evidencije snimača (uz opciju „Bez snimača“); server odbija snimač koji ne postoji i pri izmeni menja i naziv i vezu. Ranije ručno dodate kamere nisu bile povezane sa snimačem, pa su ispadale u „Kamere bez snimača“ i nisu ulazile u dozvole „po snimaču“. Povezano je pet kamera sa njihovim stvarnim snimačem (očitano sa snimača): CI - raskrsnica, Šator šrafovske robe 1 i 2 (Pogon 8 i BBC), Pogon 6 KV Unutra 16 i Hikvision 192.168.125.106 (KV Plava Hala).
 
