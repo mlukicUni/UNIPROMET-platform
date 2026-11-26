@@ -32,7 +32,6 @@
     cctv_monitoring: 'video.monitoring',
     cctv_access: 'video.dozvole',
     cameras: 'video.lista',
-    ai_agent_prototype: 'noleko.agent_prototip',
     ai_dev_plan: 'noleko.razvojni_plan',
     ai_phased_dev: 'noleko.fazni_razvoj',
     dms_analytics: 'dms.izvestaji',
@@ -53,7 +52,7 @@
   const SUPER_ONLY_TABS = new Set(['access_roles']);
 
   /** Lične stranice: nivo "Pregled" je dovoljan i za izmenu sopstvenih podešavanja (bez oznake "samo pregled") */
-  const PERSONAL_TABS = new Set(['cctv_monitoring', 'ai_agent_prototype']);
+  const PERSONAL_TABS = new Set(['cctv_monitoring']);
 
   /** Elementi čije prikazivanje zavisi od posebne akcije ili nivoa izmene */
   const GATED_ELEMENTS = {

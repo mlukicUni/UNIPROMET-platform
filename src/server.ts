@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
+import fs from 'fs';
 import http from 'http';
 import https from 'https';
 import net from 'net';
@@ -14,18 +15,19 @@ import { getOrCreateSslCertificate } from './services/sslService';
 import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
 import { getCameraCredentials } from './services/cameraLiveService';
 import { getRecorderEndpointByIp, analogRtspPath } from './services/analogChannels';
-import { isUserAllowed, getAccess, hasLevel, lookupCameraById, canAccessCamera } from './services/accessService';
+import { isUserAllowed, getAccess, hasLevel, lookupCameraById, cameraRights } from './services/accessService';
+import { getCameraInventoryById } from './db/cameraInventoryDb';
 import { enforceRouteAccess, checkVideoGatewayAccess } from './services/routeAccess';
 import { initRolesSchema, writeAudit } from './db/rolesDb';
 import { initMonitoringSchema } from './db/monitoringDb';
-import { initAiAgentSchema } from './db/aiAgentDb';
+import { initAiSchema } from './db/aiDb';
 import { initNolekoDocsSchema } from './db/nolekoDocsDb';
 
 // Ensure SQLite database and schema are initialized on startup
 migrateLegacyJsonToSqlite();
 initRolesSchema();
 initMonitoringSchema();
-initAiAgentSchema();
+initAiSchema();
 initNolekoDocsSchema();
 
 const app = express();
@@ -182,8 +184,9 @@ app.get(['/presentation', '/prezentacija'], (req, res) => {
   res.sendFile(path.join(publicPath, 'presentation.html'));
 });
 
-// Veza ka jednoj kameri (npr. iz Excel izvoza dozvola): prijava po potrebi, pa Video nadzor sa otvorenom kamerom.
-// Ko nema pristup platformi ili pravo na tu kameru dobija poruku umesto video prikaza.
+// Veza ka jednoj kameri (npr. iz Excel izvoza dozvola): /kamera/<ID>.
+// Posle prijave otvara se laka samostalna stranica samo sa video prikazom te kamere (bez učitavanja cele platforme).
+// Podaci o kameri i pravo korisnika proveravaju se ovde, pa stranica odmah zna šta da prikaže.
 app.get('/kamera/:id', (req, res) => {
   const id = String(req.params.id || '');
   if (!/^[\w-]{1,64}$/.test(id)) return res.redirect('/');
@@ -194,10 +197,25 @@ app.get('/kamera/:id', (req, res) => {
     return res.redirect('/login');
   }
   if (!isUserAllowed(user)) return res.redirect('/access-denied');
-  const cam = lookupCameraById(id);
-  const access = getAccess(user);
-  const allowed = !!cam && (canAccessCamera(access, cam, 'live') || canAccessCamera(access, cam, 'playback'));
-  res.redirect(allowed ? `/?camera=${encodeURIComponent(id)}` : '/?camera_denied=1');
+
+  const item = getCameraInventoryById(id);
+  const ref = lookupCameraById(id);
+  const rights = item && ref ? cameraRights(getAccess(user), ref) : { live: false, playback: false };
+  const ok = !!item && (rights.live || rights.playback);
+  const payload = ok
+    ? { ok: true, id, ip: item!.ip, name: item!.position || item!.name, location: item!.location || '', recorder: item!.recorder || '', live: rights.live, playback: rights.playback }
+    : { ok: false, id, message: 'Nemate dozvolu da gledate ovu kameru (ili kamera više ne postoji u evidenciji).', hint: 'Obratite se administratoru za dozvolu.' };
+
+  let html: string;
+  try {
+    html = fs.readFileSync(path.join(publicPath, 'camera.html'), 'utf8');
+  } catch {
+    return res.redirect(ok ? `/?camera=${encodeURIComponent(id)}` : '/?camera_denied=1');
+  }
+  // JSON u <script>: < se piše kao < da sadržaj ne bi mogao da zatvori skriptu
+  const json = JSON.stringify(payload).replace(/</g, '\\u003c');
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('html').send(html.replace('/*__CAMERA__*/null', () => json));
 });
 
 // Samostalni prozor jednog monitoring taba (bez menija platforme)
