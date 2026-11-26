@@ -817,6 +817,7 @@ function setupNavigationHandlers() {
   const initialHash = window.location.hash.replace('#', '').trim();
   const savedTab = initialHash || localStorage.getItem('unipromet_active_tab') || 'dashboard';
   activateTab(savedTab);
+  handleCameraDeepLink();
   // Prava i prva stranica su spremni: loader pokretanja ustupa mesto loaderu stranice (isti izgled)
   if (window.UniPageLoader) window.UniPageLoader.hideBoot();
 
@@ -8575,6 +8576,33 @@ let liveClockInterval = null;
 let liveFpsInterval = null;
 let liveFrameCounter = 0;
 let liveVfcHandle = null;
+
+/**
+ * Veza ka kameri (/kamera/<id> → /?camera=<id>): otvara Video nadzor i kameru uživo.
+ * Server je već proverio pravo; /?camera_denied=1 znači da korisnik nema pravo na tu kameru.
+ */
+async function handleCameraDeepLink() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('camera');
+  const denied = params.get('camera_denied');
+  if (!id && !denied) return;
+  window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
+  if (denied) {
+    showToast('Nemate dozvolu da gledate ovu kameru (ili kamera više ne postoji u evidenciji).', 'error');
+    return;
+  }
+  try {
+    if (window.UniAccess && window.UniAccess.ready) await window.UniAccess.ready;
+    const res = await fetch(`/api/inventory/cameras/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
+    const data = await res.json();
+    const cam = data && data.camera;
+    if (!res.ok || !cam || !cam.ip) throw new Error('Kamera nije pronađena ili nemate dozvolu.');
+    if (typeof activateTab === 'function' && (!window.UniAccess || window.UniAccess.canOpenTab('cctv_cameras'))) activateTab('cctv_cameras');
+    setTimeout(() => openCameraLiveModal(cam.ip, cam.position || cam.name, cam.recorder || ''), 400);
+  } catch (err) {
+    showToast(err.message || 'Kamera nije dostupna.', 'error');
+  }
+}
 
 function openCameraLiveModal(ip, name, vendor) {
   if (!ip) return;

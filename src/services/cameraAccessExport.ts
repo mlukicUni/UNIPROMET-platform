@@ -2,6 +2,7 @@ import ExcelJS from 'exceljs';
 import fs from 'fs';
 import path from 'path';
 import { CameraOverview, OvRole, OvUser, OvCameraRow, cameraById } from './cameraAccessOverview';
+import { publicUrl } from '../utils/appConfig';
 
 /**
  * Izvoz pregleda dozvola za pristup kamerama u Excel (isti izgled kao izvoz evidencije kamera).
@@ -165,11 +166,13 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
 
   const CAM_COLS: Col[] = [
     { header: 'Kamera', width: 30 }, { header: 'IP / Mrežni slot', width: 20 }, { header: 'Lokacija', width: 20 },
-    { header: 'Snimač', width: 22 }, { header: 'Tip', width: 14 }
+    { header: 'Snimač', width: 22 }, { header: 'Tip', width: 14 }, { header: 'Otvori u platformi', width: 20 }
   ];
+  /** Veza ka kameri: prikazuje je u Video nadzoru ako korisnik ima pristup platformi i dozvolu za tu kameru */
+  const camLink = (id: string): Cell => ({ text: 'Otvori kameru', link: `${publicUrl()}/kamera/${encodeURIComponent(id)}` });
   const camInfo = (id: string): Cell[] => {
     const c = cams.get(id);
-    return c ? [c.position || c.name, c.ip, c.location, c.recorder, c.type] : [id, '', '', '', ''];
+    return c ? [c.position || c.name, c.ip, c.location, c.recorder, c.type, camLink(id)] : [id, '', '', '', '', camLink(id)];
   };
   const UZ: Col = { header: 'Uživo', width: 10, center: true };
   const SN: Col = { header: 'Snimci', width: 10, center: true };
@@ -285,7 +288,7 @@ export function buildOverviewWorkbook(overview: CameraOverview, view: OverviewVi
     const tabs = withTabs<OvCameraRow>(rows, c => [c.position || c.name, `${c.position || c.name} ${c.ip}`], c => ({
       title: `UNIPROMET DOO ČAČAK — KAMERA: ${c.position || c.name}`,
       sections: [
-        { title: 'Podaci o kameri', cols: KV, rows: [['Kamera', c.position || c.name], ['IP / Mrežni slot', c.ip], ['Lokacija', c.location], ['Snimač', c.recorder], ['Tip', c.type]] },
+        { title: 'Podaci o kameri', cols: KV, rows: [['Kamera', c.position || c.name], ['IP / Mrežni slot', c.ip], ['Lokacija', c.location], ['Snimač', c.recorder], ['Tip', c.type], ['Otvori u platformi', camLink(c.id)]] },
         { title: `Dozvole: ${c.roles.length}`, cols: [{ header: 'Dozvola', width: 34 }, UZ, SN], rows: c.roles.map(r => [r.name, yn(r.live), yn(r.playback)]) },
         {
           title: `AD grupe: ${c.adGroups.length}`, cols: [{ header: 'AD grupa', width: 36 }, { header: 'Preko dozvole', width: 34 }],

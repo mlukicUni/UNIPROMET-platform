@@ -13,6 +13,10 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.20] - 2026-11-26
+- Kamere na snimaču Pogon 8 i BBC (kanali 1–24) više se ne zovu sve „nove kamere Pogon 8 i BBC“: dobile su nazive koje imaju na uređaju („Hala - Pogon8“ i „Camera 02“ ... „Camera 24“, kanal 6 je na uređaju „Camera 01“), očitane sa kamera.
+- Izvoz pregleda dozvola u Excel: pored svake kamere je kolona „Otvori u platformi“ sa vezom (/kamera/<ID kamere>, adresa portala iz PUBLIC_URL). Klik otvara Video nadzor sa kamerom uživo; ko nije prijavljen prvo se prijavi pa se vraća na kameru. Ko nema pristup platformi dobija stranicu „pristup odbijen“, a ko nema dozvolu za tu kameru poruku da je ne može da gleda.
+
 ## [1.3.19.1] - 2026-11-26
 - Trake za skrolovanje imaju isti izgled na celoj platformi (tanka zlatna traka na tamnoj podlozi, kao ranije u tabelama), i u meniju, prozorima, listama, DMS-u, NOLEKO stranicama, na stranici za prijavu i u zasebnom prozoru Monitoringa. Pravilo je zajedničko za svaki element (`public/css/base/scrollbars.css`), pa i svaki budući element automatski dobija taj izgled; lokalna pravila za izgled trake su uklonjena
 
