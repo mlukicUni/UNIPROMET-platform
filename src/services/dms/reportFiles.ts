@@ -118,8 +118,8 @@ export function ensureReportCache(filename: string): { cacheFile: string; mtimeM
       const n = fs.readSync(fd, buf, 0, 512, 0);
       fs.closeSync(fd);
       const head = buf.toString('utf8', 0, n);
-      const ver = head.match(/"cacheVersion":(d+)/);
-      const mt = head.match(/"mtimeMs":([d.]+)/);
+      const ver = head.match(/"cacheVersion":(\d+)/);
+      const mt = head.match(/"mtimeMs":([\d.]+)/);
       valid = !!ver && !!mt && Number(ver[1]) === CACHE_VERSION && Number(mt[1]) === st.mtimeMs;
     } catch {
       valid = false;

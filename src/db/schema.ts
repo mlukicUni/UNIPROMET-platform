@@ -3,8 +3,14 @@ import { getDb } from './sqlite';
 /**
  * Initializes all required database tables and indexes if they do not exist.
  */
+let schemaReadyFor: object | null = null;
+
 export function initSchema(): void {
   const db = getDb();
+  // Šema se pravi jednom po otvorenoj vezi: funkcija se zove pri svakom čitanju kamera/štampača/snimača,
+  // pa bi se inače stotine CREATE TABLE/INDEX naredbi izvršavale pri svakom zahtevu.
+  // Ako se baza zatvori i ponovo otvori (nova veza), provera se ponavlja.
+  if (schemaReadyFor === db) return;
 
   db.exec(`
     -- Recorders inventory table
@@ -498,4 +504,5 @@ export function initSchema(): void {
   } catch (err) {
     console.warn('[Schema] Inicijalizacija objekata upozorenje:', err);
   }
+  schemaReadyFor = db;
 }

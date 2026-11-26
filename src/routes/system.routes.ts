@@ -30,6 +30,14 @@ export const serverLogs: Array<{ id: number; timestamp: string; level: 'info' | 
   }
 ];
 
+// Dnevnik u memoriji ima gornju granicu (najnovijih MAX_SERVER_LOGS zapisa); stariji se odbacuju.
+// Više mesta dodaje direktno u serverLogs, pa se skraćuje na ovom mestu, pri čitanju i jednom na sat.
+const MAX_SERVER_LOGS = 1000;
+function trimServerLogs(): void {
+  if (serverLogs.length > MAX_SERVER_LOGS) serverLogs.splice(0, serverLogs.length - MAX_SERVER_LOGS);
+}
+setInterval(trimServerLogs, 60 * 60 * 1000).unref();
+
 export function addServerLog(level: 'info' | 'warn' | 'success' | 'error', message: string, source: string): void {
   serverLogs.push({
     id: serverLogs.length + 1,
@@ -38,6 +46,7 @@ export function addServerLog(level: 'info' | 'warn' | 'success' | 'error', messa
     message,
     source
   });
+  trimServerLogs();
 }
 
 // GET /api/status - Complete server & system telemetry
@@ -79,6 +88,7 @@ systemRouter.get('/stats', (req: Request, res: Response) => {
 
 // GET /api/logs - Server activity log
 systemRouter.get('/logs', (_req: Request, res: Response) => {
+  trimServerLogs();
   res.json({
     total: serverLogs.length,
     logs: [...serverLogs].reverse()

@@ -17,6 +17,7 @@ User=uniadmin
 Group=uniadmin
 WorkingDirectory=/opt/unipromet-admin
 Environment=TZ=Europe/Belgrade
+Environment=NODE_ENV=production
 ExecStart=/usr/bin/node dist/server.js
 Restart=always
 RestartSec=5

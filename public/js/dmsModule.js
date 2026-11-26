@@ -65,8 +65,9 @@ function dmsJson(body) {
 
 /* ---------- Biblioteke (lenjo) ---------- */
 const DMS_LIBS = {
-  xlsx: { test: () => window.XLSX, src: 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js' },
-  chart: { test: () => window.Chart, src: 'https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js' }
+  // Lokalne kopije istih (zakucanih) verzija: DMS ne zavisi od interneta
+  xlsx: { test: () => window.XLSX, src: '/vendor/xlsx-0.18.5.full.min.js' },
+  chart: { test: () => window.Chart, src: '/vendor/chart-4.4.1.umd.js' }
 };
 const dmsLibPromises = {};
 
