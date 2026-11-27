@@ -28,6 +28,14 @@
   <script src="/js/core/service-menu.js?v=20261124"></script>
 
   <!-- Main Stylesheet -->
+  <!-- Moduli stila koje je style.css ranije učitavao preko @import (isti redosled, pre style.css) -->
+  <link rel="stylesheet" href="/css/base/variables.css">
+  <link rel="stylesheet" href="/css/base/scrollbars.css">
+  <link rel="stylesheet" href="/css/components/modals.css">
+  <link rel="stylesheet" href="/css/components/toolbars.css">
+  <link rel="stylesheet" href="/css/components/tables.css">
+  <link rel="stylesheet" href="/css/components/scheduler.css">
+  <link rel="stylesheet" href="/css/components/live-stream.css">
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/components/auth-widget.css">
   <link rel="stylesheet" href="/css/components/equipment.css">
@@ -8356,6 +8364,8 @@
 
   <!-- Role & Permissions (client-side view of /auth/me access) - must load first -->
   <script src="/js/access.js?v=20261125"></script>
+  <!-- Jedna zajednička SSE veza (/api/equipment/events) za Opremu, MTS, Mrežnu opremu i Čvorišta -->
+  <script src="/js/core/sse.js"></script>
   <!-- VideoRTC / go2rtc 25 FPS Streaming Client -->
   <script type="module" src="/js/core/video-stream.js"></script>
   <!-- Equipment Inventory Module -->

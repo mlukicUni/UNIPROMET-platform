@@ -676,8 +676,7 @@
   // 4. FAST SYNC CHECK HOOK & REAL-TIME SSE (Server-Sent Events)
   // ==========================================================================
 
-  let sseSource = null;
-  let sseReconnectTimer = null;
+  let sseUnsubscribe = null;
   let liveRefreshThrottle = null;
 
   /**
@@ -712,39 +711,18 @@
    * Sets up real-time SSE listener for live table auto-refresh without page reload.
    */
   function setupLiveSSE() {
-    if (sseSource) {
-      try { sseSource.close(); } catch(e) {}
-    }
-
-    try {
-      sseSource = new EventSource('/api/equipment/events');
-
-      sseSource.onopen = () => {
-        console.log('[EquipmentModule] 🟢 SSE Live Stream povezan uspešno.');
-      };
-
-      sseSource.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data && data.type !== 'connected') {
-            console.log('[EquipmentModule] 📥 Primljen live signal sa servera:', data.type);
-            scheduleLiveRefresh(data.type);
-          }
-        } catch (e) {
-          scheduleLiveRefresh('raw');
+    // Jedna zajednička veza (core/sse.js) za sve module; prijava se radi samo jednom
+    if (sseUnsubscribe || !window.UniSSE) return;
+    sseUnsubscribe = window.UniSSE.subscribe((event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data && data.type !== 'connected') {
+          scheduleLiveRefresh(data.type);
         }
-      };
-
-      sseSource.onerror = () => {
-        try { sseSource.close(); } catch(e) {}
-        sseSource = null;
-        clearTimeout(sseReconnectTimer);
-        // Auto-reconnect after 3 seconds
-        sseReconnectTimer = setTimeout(setupLiveSSE, 3000);
-      };
-    } catch (err) {
-      console.warn('[EquipmentModule] SSE setup notice:', err);
-    }
+      } catch (e) {
+        scheduleLiveRefresh('raw');
+      }
+    });
   }
 
   /**

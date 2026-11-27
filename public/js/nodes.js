@@ -1597,10 +1597,9 @@
    * Sets up SSE listeners for automatic live synchronization
    */
   function setupSSEListener() {
-    if (window.EventSource) {
+    if (window.UniSSE) {
       try {
-        const sse = new EventSource('/api/equipment/events');
-        sse.onmessage = (e) => {
+        window.UniSSE.subscribe((e) => {
           try {
             const data = JSON.parse(e.data);
             if (['node_created', 'node_updated', 'node_deleted', 'history_added', 'history_deleted'].includes(data.event)) {
@@ -1608,7 +1607,7 @@
               fetchNodes();
             }
           } catch (err) {}
-        };
+        });
       } catch (err) {}
     }
   }

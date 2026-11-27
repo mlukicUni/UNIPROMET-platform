@@ -1057,9 +1057,8 @@
 
   // Hook into SSE events if broadcast
   function setupSseListener() {
-    if (window.EventSource) {
-      const evtSource = new EventSource('/api/equipment/events');
-      evtSource.onmessage = (e) => {
+    if (window.UniSSE) {
+      window.UniSSE.subscribe((e) => {
         try {
           const data = JSON.parse(e.data);
           if (['mts_created', 'mts_updated', 'mts_deleted', 'mts_log_added', 'mts_log_deleted', 'legacy_sync'].includes(data.type)) {
@@ -1072,7 +1071,7 @@
         } catch (err) {
           // Ignore parse errors
         }
-      };
+      });
     }
   }
 

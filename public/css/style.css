@@ -4,15 +4,9 @@
    "Na svetloj strani puta"
    ========================================================================== */
 
-/* Modular Subsystem Imports */
-@import url('base/variables.css');
-@import url('base/scrollbars.css'); /* jedan izgled traka za skrolovanje na celoj platformi */
-@import url('components/modals.css');
-@import url('components/toolbars.css');
-@import url('components/tables.css');
-@import url('components/scheduler.css');
-@import url('components/live-stream.css');
-/* components/equipment.css se učitava posebnim <link>-om u HTML-u (index.html, monitor.html), ne više ovde */
+/* Moduli (variables, scrollbars, modals, toolbars, tables, scheduler, live-stream, equipment) se učitavaju posebnim
+   <link> tagovima u HTML-u, ISPRED ovog fajla i istim redom kojim su ranije bili @import (index.html, monitor.html).
+   Ranije su bili @import: pregledač ih je otkrivao tek posle preuzimanja ovog fajla (dva uzastopna nivoa čekanja). */
 
 :root {
   /* Color Palette */

@@ -11614,8 +11614,12 @@ async function initAuthWidget() {
   }
 
   try {
-    const res = await fetch('/auth/me');
-    const data = await res.json();
+    // Odgovor /auth/me koji je access.js upravo učitao (pri pokretanju); samo ako ga nema, traži se ponovo
+    let data = window.UniAccess && window.UniAccess.recentMe ? window.UniAccess.recentMe(15000) : null;
+    if (!data) {
+      const res = await fetch('/auth/me');
+      data = await res.json();
+    }
 
     if (data.isAuthenticated && data.user) {
       const user = data.user;

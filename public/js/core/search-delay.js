@@ -13,7 +13,7 @@
  * ==========================================================================
  */
 (function () {
-  const SEARCH_DELAY_MS = 800;
+  const SEARCH_DELAY_MS = 300; // bilo 800 ms
 
   /** Polja za pretragu: po tipu, klasi, ID-ju ili tekstu „Pretraži…“ */
   const SEARCH_SELECTOR = [
@@ -148,6 +148,7 @@
 
   // Polja se prave i kasnije (modali, DMS), a vrednost se menja i iz koda - kratka periodična provera
   function scan() {
+    if (document.hidden) return; // prozor nije vidljiv: nema šta da se ažurira
     document.querySelectorAll('input').forEach(el => { if (isSearchField(el)) attachClear(el); });
     managed.forEach(el => {
       if (!el.isConnected) { managed.delete(el); return; }
@@ -157,7 +158,7 @@
   window.addEventListener('resize', () => managed.forEach(update));
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan, { once: true });
   else scan();
-  setInterval(scan, 500);
+  setInterval(scan, 1000);
 
   window.UniSearchDelay = { SEARCH_DELAY_MS, isSearchField, flush };
 })();

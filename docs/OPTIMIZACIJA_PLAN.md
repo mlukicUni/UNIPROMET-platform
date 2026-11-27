@@ -95,6 +95,8 @@ Najveći efekat po uloženom trudu. Svaka stavka je mala i izolovana.
 
 ### 2B. Frontend (jedna verzija)
 
+**STATUS 2B (2026-11-27), prvi deo, na dev serveru, nije puštano:** urađeno 2.20 (jedna SSE veza; `lines.js` i `software.js` slušaju događaj `equipment-sse-event` koji niko ne šalje, pa im uživo osvežavanje danas ne radi — namerno nije "popravljeno" da se ne uvede novi saobraćaj; `nodes.js` i dalje proverava `data.event`), deo 2.22 (`/auth/me` jednom pri pokretanju), 2.26 (blaga varijanta: 1 s i pauza kad je prozor skriven), 2.28 (samo spljoštavanje `@import`-a), 1.16 i skraćenje kašnjenja pretrage (odluke korisnika: 100 ms i 300 ms). **Nije rađeno (bez provere u pregledaču previše rizično):** 2.21 (crtanje skrivenih stranica pri startu), ostatak 2.22, 2.27, `backdrop-filter`, 2.29 (minifikacija), kao i video stavke 2.23–2.25 i 2.30. Korisnik ručno testira UI.
+
 | ID | Izmena | Efekat | Rizik | Provera |
 |---|---|---|---|---|
 | 2.20 | **Jedan** `EventSource` (`core/events.js`) koji razašilje događaj postojećim modulima (`software.js` već sluša `equipment-sse-event`); zatvara se kad je tab skriven. Usput: `nodes.js:1605` proverava `data.event`, ostali `data.type` — proveriti da li uživo osvežavanje čvorišta uopšte radi | Oslobađa 3 od 6 HTTP/1.1 veza | Nizak–srednji | Network „events": 1 zahtev; uživo osvežavanje na Opremi/MTS/Mreži/Čvorištima |
