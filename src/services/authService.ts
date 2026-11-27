@@ -410,10 +410,17 @@ export function getCurrentUser(req: express.Request): SessionUser | null {
   return user;
 }
 
-/** Da li su grupe korisnika starije od 30 s (tada ih treba osvežiti iz Graph-a) */
+/**
+ * Koliko dugo se grupe korisnika smatraju svežim pre ponovnog čitanja iz Graph-a.
+ * Ranije 30 s (po jedan Graph poziv po aktivnom korisniku na pola minuta, uz rizik od ograničenja 429);
+ * sada 10 min. Ručno osvežavanje (forceRefresh, npr. dugme na stranici prava) i dalje važi odmah.
+ */
+const GROUP_REFRESH_MS = 10 * 60 * 1000;
+
+/** Da li su grupe korisnika starije od GROUP_REFRESH_MS (tada ih treba osvežiti iz Graph-a) */
 export function isUserSyncStale(user: SessionUser): boolean {
   const lastSync = user.lastAdSyncAt ? new Date(user.lastAdSyncAt).getTime() : 0;
-  return (Date.now() - lastSync) > 30000;
+  return (Date.now() - lastSync) > GROUP_REFRESH_MS;
 }
 
 /**
@@ -452,7 +459,7 @@ export async function getOrRefreshCurrentUser(req: express.Request, forceRefresh
   const user = verifySessionCookie(req.cookies?.[COOKIE_NAME]);
   if (!user) return null;
 
-  const isStale = isUserSyncStale(user); // 30s freshness window
+  const isStale = isUserSyncStale(user);
 
   if (forceRefresh || isStale) {
     const syncKey = user.email || user.id;

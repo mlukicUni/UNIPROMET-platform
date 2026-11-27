@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { acquireScanLock } from './scanLockManager';
 import path from 'path';
 import { getDb } from '../db/sqlite';
 import { getAllCameraInventory } from '../db/cameraInventoryDb';
@@ -127,7 +128,7 @@ export function startSnapshotRun(trigger: 'monthly' | 'manual', ids?: string[]):
     .run(startedAt, trigger, targets.length).lastInsertRowid);
   console.log(`[CameraSnapshots] Počinje uzimanje slika (${trigger}) za ${targets.length} kamera...`);
 
-  (async () => {
+  const work = async () => {
     // Analogni kanali istog snimača idu jedan za drugim kao i ostale kamere (sve je redom)
     for (const cam of targets) {
       const ok = await captureOne(cam);
@@ -135,7 +136,10 @@ export function startSnapshotRun(trigger: 'monthly' | 'manual', ids?: string[]):
       if (ok) state.ok++; else state.failed++;
       await new Promise(r => setTimeout(r, PAUSE_MS));
     }
-  })()
+  };
+  // Mesečno (zakazano) uzimanje slika traje 15–25 min i ne sme da se preklapa sa skeniranjem kamera i
+  // proverom snimača: ide kroz isti scan lock kao i ostala skeniranja (Sophos/WAN). Ručno pokrenuto ostaje kao ranije.
+  (trigger === 'monthly' ? acquireScanLock('camera-snapshots', work) : work())
     .catch(err => console.error('[CameraSnapshots] Greška:', err))
     .finally(() => {
       state.running = false;
