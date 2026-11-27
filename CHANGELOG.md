@@ -13,6 +13,12 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.25] - 2026-11-27
+- Manje pozadinskog rada servera (optimizacija, faza 2C), bez promene funkcionalnosti:
+  - Grupe korisnika iz Microsoft Graph-a osvežavaju se na 10 min (bilo 30 s po aktivnom korisniku): manje Graph poziva i nema rizika od ograničenja (429). Promena grupe u Microsoft 365 važi do 10 min kasnije; ručno osvežavanje prava (forceRefresh) i dalje važi odmah. Graph pozivi imaju rok od 15 s (zaglavljen poziv više ne drži osvežavanje korisnika), a istovremeni zahtevi za token dele jedan zahtev.
+  - Mesečno zakazano uzimanje slika kamera (traje 15–25 min) ide kroz isti scan lock kao ostala skeniranja, pa se ne preklapa sa skeniranjem kamera i proverom snimača (Sophos/WAN). Ručno pokrenuto uzimanje slika radi kao ranije.
+  - Uklonjene dve nekorišćene skripte (`public/js/core/api.js`, `public/js/core/modal.js`) koje nijedna stranica nije učitavala.
+
 ## [1.3.24] - 2026-11-27
 - Brža i odzivnija platforma u pregledaču (optimizacija, faza 2B, prvi deo; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
   - Promena stranice: loader se zadržava najmanje 100 ms (bilo 450 ms), pa stranice deluju trenutno; i dalje se vidi ako podaci stvarno kasne.

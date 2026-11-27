@@ -7,10 +7,21 @@ import type { UserGroup } from './authService';
  */
 
 let cachedToken: { value: string; expiresAt: number } | null = null;
+let tokenInFlight: Promise<string> | null = null;
+const GRAPH_TIMEOUT_MS = 15_000; // bez roka, zaglavljen Graph poziv bi zauvek držao stanje osvežavanja korisnika
 
 export async function getGraphAppToken(): Promise<string> {
   const now = Date.now();
   if (cachedToken && cachedToken.expiresAt > now + 60 * 1000) return cachedToken.value;
+  // Više istovremenih zahteva deli jedan zahtev za token
+  if (!tokenInFlight) {
+    tokenInFlight = requestGraphAppToken().finally(() => { tokenInFlight = null; });
+  }
+  return tokenInFlight;
+}
+
+async function requestGraphAppToken(): Promise<string> {
+  const now = Date.now();
 
   const tenant = process.env.AZURE_TENANT_ID || '062bb2bd-105f-4d7b-807e-d6a7e8ca5929';
   const clientId = process.env.AZURE_CLIENT_ID || '627b08f1-19b9-46c9-8448-0bf4bf10c409';
@@ -25,7 +36,8 @@ export async function getGraphAppToken(): Promise<string> {
       client_secret: clientSecret,
       scope: 'https://graph.microsoft.com/.default',
       grant_type: 'client_credentials'
-    }).toString()
+    }).toString(),
+    signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS)
   });
   if (!res.ok) throw new Error(`Graph token zahtev nije uspeo (HTTP ${res.status})`);
 
@@ -38,7 +50,8 @@ export async function getGraphAppToken(): Promise<string> {
 export async function graphGet<T>(path: string): Promise<T> {
   const token = await getGraphAppToken();
   const res = await fetch(`https://graph.microsoft.com/v1.0${path}`, {
-    headers: { Authorization: `Bearer ${token}` }
+    headers: { Authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(GRAPH_TIMEOUT_MS)
   });
   if (!res.ok) throw new Error(`Graph ${res.status} za ${path.split('?')[0]}`);
   return (await res.json()) as T;
