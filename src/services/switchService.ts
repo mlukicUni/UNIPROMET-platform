@@ -62,9 +62,22 @@ export interface SwitchDetails {
 const SWITCH_IP = '192.168.120.25';
 const COMMUNITY = 'unipromet-snmp';
 
-let cachedSwitchDetails: SwitchDetails | null = null;
-let lastCacheTime = 0;
-let inflightScanPromise: Promise<SwitchDetails> | null = null;
+// Keš i tekuće čitanje se vode po IP adresi sviča (ranije je postojala jedna vrednost za sve IP adrese,
+// pa je zahtev za drugi svič mogao da dobije podatke prvog). TTL i SNMP ponašanje nepromenjeni.
+const SWITCH_CACHE_TTL_MS = 15000;
+const SWITCH_CACHE_MAX_ENTRIES = 20; // ip dolazi iz URL-a, pa broj ključeva ograničavamo
+const switchCache = new Map<string, { details: SwitchDetails; at: number }>();
+const inflightScans = new Map<string, Promise<SwitchDetails>>();
+
+function setSwitchCache(ip: string, details: SwitchDetails): void {
+  switchCache.delete(ip);
+  switchCache.set(ip, { details, at: Date.now() });
+  while (switchCache.size > SWITCH_CACHE_MAX_ENTRIES) {
+    const oldest = switchCache.keys().next().value;
+    if (oldest === undefined) break;
+    switchCache.delete(oldest);
+  }
+}
 
 // Comprehensive OUI Prefix Map for vendor identification
 const OUI_MAP: Record<string, { vendor: string; type: string }> = {
@@ -295,15 +308,17 @@ function resolveMacDevice(mac: string, lookupMap: Map<string, SwitchPortDevice>)
  */
 export async function fetchSwitchDetails(ip: string = SWITCH_IP, force: boolean = false): Promise<SwitchDetails> {
   const now = Date.now();
-  if (!force && cachedSwitchDetails && (now - lastCacheTime < 15000)) {
-    return cachedSwitchDetails;
+  const cachedEntry = switchCache.get(ip);
+  if (!force && cachedEntry && (now - cachedEntry.at < SWITCH_CACHE_TTL_MS)) {
+    return cachedEntry.details;
   }
 
-  if (inflightScanPromise) {
-    return inflightScanPromise;
+  const running = inflightScans.get(ip);
+  if (running) {
+    return running;
   }
 
-  inflightScanPromise = (async () => {
+  const scanPromise: Promise<SwitchDetails> = (async () => {
     try {
       const session = snmp.createSession(ip, COMMUNITY, {
         version: snmp.Version2c,
@@ -351,8 +366,7 @@ export async function fetchSwitchDetails(ip: string = SWITCH_IP, force: boolean 
           lastScannedAt: new Date().toISOString(),
           error: 'SNMP konekcija nije uspela'
         };
-        cachedSwitchDetails = fallback;
-        lastCacheTime = Date.now();
+        setSwitchCache(ip, fallback);
         return fallback;
       }
 
@@ -557,8 +571,7 @@ export async function fetchSwitchDetails(ip: string = SWITCH_IP, force: boolean 
         lastScannedAt: new Date().toISOString()
       };
 
-      cachedSwitchDetails = result;
-      lastCacheTime = Date.now();
+      setSwitchCache(ip, result);
       return result;
 
     } catch (err: any) {
@@ -584,15 +597,15 @@ export async function fetchSwitchDetails(ip: string = SWITCH_IP, force: boolean 
         lastScannedAt: new Date().toISOString(),
         error: err?.message || 'Greška'
       };
-      cachedSwitchDetails = fallback;
-      lastCacheTime = Date.now();
+      setSwitchCache(ip, fallback);
       return fallback;
-    } finally {
-      inflightScanPromise = null;
     }
   })();
 
-  return inflightScanPromise;
+  inflightScans.set(ip, scanPromise);
+  const clearInflight = () => { if (inflightScans.get(ip) === scanPromise) inflightScans.delete(ip); };
+  scanPromise.then(clearInflight, clearInflight);
+  return scanPromise;
 }
 
 /**

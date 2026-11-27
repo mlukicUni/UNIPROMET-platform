@@ -504,5 +504,19 @@ export function initSchema(): void {
   } catch (err) {
     console.warn('[Schema] Inicijalizacija objekata upozorenje:', err);
   }
+  // Dodatni indeksi za kolone po kojima se filtrira, spaja i broji (filteri opreme, čvorišta, linije, rečnici, kamere po snimaču).
+  // Svaki posebno u try/catch: kolona koju dodaje kasnija migracija možda još ne postoji (indeks se tada pravi pri sledećem pokretanju).
+  const extraIndexes = [
+    'CREATE INDEX IF NOT EXISTS idx_equipment_room ON equipment(room_id)',
+    'CREATE INDEX IF NOT EXISTS idx_equipment_location ON equipment(location_id)',
+    'CREATE INDEX IF NOT EXISTS idx_equipment_building ON equipment(building_id)',
+    'CREATE INDEX IF NOT EXISTS idx_equipment_custom_code ON equipment(custom_code)',
+    'CREATE INDEX IF NOT EXISTS idx_equipment_rooms_building ON equipment_rooms(building)',
+    'CREATE INDEX IF NOT EXISTS idx_equipment_buildings_location ON equipment_buildings(location_id)',
+    'CREATE INDEX IF NOT EXISTS idx_cameras_recorder_id ON cameras(recorder_id)'
+  ];
+  for (const stmt of extraIndexes) {
+    try { db.exec(stmt); } catch { /* kolona još ne postoji */ }
+  }
   schemaReadyFor = db;
 }

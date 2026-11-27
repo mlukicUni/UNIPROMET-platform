@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import express from 'express';
-import { getDb } from '../db/sqlite';
+import { getDb, prepCached } from '../db/sqlite';
 import { fetchUserGroupsFromGraph } from './graphService';
 
 export interface UserGroup {
@@ -270,7 +270,7 @@ function updateSessionUser(sid: string, user: SessionUser): void {
 
 function loadSession(sid: string): SessionUser | null {
   const db = sessionDb();
-  const row = db.prepare('SELECT user_json, expires_at FROM sessions WHERE sid = ?').get(sid) as
+  const row = prepCached('SELECT user_json, expires_at FROM sessions WHERE sid = ?').get(sid) as
     { user_json: string; expires_at: number } | undefined;
   if (!row) return null;
   if (row.expires_at < Date.now()) {
@@ -295,9 +295,23 @@ function signPayload(base64: string): string {
   return crypto.createHmac('sha256', SESSION_SECRET).update(base64).digest('hex');
 }
 
-/** Proverava potpis cookie-ja i vraća sid i rok, ili null */
+/**
+ * Proverava potpis cookie-ja i vraća sid i rok, ili null.
+ * Rezultat zavisi samo od teksta cookie-ja (HMAC + dekodiranje), pa se kratko pamti:
+ * isti cookie stiže sa svakim zahtevom, a bez ovoga se HMAC računa po nekoliko puta po zahtevu.
+ */
+const parsedCookieCache = new Map<string, { sid: string; exp: number } | null>();
+
 function parseCookie(cookieValue?: string): { sid: string; exp: number } | null {
   if (!cookieValue) return null;
+  if (parsedCookieCache.has(cookieValue)) return parsedCookieCache.get(cookieValue) ?? null;
+  const result = parseCookieUncached(cookieValue);
+  if (parsedCookieCache.size >= 1000) parsedCookieCache.clear();
+  parsedCookieCache.set(cookieValue, result);
+  return result;
+}
+
+function parseCookieUncached(cookieValue: string): { sid: string; exp: number } | null {
   const parts = cookieValue.split('.');
   if (parts.length !== 2) return null;
 
@@ -380,9 +394,26 @@ export function verifySessionCookie(cookieValue?: string): SessionUser | null {
 /**
  * Extracts current logged-in user from request cookies.
  */
+const requestUserMemo = new WeakMap<express.Request, { cookie: string | undefined; user: SessionUser | null }>();
+
+/**
+ * Korisnik iz sesije za OVAJ zahtev. Rezultat se pamti na zahtevu (isti cookie): kapija na /api, provera
+ * prava i rute ga traže više puta, a svako traženje je inače čitanje sesije iz baze + HMAC + JSON.parse.
+ * Pamćenje važi samo za jedan zahtev, pa odjava i promena role važe od sledećeg zahteva kao i ranije.
+ */
 export function getCurrentUser(req: express.Request): SessionUser | null {
   const cookieValue = req.cookies?.[COOKIE_NAME];
-  return verifySessionCookie(cookieValue);
+  const memo = requestUserMemo.get(req);
+  if (memo && memo.cookie === cookieValue) return memo.user;
+  const user = verifySessionCookie(cookieValue);
+  requestUserMemo.set(req, { cookie: cookieValue, user });
+  return user;
+}
+
+/** Da li su grupe korisnika starije od 30 s (tada ih treba osvežiti iz Graph-a) */
+export function isUserSyncStale(user: SessionUser): boolean {
+  const lastSync = user.lastAdSyncAt ? new Date(user.lastAdSyncAt).getTime() : 0;
+  return (Date.now() - lastSync) > 30000;
 }
 
 /**
@@ -417,12 +448,11 @@ const syncInProgress = new Map<string, Promise<SessionUser>>();
  * if last sync was > 30s ago or if forceRefresh is true.
  */
 export async function getOrRefreshCurrentUser(req: express.Request, forceRefresh = false): Promise<SessionUser | null> {
-  const user = getCurrentUser(req);
+  // Svež primerak iz sesije (ne onaj zapamćen na zahtevu): osvežavanje grupa ga menja na licu mesta
+  const user = verifySessionCookie(req.cookies?.[COOKIE_NAME]);
   if (!user) return null;
 
-  const now = Date.now();
-  const lastSync = user.lastAdSyncAt ? new Date(user.lastAdSyncAt).getTime() : 0;
-  const isStale = (now - lastSync) > 30000; // 30s freshness window
+  const isStale = isUserSyncStale(user); // 30s freshness window
 
   if (forceRefresh || isStale) {
     const syncKey = user.email || user.id;

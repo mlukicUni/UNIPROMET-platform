@@ -387,7 +387,52 @@ export async function getOfflineCamerasFromInventory(discoveredCameras?: CameraD
  * For callers outside a scan (UI list, email). Inside scanCameras the unlocked version is used.
  */
 export function checkOfflineCamerasLocked(): ReturnType<typeof getOfflineCamerasFromInventory> {
-  return acquireScanLock('cameras-offline-check', () => getOfflineCamerasFromInventory());
+  return acquireScanLock('cameras-offline-check', async () => {
+    const result = await getOfflineCamerasFromInventory();
+    lastOfflineCheck = { at: Date.now(), result };
+    return result;
+  });
+}
+
+type OfflineCheckResult = Awaited<ReturnType<typeof getOfflineCamerasFromInventory>>;
+
+// Poslednji rezultat provere nedostupnih kamera (za GET /api/cameras/offline)
+let lastOfflineCheck: { at: number; result: OfflineCheckResult } | null = null;
+const OFFLINE_FRESH_MS = 60 * 1000;          // mlađe od ovoga: vraća se bez nove provere
+const OFFLINE_MAX_STALE_MS = CACHE_TTL_MS;   // stariji od ovoga: čeka se nova provera kao do sada
+let offlineBackgroundRefresh: Promise<unknown> | null = null;
+
+/**
+ * Za UI (GET /api/cameras/offline): ne proverava sve kamere iz evidencije pri svakom pozivu.
+ * - rezultat mlađi od 60 s se vraća odmah;
+ * - stariji (do 15 min) se vraća odmah, a nova provera ide u pozadini (najviše jedna, pod istim scan lockom);
+ * - nema podataka ili su pregledni stari: blokira kao ranije.
+ * Mejl i drugi pozivaoci koriste checkOfflineCamerasLocked (uvek sveža provera).
+ */
+export async function getOfflineCamerasCached(): Promise<OfflineCheckResult> {
+  const now = Date.now();
+  let prev = lastOfflineCheck;
+  if (inMemoryCache && (!prev || lastScanTimestamp > prev.at) && now - lastScanTimestamp < OFFLINE_MAX_STALE_MS) {
+    // Zadnje skeniranje kamera već sadrži proveru nedostupnih (isti oblik podataka)
+    prev = {
+      at: lastScanTimestamp,
+      result: {
+        offlineCameras: inMemoryCache.offlineCameras || [],
+        offlineCount: inMemoryCache.offlineCount || 0,
+        inventoryTotalCount: inMemoryCache.inventoryTotalCount || 0
+      }
+    };
+  }
+  if (prev && now - prev.at < OFFLINE_FRESH_MS) return prev.result;
+  if (prev && now - prev.at < OFFLINE_MAX_STALE_MS) {
+    if (!offlineBackgroundRefresh) {
+      offlineBackgroundRefresh = checkOfflineCamerasLocked()
+        .catch(err => console.warn('[CameraScanner] Pozadinska provera nedostupnih kamera nije uspela:', err?.message || err))
+        .finally(() => { offlineBackgroundRefresh = null; });
+    }
+    return prev.result;
+  }
+  return checkOfflineCamerasLocked();
 }
 
 /**
@@ -555,6 +600,28 @@ export async function scanCameras(force = false, deepScan = false, waitIfBusy = 
       inventoryTotalCount: 0
     };
   });
+}
+
+let cameraBackgroundRefresh: Promise<unknown> | null = null;
+
+/**
+ * Za UI (GET /api/cameras bez force): stale-while-revalidate.
+ * Ako je keš istekao (15 min), a postoji prethodni rezultat, vraća ga odmah i pokreće novo skeniranje
+ * u pozadini (najviše jedno, kroz isti scan lock i isti tempo kao do sada; ako lock zauzima drugo
+ * skeniranje, osvežavanje se preskače kao i ranije dok se odgovor vraćao iz keša).
+ * Prvi poziv bez ikakvih podataka i duboko skeniranje (deep) ostaju blokirajući.
+ */
+export async function scanCamerasStaleOk(deepScan = false): Promise<CameraScanResult> {
+  if (!deepScan && inMemoryCache && Date.now() - lastScanTimestamp >= CACHE_TTL_MS) {
+    if (!cameraBackgroundRefresh) {
+      cameraBackgroundRefresh = scanCameras(true, false)
+        .catch(err => console.warn('[CameraScanner] Pozadinsko osvežavanje nije uspelo:', err?.message || err))
+        .finally(() => { cameraBackgroundRefresh = null; });
+    }
+    enrichCamerasWithInventory(inMemoryCache.cameras);
+    return { ...inMemoryCache, cached: true };
+  }
+  return scanCameras(false, deepScan);
 }
 
 /**

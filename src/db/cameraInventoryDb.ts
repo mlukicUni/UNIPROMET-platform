@@ -1,4 +1,4 @@
-import { getDb } from './sqlite';
+import { getDb, prepCached } from './sqlite';
 import { initSchema } from './schema';
 
 export interface CameraInventoryItem {
@@ -105,8 +105,7 @@ export function getCameraInventoryById(id: string): CameraInventoryItem | undefi
 
 export function getCameraInventoryByIp(ip: string): CameraInventoryItem | undefined {
   initSchema();
-  const db = getDb();
-  const row = db.prepare('SELECT * FROM cameras WHERE ip = ?').get(ip.trim()) as CameraRow | undefined;
+  const row = prepCached('SELECT * FROM cameras WHERE ip = ?').get(ip.trim()) as CameraRow | undefined;
   return row ? rowToItem(row) : undefined;
 }
 

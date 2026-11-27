@@ -1,3 +1,4 @@
+import type { Statement } from 'better-sqlite3';
 import { getDb } from '../db/sqlite';
 import { parseAnalogIp } from './analogChannels';
 import { cameraAnswers } from './cameraProbe';
@@ -50,15 +51,32 @@ function rowToStatus(r: StatusRow): CameraStatus {
 /** Upis rezultata; "since" se menja samo kad se stanje promeni */
 export function recordCameraStatus(ip: string, online: boolean, at: string, source: string): CameraStatus {
   initSchema();
-  const db = getDb();
+  const stmts = statements();
   const key = ip.trim();
-  const prev = db.prepare('SELECT * FROM camera_status WHERE ip = ?').get(key) as StatusRow | undefined;
+  const prev = stmts.select.get(key) as StatusRow | undefined;
+  // Isti rezultat provere (isto stanje i isto vreme provere, npr. iz keša od 25 s) ne upisuje se ponovo
+  if (prev && (prev.online === 1) === online && prev.checked_at === at) {
+    return { ip: key, online, since: prev.since, checkedAt: at };
+  }
   const since = prev && (prev.online === 1) === online ? prev.since : at;
-  db.prepare(`INSERT INTO camera_status (ip, online, since, checked_at, source) VALUES (?, ?, ?, ?, ?)
+  stmts.upsert.run(key, online ? 1 : 0, since, at, source);
+  return { ip: key, online, since, checkedAt: at };
+}
+
+// Pripremljene naredbe se prave jednom po otvorenoj vezi (ranije se kompajlirale pri svakom upisu)
+let cachedStatements: { db: unknown; select: Statement; upsert: Statement } | null = null;
+function statements() {
+  const db = getDb();
+  if (!cachedStatements || cachedStatements.db !== db) {
+    cachedStatements = {
+      db,
+      select: db.prepare('SELECT * FROM camera_status WHERE ip = ?'),
+      upsert: db.prepare(`INSERT INTO camera_status (ip, online, since, checked_at, source) VALUES (?, ?, ?, ?, ?)
               ON CONFLICT(ip) DO UPDATE SET online = excluded.online, since = excluded.since,
                 checked_at = excluded.checked_at, source = excluded.source`)
-    .run(key, online ? 1 : 0, since, at, source);
-  return { ip: key, online, since, checkedAt: at };
+    };
+  }
+  return cachedStatements;
 }
 
 /** Upis rezultata zakazane provere za sve proverene kamere odjednom */
@@ -146,9 +164,13 @@ function checkHost(host: string, sampleIp: string): Promise<{ online: boolean; a
  */
 export async function checkCameraStatuses(ips: string[]): Promise<CameraStatus[]> {
   const unique = [...new Set(ips.map(i => String(i || '').trim()).filter(Boolean))];
-  const results = await Promise.all(unique.map(async ip => {
-    const r = await checkHost(probeHost(ip), ip);
-    return recordCameraStatus(ip, r.online, new Date(r.at).toISOString(), 'on-demand');
-  }));
+  const probed = await Promise.all(unique.map(async ip => ({ ip, r: await checkHost(probeHost(ip), ip) })));
+  // Upis svih rezultata u jednoj transakciji (ranije jedna po kameri)
+  const results: CameraStatus[] = [];
+  getDb().transaction(() => {
+    for (const { ip, r } of probed) {
+      results.push(recordCameraStatus(ip, r.online, new Date(r.at).toISOString(), 'on-demand'));
+    }
+  })();
   return results;
 }

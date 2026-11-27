@@ -31,14 +31,14 @@ legacySyncBridge.onSyncEvent((event) => {
   broadcastEquipmentEvent(event.type);
 });
 
-// Periodic background check of legacy database (every 3 seconds for instant real-time sync)
+// Periodic background check of legacy database (every 15 seconds; /webhook/legacy-change can still trigger an instant sync)
 setInterval(async () => {
   try {
     await legacySyncBridge.checkAndSync(false);
   } catch (err) {
     // Ignore background check errors
   }
-}, 3000);
+}, 15000);
 // [LEGACY_BRIDGE_END]
 
 // Keep-alive heartbeat every 15 seconds to prevent browser SSE timeout

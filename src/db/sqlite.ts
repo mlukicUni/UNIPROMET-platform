@@ -46,7 +46,24 @@ export function getDb(): Database.Database {
   return dbInstance;
 }
 
+/**
+ * Pripremljena naredba, pamti se po tekstu upita (po otvorenoj vezi). Za upite koji se izvršavaju pri svakom
+ * zahtevu (sesija, provera prava, kamere): kompajliranje SQL-a se plaća jednom, a ne svaki put.
+ * Samo za naredbe koje se izvršavaju do kraja (get/run/all), ne za iteratore.
+ */
+const preparedCache = new Map<string, Database.Statement>();
+export function prepCached(sql: string): Database.Statement {
+  const db = getDb();
+  let stmt = preparedCache.get(sql);
+  if (!stmt) {
+    stmt = db.prepare(sql);
+    preparedCache.set(sql, stmt);
+  }
+  return stmt;
+}
+
 export function closeDb(): void {
+  preparedCache.clear();
   if (maintenanceTimer) {
     clearInterval(maintenanceTimer);
     maintenanceTimer = null;
