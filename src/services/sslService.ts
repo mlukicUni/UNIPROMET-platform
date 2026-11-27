@@ -1,6 +1,5 @@
 import path from 'path';
 import fs from 'fs';
-import selfsigned from 'selfsigned';
 import { publicHost } from '../utils/appConfig';
 
 interface SslCertificates {
@@ -40,6 +39,8 @@ export async function getOrCreateSslCertificate(): Promise<SslCertificates> {
     { name: 'commonName', value: publicHost() }
   ];
 
+  // Biblioteka se učitava tek kad treba napraviti novi sertifikat (inače bi usporavala svako pokretanje servera)
+  const { default: selfsigned } = await import('selfsigned');
   const pems = await selfsigned.generate(attrs, {
     keySize: 2048,
     notBeforeDate: new Date(Date.now() - 24 * 3600 * 1000),

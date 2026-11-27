@@ -42,6 +42,8 @@ class LegacySyncBridge {
   private lastChecksum = '';
   private lastSyncTime: string | null = null;
   private isAvailable = true;
+  private connectFailures = 0;
+  private nextConnectAttempt = 0;
   private listeners: ((event: { type: string; timestamp: string }) => void)[] = [];
 
   private getConfig(): LegacyConfig | null {
@@ -71,22 +73,44 @@ class LegacySyncBridge {
 
   /**
    * Returns active connection pool or connects if needed.
+   * ignoreBackoff=true (dual-write, webhook/force sync) pokušava povezivanje i dok traje pauza posle neuspeha;
+   * pozadinska provera (svakih 15 s) poštuje pauzu: 15 s -> 30 s -> 60 s ... najviše 5 min.
    */
-  private async getPool(): Promise<sql.ConnectionPool | null> {
+  private async getPool(ignoreBackoff = true): Promise<sql.ConnectionPool | null> {
     if (this.pool && this.pool.connected) return this.pool;
     if (this.isConnecting) return null;
 
     const config = this.getConfig();
     if (!config) return null;
 
+    if (!ignoreBackoff && Date.now() < this.nextConnectAttempt) return null;
+
     this.isConnecting = true;
     try {
-      this.pool = new sql.ConnectionPool(config);
-      await this.pool.connect();
+      // Zatvori stari (prekinuti) pool pre nego što se napravi novi, da konekcije ne cure
+      if (this.pool) {
+        const stale = this.pool;
+        this.pool = null;
+        try { await stale.close(); } catch { /* već zatvoren */ }
+      }
+
+      const fresh = new sql.ConnectionPool(config);
+      try {
+        await fresh.connect();
+      } catch (connErr) {
+        try { await fresh.close(); } catch { /* ignoriši */ }
+        throw connErr;
+      }
+      this.pool = fresh;
+      this.connectFailures = 0;
+      this.nextConnectAttempt = 0;
       this.isAvailable = true;
       return this.pool;
     } catch (err: any) {
-      console.warn('[LegacySyncBridge] Neuspešno povezivanje sa 121.20 bazom:', err.message);
+      this.connectFailures++;
+      const delayMs = Math.min(15000 * Math.pow(2, this.connectFailures - 1), 5 * 60 * 1000);
+      this.nextConnectAttempt = Date.now() + delayMs;
+      console.warn(`[LegacySyncBridge] Neuspešno povezivanje sa 121.20 bazom: ${err.message} (sledeći pokušaj pozadinske provere za ${Math.round(delayMs / 1000)} s)`);
       this.isAvailable = false;
       return null;
     } finally {
@@ -119,8 +143,8 @@ class LegacySyncBridge {
    * Ultra-fast checksum query (takes ~15-20ms).
    * Computes an aggregate hash of pc1, pc_detalji, software, evidencije, status, tip_opreme, lokacija, objekat, and kancelarija from 192.168.121.20.
    */
-  public async getFastChecksum(): Promise<{ hash: string; durationMs: number; count: number } | null> {
-    const pool = await this.getPool();
+  public async getFastChecksum(ignoreBackoff = false): Promise<{ hash: string; durationMs: number; count: number } | null> {
+    const pool = await this.getPool(ignoreBackoff);
     if (!pool) return null;
 
     const t0 = Date.now();
@@ -167,7 +191,8 @@ class LegacySyncBridge {
     const t0 = Date.now();
 
     try {
-      const checksumResult = await this.getFastChecksum();
+      // force (webhook sa 121.20 / ručna sinhronizacija) zaobilazi pauzu posle neuspelog povezivanja
+      const checksumResult = await this.getFastChecksum(force);
       if (!checksumResult) {
         return { changed: false, durationMs: Date.now() - t0 };
       }
@@ -198,6 +223,11 @@ class LegacySyncBridge {
 
   /**
    * Pulls all records from pc1, pc_detalji, software, evidencije and all 5 dictionaries on 121.20 into local SQLite.
+   *
+   * Dve faze:
+   *  1) asinhrono čitanje svih potrebnih podataka sa 121.20 (bez ikakvog upisa u SQLite)
+   *  2) sinhroni lokalni upis u JEDNOJ transakciji (better-sqlite3 transakcija ne sme da prelazi preko `await`)
+   * Oprema se upisuje samo ako se red zaista razlikuje od lokalnog (updated_at se ne dira bez potrebe).
    */
   public async pullFromLegacy(): Promise<void> {
     const pool = await this.getPool();
@@ -207,366 +237,508 @@ class LegacySyncBridge {
       const { getDb } = await import('../db/sqlite.js');
       const db = getDb();
 
-      // 0. Pull Dictionaries (Statuses, Categories, Locations, Buildings, Rooms)
+      // ======================================================================
+      // FAZA 1: čitanje sa 121.20 (async)
+      // ======================================================================
+      const nonEmpty = (res: any): any[] | undefined =>
+        res.recordset && res.recordset.length > 0 ? (res.recordset as any[]) : undefined;
+
+      // 0. Dictionaries (Statuses, Categories, Locations, Buildings, Rooms) - redom; pri grešci ostaje ono što je već pročitano
+      const dict: { stat?: any[]; cat?: any[]; loc?: any[]; obj?: any[]; room?: any[] } = {};
+      let dictFetchErr: any = null;
       try {
-        // A. Statuses
-        const statRes = await pool.request().query(`SELECT status_id, status FROM status WITH (NOLOCK) ORDER BY status_id ASC;`);
-        if (statRes.recordset && statRes.recordset.length > 0) {
-          const insertStat = db.prepare(`
-            INSERT OR REPLACE INTO equipment_statuses (id, name, color)
-            VALUES (@id, @name, COALESCE((SELECT color FROM equipment_statuses WHERE id = @id), @color))
-          `);
-          const statTx = db.transaction((rows: any[]) => {
-            for (const s of rows) {
-              const name = (s.status || '').trim();
-              let color = 'gray';
-              const upper = name.toUpperCase();
-              if (upper.includes('ISPRAVNO') && !upper.includes('NEISPRAVNO')) color = 'green';
-              else if (upper.includes('NEISPRAVNO') || upper.includes('KVAR')) color = 'red';
-              else if (upper.includes('RC') || upper.includes('REZERVA')) color = 'blue';
-              else if (upper.includes('SERVIS') || upper.includes('POPRAV')) color = 'yellow';
-
-              insertStat.run({ id: s.status_id, name: name || `Status #${s.status_id}`, color });
-            }
-          });
-          statTx(statRes.recordset);
-        }
-
-        // B. Categories (tip_opreme)
-        const catRes = await pool.request().query(`SELECT tip_id, tip_naziv, tip FROM tip_opreme WITH (NOLOCK) ORDER BY tip_id ASC;`);
-        if (catRes.recordset && catRes.recordset.length > 0) {
-          const insertCat = db.prepare(`
-            INSERT OR REPLACE INTO equipment_categories (id, name, is_network, icon)
-            VALUES (@id, @name, @is_network, COALESCE((SELECT icon FROM equipment_categories WHERE id = @id), @icon))
-          `);
-          const catTx = db.transaction((rows: any[]) => {
-            for (const c of rows) {
-              const name = (c.tip_naziv || '').trim();
-              const tip = (c.tip || '').trim().toUpperCase();
-              const isNetwork = (tip === 'M' || name.toUpperCase().includes('SWITCH') || name.toUpperCase().includes('ROUTER') || name.toUpperCase().includes('ACCESS POINT') || name.toUpperCase().includes('AP')) ? 1 : 0;
-              
-              let icon = 'package';
-              const u = name.toUpperCase();
-              if (u.includes('RACUNAR') || u.includes('RAČUNAR') || u.includes('PC')) icon = 'monitor';
-              else if (u.includes('LAPTOP') || u.includes('NOTEBOOK')) icon = 'laptop';
-              else if (u.includes('STAMP') || u.includes('ŠTAMP')) icon = 'printer';
-              else if (u.includes('SWITCH') || u.includes('SVIC')) icon = 'network';
-              else if (u.includes('ROUTER') || u.includes('RUTER')) icon = 'router';
-              else if (u.includes('AP') || u.includes('WIFI') || u.includes('ACCESS POINT')) icon = 'wifi';
-              else if (u.includes('SERVER')) icon = 'server';
-              else if (u.includes('KAMER')) icon = 'video';
-              else if (u.includes('SKENER')) icon = 'scan';
-              else if (u.includes('TELEFON')) icon = 'phone';
-              else if (u.includes('UPS')) icon = 'zap';
-              else if (u.includes('TABLET')) icon = 'tablet';
-
-              insertCat.run({ id: c.tip_id, name: name || `Kategorija #${c.tip_id}`, is_network: isNetwork, icon });
-            }
-          });
-          catTx(catRes.recordset);
-        }
-
-        // C. Locations (lokacija)
-        const locRes = await pool.request().query(`SELECT lok, opis, adresa, telefon FROM lokacija WITH (NOLOCK) ORDER BY lok ASC;`);
-        if (locRes.recordset && locRes.recordset.length > 0) {
-          const insertLoc = db.prepare(`
-            INSERT OR REPLACE INTO equipment_locations (id, name)
-            VALUES (@id, @name)
-          `);
-          const locTx = db.transaction((rows: any[]) => {
-            for (const l of rows) {
-              const name = (l.opis || '').trim();
-              insertLoc.run({ id: l.lok, name: name || `Lokacija #${l.lok}` });
-            }
-          });
-          locTx(locRes.recordset);
-        }
-
-        // D. Buildings (objekat)
-        const objRes = await pool.request().query(`SELECT id, objekat, lokacija, opis FROM objekat WITH (NOLOCK) ORDER BY id ASC;`);
-        if (objRes.recordset && objRes.recordset.length > 0) {
-          const insertBld = db.prepare(`
-            INSERT OR REPLACE INTO equipment_buildings (id, name, location_id, code, description)
-            VALUES (@id, @name, @location_id, @code, @description)
-          `);
-          const objTx = db.transaction((rows: any[]) => {
-            for (const b of rows) {
-              const name = (b.objekat || '').trim();
-              insertBld.run({
-                id: b.id,
-                name: name || `Objekat #${b.id}`,
-                location_id: b.lokacija || null,
-                code: String(b.id),
-                description: b.opis ? String(b.opis).trim() : null
-              });
-            }
-          });
-          objTx(objRes.recordset);
-        }
-
-        // E. Rooms (kancelarija)
-        const roomRes = await pool.request().query(`SELECT idkanc, kanc_oznaka, objekat, sprat, opis_skracen, opis FROM kancelarija WITH (NOLOCK) ORDER BY idkanc ASC;`);
-        if (roomRes.recordset && roomRes.recordset.length > 0) {
-          const insertRoom = db.prepare(`
-            INSERT OR REPLACE INTO equipment_rooms (id, code, building, floor, short_desc, name)
-            VALUES (@id, @code, @building, @floor, @short_desc, @name)
-          `);
-          const roomTx = db.transaction((rows: any[]) => {
-            for (const r of rows) {
-              insertRoom.run({
-                id: r.idkanc,
-                code: r.kanc_oznaka ? String(r.kanc_oznaka).trim() : null,
-                building: r.objekat || null,
-                floor: r.sprat != null ? String(r.sprat).trim() : null,
-                short_desc: r.opis_skracen ? String(r.opis_skracen).trim() : null,
-                name: r.opis ? String(r.opis).trim() : null
-              });
-            }
-          });
-          roomTx(roomRes.recordset);
-        }
-      } catch (dictErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji šifarnika sa 121.20:', dictErr.message);
+        dict.stat = nonEmpty(await pool.request().query(`SELECT status_id, status FROM status WITH (NOLOCK) ORDER BY status_id ASC;`));
+        dict.cat = nonEmpty(await pool.request().query(`SELECT tip_id, tip_naziv, tip FROM tip_opreme WITH (NOLOCK) ORDER BY tip_id ASC;`));
+        dict.loc = nonEmpty(await pool.request().query(`SELECT lok, opis, adresa, telefon FROM lokacija WITH (NOLOCK) ORDER BY lok ASC;`));
+        dict.obj = nonEmpty(await pool.request().query(`SELECT id, objekat, lokacija, opis FROM objekat WITH (NOLOCK) ORDER BY id ASC;`));
+        dict.room = nonEmpty(await pool.request().query(`SELECT idkanc, kanc_oznaka, objekat, sprat, opis_skracen, opis FROM kancelarija WITH (NOLOCK) ORDER BY idkanc ASC;`));
+      } catch (e: any) {
+        dictFetchErr = e;
       }
 
-      // 1. Pull equipment & hardware details
-      const res = await pool.request().query(`
-        SELECT 
-          p.id, p.ime, p.katid, p.statid, p.lokacija, p.objekat, p.kancelarija,
-          p.zap, p.si_os, p.koment, p.opis, p.doslo, p.kupljeno, p.r_oznaka,
-          p.dimenzije_ormana, p.trasa_opis, p.broj_linija_izvedenih,
-          d.operativni, d.adresa, d.mrezna, d.ram, d.procesor, d.hdd_vrsta, d.hdd_kapac,
-          d.ploca, d.monitor, d.graficka, d.gateway
-        FROM pc1 p WITH (NOLOCK)
-        LEFT JOIN pc_detalji d WITH (NOLOCK) ON p.id = d.id1opreme
-        ORDER BY p.id DESC;
-      `);
-
-      const rows = res.recordset;
-      if (!rows || rows.length === 0) return;
-
-      const existingEqIds = new Set<number>();
-
-      for (const r of rows) {
-        existingEqIds.add(r.id);
-        const input: EquipmentInput = {
-          id: r.id,
-          name: (r.ime || '').trim(),
-          category_id: r.katid || null,
-          status_id: r.statid || 1,
-          location_id: r.lokacija || null,
-          building_id: r.objekat || null,
-          room_id: r.kancelarija || null,
-          employee_no: r.zap ? String(r.zap).trim() : null,
-          inventory_no: r.si_os ? String(r.si_os).trim() : null,
-          comment: r.koment ? String(r.koment).trim() : null,
-          description: r.opis ? String(r.opis).trim() : null,
-          date_arrived: r.doslo ? new Date(r.doslo).toISOString().split('T')[0] : null,
-          date_purchased: r.kupljeno ? String(r.kupljeno).trim() : null,
-          custom_code: r.r_oznaka || null,
-          rack_dims: r.dimenzije_ormana ? String(r.dimenzije_ormana).trim() : null,
-          route_desc: r.trasa_opis ? String(r.trasa_opis).trim() : null,
-          lines_count: r.broj_linija_izvedenih != null ? Number(r.broj_linija_izvedenih) : null
-        };
-
-
-        let details: EquipmentDetails | undefined;
-        if (r.operativni || r.adresa || r.ram || r.procesor || r.hdd_vrsta || r.hdd_kapac || r.ploca || r.gateway || r.graficka) {
-          details = {
-            equipment_id: r.id,
-            os: r.operativni || null,
-            ip_address: r.adresa || null,
-            mac_address: r.mrezna || null,
-            ram: r.ram || null,
-            processor: r.procesor || null,
-            disk_type: r.hdd_vrsta || null,
-            disk_capacity: r.hdd_kapac || null,
-            motherboard: r.ploca || null,
-            monitor: r.monitor || null,
-            gpu: r.graficka || null,
-            gateway: r.gateway || null
-          };
-        }
-
-        const existing = equipmentDb.getEquipmentById(r.id);
-        if (existing) {
-          equipmentDb.updateEquipment(r.id, input, details);
-        } else {
-          equipmentDb.createEquipment(input, details);
-        }
+      // 1. Equipment & hardware details
+      let rows: any[] | undefined;
+      let abortErr: any = null; // greška koja prekida ostatak sinhronizacije (kao nekadašnji spoljni catch)
+      try {
+        const res = await pool.request().query(`
+          SELECT
+            p.id, p.ime, p.katid, p.statid, p.lokacija, p.objekat, p.kancelarija,
+            p.zap, p.si_os, p.koment, p.opis, p.doslo, p.kupljeno, p.r_oznaka,
+            p.dimenzije_ormana, p.trasa_opis, p.broj_linija_izvedenih,
+            d.operativni, d.adresa, d.mrezna, d.ram, d.procesor, d.hdd_vrsta, d.hdd_kapac,
+            d.ploca, d.monitor, d.graficka, d.gateway
+          FROM pc1 p WITH (NOLOCK)
+          LEFT JOIN pc_detalji d WITH (NOLOCK) ON p.id = d.id1opreme
+          ORDER BY p.id DESC;
+        `);
+        rows = res.recordset;
+      } catch (e: any) {
+        abortErr = e;
       }
 
-      // 2. Pull software & licenses
-      try {
-        const swRes = await pool.request().query(`
-          SELECT id_lic, id2opreme, vendor, naziv_soft, licenciran, kljuc, napomena 
+      // 2-7. Ostale tabele (svaka nezavisno; greška u čitanju samo daje upozorenje, kao ranije)
+      const fetchSection = async (text: string, label: string): Promise<any[] | undefined> => {
+        try {
+          return nonEmpty(await pool.request().query(text));
+        } catch (e: any) {
+          console.warn(`[LegacySyncBridge] Upozorenje pri sinhronizaciji ${label}:`, e.message);
+          return undefined;
+        }
+      };
+
+      let swRows: any[] | undefined, evRows: any[] | undefined, pkgRows: any[] | undefined,
+        telRows: any[] | undefined, evTelRows: any[] | undefined, linRows: any[] | undefined;
+      if (!abortErr && rows && rows.length > 0) {
+        swRows = await fetchSection(`
+          SELECT id_lic, id2opreme, vendor, naziv_soft, licenciran, kljuc, napomena
           FROM software WITH (NOLOCK)
           ORDER BY id_lic ASC;
-        `);
-        if (swRes.recordset && swRes.recordset.length > 0) {
-          const { getDb } = await import('../db/sqlite.js');
-          const db = getDb();
-          const insertSw = db.prepare(`
-            INSERT OR REPLACE INTO equipment_software (id, equipment_id, vendor, name, is_licensed, license_key, note)
-            VALUES (@id, @equipment_id, @vendor, @name, @is_licensed, @license_key, @note)
-          `);
-          const syncSwTx = db.transaction((swRows: any[]) => {
-            for (const s of swRows) {
-              if (!existingEqIds.has(s.id2opreme)) continue;
-              insertSw.run({
-                id: s.id_lic,
-                equipment_id: s.id2opreme,
-                vendor: s.vendor ? String(s.vendor).trim() : null,
-                name: s.naziv_soft ? String(s.naziv_soft).trim() : 'Softver',
-                is_licensed: s.licenciran ? 1 : 0,
-                license_key: s.kljuc ? String(s.kljuc).trim() : null,
-                note: s.napomena ? String(s.napomena).trim() : null
-              });
-            }
-          });
-          syncSwTx(swRes.recordset);
-        }
-      } catch (swErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji software tabele:', swErr.message);
-      }
-
-      // 3. Pull history & service notes (evidencije)
-      try {
-        const evRes = await pool.request().query(`
-          SELECT id2, idopreme, datum, text, telefon 
+        `, 'software tabele');
+        evRows = await fetchSection(`
+          SELECT id2, idopreme, datum, text, telefon
           FROM evidencije WITH (NOLOCK)
           ORDER BY id2 ASC;
-        `);
-        if (evRes.recordset && evRes.recordset.length > 0) {
-          const { getDb } = await import('../db/sqlite.js');
-          const db = getDb();
-          const insertHist = db.prepare(`
-            INSERT OR REPLACE INTO equipment_history (id, equipment_id, date, note, phone)
-            VALUES (@id, @equipment_id, @date, @note, @phone)
-          `);
-          const syncHistTx = db.transaction((evRows: any[]) => {
-            for (const h of evRows) {
-              if (!existingEqIds.has(h.idopreme)) continue;
-              insertHist.run({
-                id: h.id2,
-                equipment_id: h.idopreme,
-                date: h.datum ? new Date(h.datum).toISOString().split('T')[0] : null,
-                note: h.text ? String(h.text).trim() : '',
-                phone: h.telefon ? String(h.telefon).trim() : null
-              });
-            }
-          });
-          syncHistTx(evRes.recordset);
-        }
-      } catch (evErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji evidencije tabele:', evErr.message);
-      }
-
-      // 4. Pull MTS Packages (Paket_dodatak)
-      try {
-        const pkgRes = await pool.request().query(`
-          SELECT Id, Tip, Sifra, Opis, JM 
+        `, 'evidencije tabele');
+        pkgRows = await fetchSection(`
+          SELECT Id, Tip, Sifra, Opis, JM
           FROM Paket_dodatak WITH (NOLOCK)
           ORDER BY Id ASC;
-        `);
-        if (pkgRes.recordset && pkgRes.recordset.length > 0) {
-          mtsDb.syncPackages(pkgRes.recordset.map((p: any) => ({
-            id: p.Id,
-            tip: p.Tip ? String(p.Tip).trim() : '',
-            sifra: p.Sifra ? String(p.Sifra).trim() : null,
-            opis: p.Opis ? String(p.Opis).trim() : '',
-            jm: p.JM ? String(p.JM).trim() : null
-          })));
-        }
-      } catch (pkgErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji Paket_dodatak tabele:', pkgErr.message);
-      }
-
-      // 5. Pull MTS Numbers (Telefoni)
-      try {
-        const telRes = await pool.request().query(`
+        `, 'Paket_dodatak tabele');
+        telRows = await fetchSection(`
           SELECT Id, telefon, kategorija, status, provajder, paket, doslo, dodatak_internet, dodatak1, dodatak2, dodatak3
           FROM Telefoni WITH (NOLOCK)
           ORDER BY Id ASC;
-        `);
-        if (telRes.recordset && telRes.recordset.length > 0) {
-          const { getDb } = await import('../db/sqlite.js');
-          const db = getDb();
-          const insertTel = db.prepare(`
-            INSERT OR REPLACE INTO mts_numbers (
-              id, telefon, kategorija, status, provajder, paket, doslo, dodatak_internet, dodatak1, dodatak2, dodatak3, updated_at
-            ) VALUES (
-              @id, @telefon, @kategorija, @status, @provajder, @paket, @doslo, @dodatak_internet, @dodatak1, @dodatak2, @dodatak3, CURRENT_TIMESTAMP
-            )
-          `);
-          const telTx = db.transaction((telRows: any[]) => {
-            for (const t of telRows) {
-              insertTel.run({
-                id: t.Id,
-                telefon: t.telefon ? String(t.telefon).trim() : '',
-                kategorija: t.kategorija ? String(t.kategorija).trim() : 'Mobilni',
-                status: t.status ? String(t.status).trim() : 'Aktivan',
-                provajder: t.provajder ? String(t.provajder).trim() : 'MTS',
-                paket: t.paket ? String(t.paket).trim() : null,
-                doslo: t.doslo ? String(t.doslo).trim() : null,
-                dodatak_internet: t.dodatak_internet ? String(t.dodatak_internet).trim() : null,
-                dodatak1: t.dodatak1 ? String(t.dodatak1).trim() : null,
-                dodatak2: t.dodatak2 ? String(t.dodatak2).trim() : null,
-                dodatak3: t.dodatak3 ? String(t.dodatak3).trim() : null
-              });
-            }
-          });
-          telTx(telRes.recordset);
-        }
-      } catch (telErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji Telefoni tabele:', telErr.message);
-      }
-
-      // 6. Pull MTS Phone Logs (evidencije_telefona)
-      try {
-        const evTelRes = await pool.request().query(`
+        `, 'Telefoni tabele');
+        evTelRows = await fetchSection(`
           SELECT id2, telefon, datum, text
           FROM evidencije_telefona WITH (NOLOCK)
           ORDER BY id2 ASC;
-        `);
-        if (evTelRes.recordset && evTelRes.recordset.length > 0) {
-          const { getDb } = await import('../db/sqlite.js');
-          const db = getDb();
-          const insertEvTel = db.prepare(`
-            INSERT OR REPLACE INTO mts_phone_logs (id, telefon, datum, text)
-            VALUES (@id, @telefon, @datum, @text)
-          `);
-          const evTelTx = db.transaction((logs: any[]) => {
-            for (const l of logs) {
-              insertEvTel.run({
-                id: l.id2,
-                telefon: l.telefon ? String(l.telefon).trim() : '',
-                datum: l.datum ? new Date(l.datum).toISOString().split('T')[0] : null,
-                text: l.text ? String(l.text).trim() : ''
-              });
-            }
-          });
-          evTelTx(evTelRes.recordset);
-        }
-      } catch (evTelErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji evidencije_telefona tabele:', evTelErr.message);
-      }
-
-      // 7. Pull Lines (linija)
-      try {
-        const linRes = await pool.request().query(`
+        `, 'evidencije_telefona tabele');
+        linRows = await fetchSection(`
           SELECT id, oznaka_zid, oznaka_panel, kancelarija, cvor, opis_trase, opis
           FROM linija WITH (NOLOCK)
           ORDER BY id ASC;
-        `);
-        if (linRes.recordset && linRes.recordset.length > 0) {
-          linesDb.syncLegacyLines(linRes.recordset);
-        }
-      } catch (linErr: any) {
-        console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji linija tabele:', linErr.message);
+        `, 'linija tabele');
       }
 
-      console.log(`[LegacySyncBridge] ✓ Uspešno sinhronizovano ${rows.length} zapisa opreme, linija i MTS brojeva sa 121.20 u SQLite.`);
+      // ======================================================================
+      // FAZA 2: lokalni upis (sync) u jednoj transakciji
+      // ======================================================================
+      const warnSection = (label: string, e: any) =>
+        console.warn(`[LegacySyncBridge] Upozorenje pri sinhronizaciji ${label}:`, e.message);
+
+      const writeAll = db.transaction(() => {
+        // 0. Dictionaries
+        try {
+          // A. Statuses
+          if (dict.stat) {
+            const insertStat = db.prepare(`
+              INSERT OR REPLACE INTO equipment_statuses (id, name, color)
+              VALUES (@id, @name, COALESCE((SELECT color FROM equipment_statuses WHERE id = @id), @color))
+            `);
+            const statTx = db.transaction((rows: any[]) => {
+              for (const s of rows) {
+                const name = (s.status || '').trim();
+                let color = 'gray';
+                const upper = name.toUpperCase();
+                if (upper.includes('ISPRAVNO') && !upper.includes('NEISPRAVNO')) color = 'green';
+                else if (upper.includes('NEISPRAVNO') || upper.includes('KVAR')) color = 'red';
+                else if (upper.includes('RC') || upper.includes('REZERVA')) color = 'blue';
+                else if (upper.includes('SERVIS') || upper.includes('POPRAV')) color = 'yellow';
+
+                insertStat.run({ id: s.status_id, name: name || `Status #${s.status_id}`, color });
+              }
+            });
+            statTx(dict.stat);
+          }
+
+          // B. Categories (tip_opreme)
+          if (dict.cat) {
+            const insertCat = db.prepare(`
+              INSERT OR REPLACE INTO equipment_categories (id, name, is_network, icon)
+              VALUES (@id, @name, @is_network, COALESCE((SELECT icon FROM equipment_categories WHERE id = @id), @icon))
+            `);
+            const catTx = db.transaction((rows: any[]) => {
+              for (const c of rows) {
+                const name = (c.tip_naziv || '').trim();
+                const tip = (c.tip || '').trim().toUpperCase();
+                const isNetwork = (tip === 'M' || name.toUpperCase().includes('SWITCH') || name.toUpperCase().includes('ROUTER') || name.toUpperCase().includes('ACCESS POINT') || name.toUpperCase().includes('AP')) ? 1 : 0;
+
+                let icon = 'package';
+                const u = name.toUpperCase();
+                if (u.includes('RACUNAR') || u.includes('RAČUNAR') || u.includes('PC')) icon = 'monitor';
+                else if (u.includes('LAPTOP') || u.includes('NOTEBOOK')) icon = 'laptop';
+                else if (u.includes('STAMP') || u.includes('ŠTAMP')) icon = 'printer';
+                else if (u.includes('SWITCH') || u.includes('SVIC')) icon = 'network';
+                else if (u.includes('ROUTER') || u.includes('RUTER')) icon = 'router';
+                else if (u.includes('AP') || u.includes('WIFI') || u.includes('ACCESS POINT')) icon = 'wifi';
+                else if (u.includes('SERVER')) icon = 'server';
+                else if (u.includes('KAMER')) icon = 'video';
+                else if (u.includes('SKENER')) icon = 'scan';
+                else if (u.includes('TELEFON')) icon = 'phone';
+                else if (u.includes('UPS')) icon = 'zap';
+                else if (u.includes('TABLET')) icon = 'tablet';
+
+                insertCat.run({ id: c.tip_id, name: name || `Kategorija #${c.tip_id}`, is_network: isNetwork, icon });
+              }
+            });
+            catTx(dict.cat);
+          }
+
+          // C. Locations (lokacija)
+          if (dict.loc) {
+            const insertLoc = db.prepare(`
+              INSERT OR REPLACE INTO equipment_locations (id, name)
+              VALUES (@id, @name)
+            `);
+            const locTx = db.transaction((rows: any[]) => {
+              for (const l of rows) {
+                const name = (l.opis || '').trim();
+                insertLoc.run({ id: l.lok, name: name || `Lokacija #${l.lok}` });
+              }
+            });
+            locTx(dict.loc);
+          }
+
+          // D. Buildings (objekat)
+          if (dict.obj) {
+            const insertBld = db.prepare(`
+              INSERT OR REPLACE INTO equipment_buildings (id, name, location_id, code, description)
+              VALUES (@id, @name, @location_id, @code, @description)
+            `);
+            const objTx = db.transaction((rows: any[]) => {
+              for (const b of rows) {
+                const name = (b.objekat || '').trim();
+                insertBld.run({
+                  id: b.id,
+                  name: name || `Objekat #${b.id}`,
+                  location_id: b.lokacija || null,
+                  code: String(b.id),
+                  description: b.opis ? String(b.opis).trim() : null
+                });
+              }
+            });
+            objTx(dict.obj);
+          }
+
+          // E. Rooms (kancelarija)
+          if (dict.room) {
+            const insertRoom = db.prepare(`
+              INSERT OR REPLACE INTO equipment_rooms (id, code, building, floor, short_desc, name)
+              VALUES (@id, @code, @building, @floor, @short_desc, @name)
+            `);
+            const roomTx = db.transaction((rows: any[]) => {
+              for (const r of rows) {
+                insertRoom.run({
+                  id: r.idkanc,
+                  code: r.kanc_oznaka ? String(r.kanc_oznaka).trim() : null,
+                  building: r.objekat || null,
+                  floor: r.sprat != null ? String(r.sprat).trim() : null,
+                  short_desc: r.opis_skracen ? String(r.opis_skracen).trim() : null,
+                  name: r.opis ? String(r.opis).trim() : null
+                });
+              }
+            });
+            roomTx(dict.room);
+          }
+        } catch (dictErr: any) {
+          console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji šifarnika sa 121.20:', dictErr.message);
+        }
+        if (dictFetchErr) {
+          console.warn('[LegacySyncBridge] Upozorenje pri sinhronizaciji šifarnika sa 121.20:', dictFetchErr.message);
+        }
+
+        // Greška pri čitanju opreme ili prazan rezultat prekida ostatak (kao ranije)
+        if (abortErr || !rows || rows.length === 0) return;
+
+        // 1. Equipment & hardware details
+        const existingEqIds = new Set<number>();
+        try {
+          const selEq = db.prepare('SELECT * FROM equipment WHERE id = ?');
+          const selDet = db.prepare('SELECT * FROM equipment_details WHERE equipment_id = ?');
+          const updEq = db.prepare(`
+            UPDATE equipment SET
+              updated_at = datetime('now'),
+              name = @name, category_id = @category_id, status_id = @status_id,
+              employee_no = @employee_no, inventory_no = @inventory_no,
+              location_id = @location_id, building_id = @building_id, room_id = @room_id,
+              custom_code = @custom_code, rack_dims = @rack_dims, route_desc = @route_desc,
+              lines_count = @lines_count, description = @description, comment = @comment,
+              date_arrived = @date_arrived, date_purchased = @date_purchased
+            WHERE id = @id
+          `);
+          // Isti upit kao u equipmentDb.updateEquipment (bez kolone monitor - tako je i bilo)
+          const upsertDet = db.prepare(`
+            INSERT INTO equipment_details (
+              equipment_id, os, ip_address, mac_address, ram, processor,
+              disk_type, disk_capacity, motherboard, gpu, gateway, updated_at
+            ) VALUES (
+              @id, @os, @ip_address, @mac_address, @ram, @processor,
+              @disk_type, @disk_capacity, @motherboard, @gpu, @gateway, datetime('now')
+            )
+            ON CONFLICT(equipment_id) DO UPDATE SET
+              os = COALESCE(@os, os),
+              ip_address = COALESCE(@ip_address, ip_address),
+              mac_address = COALESCE(@mac_address, mac_address),
+              ram = COALESCE(@ram, ram),
+              processor = COALESCE(@processor, processor),
+              disk_type = COALESCE(@disk_type, disk_type),
+              disk_capacity = COALESCE(@disk_capacity, disk_capacity),
+              motherboard = COALESCE(@motherboard, motherboard),
+              gpu = COALESCE(@gpu, gpu),
+              gateway = COALESCE(@gateway, gateway),
+              updated_at = datetime('now')
+          `);
+          const same = (a: any, b: any) => (a ?? null) === (b ?? null) || (a != null && b != null && String(a) === String(b));
+          const DET_FIELDS = ['os', 'ip_address', 'mac_address', 'ram', 'processor', 'disk_type', 'disk_capacity', 'motherboard', 'gpu', 'gateway'] as const;
+
+          // Jedan unutrašnji savepoint: greška u opremi poništava samo upise opreme, ne i šifarnike
+          const eqTx = db.transaction((eqRows: any[]) => {
+            for (const r of eqRows) {
+              existingEqIds.add(r.id);
+              const input: EquipmentInput = {
+                id: r.id,
+                name: (r.ime || '').trim(),
+                category_id: r.katid || null,
+                status_id: r.statid || 1,
+                location_id: r.lokacija || null,
+                building_id: r.objekat || null,
+                room_id: r.kancelarija || null,
+                employee_no: r.zap ? String(r.zap).trim() : null,
+                inventory_no: r.si_os ? String(r.si_os).trim() : null,
+                comment: r.koment ? String(r.koment).trim() : null,
+                description: r.opis ? String(r.opis).trim() : null,
+                date_arrived: r.doslo ? new Date(r.doslo).toISOString().split('T')[0] : null,
+                date_purchased: r.kupljeno ? String(r.kupljeno).trim() : null,
+                custom_code: r.r_oznaka || null,
+                rack_dims: r.dimenzije_ormana ? String(r.dimenzije_ormana).trim() : null,
+                route_desc: r.trasa_opis ? String(r.trasa_opis).trim() : null,
+                lines_count: r.broj_linija_izvedenih != null ? Number(r.broj_linija_izvedenih) : null
+              };
+
+              let details: EquipmentDetails | undefined;
+              if (r.operativni || r.adresa || r.ram || r.procesor || r.hdd_vrsta || r.hdd_kapac || r.ploca || r.gateway || r.graficka) {
+                details = {
+                  equipment_id: r.id,
+                  os: r.operativni || null,
+                  ip_address: r.adresa || null,
+                  mac_address: r.mrezna || null,
+                  ram: r.ram || null,
+                  processor: r.procesor || null,
+                  disk_type: r.hdd_vrsta || null,
+                  disk_capacity: r.hdd_kapac || null,
+                  motherboard: r.ploca || null,
+                  monitor: r.monitor || null,
+                  gpu: r.graficka || null,
+                  gateway: r.gateway || null
+                };
+              }
+
+              const stored = selEq.get(r.id) as any;
+              if (!stored) {
+                // Nova oprema (retko) - postojeća logika kreiranja
+                equipmentDb.createEquipment(input, details);
+                continue;
+              }
+
+              // Ista normalizacija vrednosti kao u equipmentDb.updateEquipment
+              const params = {
+                id: r.id,
+                name: input.name ? input.name.trim() : '',
+                category_id: input.category_id,
+                status_id: input.status_id,
+                employee_no: input.employee_no ? input.employee_no.trim() : null,
+                inventory_no: input.inventory_no ? input.inventory_no.trim() : null,
+                location_id: input.location_id,
+                building_id: input.building_id,
+                room_id: input.room_id,
+                custom_code: input.custom_code,
+                rack_dims: input.rack_dims ? input.rack_dims.trim() : null,
+                route_desc: input.route_desc ? input.route_desc.trim() : null,
+                lines_count: input.lines_count !== null ? Number(input.lines_count) : null,
+                description: input.description,
+                comment: input.comment,
+                date_arrived: input.date_arrived,
+                date_purchased: input.date_purchased
+              };
+              const eqChanged = (Object.keys(params) as (keyof typeof params)[])
+                .some(k => k !== 'id' && !same(params[k], stored[k]));
+              if (eqChanged) updEq.run(params);
+
+              if (details) {
+                const storedDet = selDet.get(r.id) as any;
+                // COALESCE semantika: prazna dolazna vrednost ne menja postojeću
+                const detChanged = !storedDet || DET_FIELDS.some(f => {
+                  const v = details![f] || null;
+                  return v !== null && !same(v, storedDet[f]);
+                });
+                if (detChanged) {
+                  upsertDet.run({
+                    id: r.id,
+                    os: details.os || null,
+                    ip_address: details.ip_address || null,
+                    mac_address: details.mac_address || null,
+                    ram: details.ram || null,
+                    processor: details.processor || null,
+                    disk_type: details.disk_type || null,
+                    disk_capacity: details.disk_capacity || null,
+                    motherboard: details.motherboard || null,
+                    gpu: details.gpu || null,
+                    gateway: details.gateway || null
+                  });
+                }
+              }
+            }
+          });
+          eqTx(rows);
+        } catch (eqErr: any) {
+          abortErr = eqErr;
+          return;
+        }
+
+        // 2. Software & licenses
+        if (swRows) {
+          try {
+            const insertSw = db.prepare(`
+              INSERT OR REPLACE INTO equipment_software (id, equipment_id, vendor, name, is_licensed, license_key, note)
+              VALUES (@id, @equipment_id, @vendor, @name, @is_licensed, @license_key, @note)
+            `);
+            const syncSwTx = db.transaction((list: any[]) => {
+              for (const s of list) {
+                if (!existingEqIds.has(s.id2opreme)) continue;
+                insertSw.run({
+                  id: s.id_lic,
+                  equipment_id: s.id2opreme,
+                  vendor: s.vendor ? String(s.vendor).trim() : null,
+                  name: s.naziv_soft ? String(s.naziv_soft).trim() : 'Softver',
+                  is_licensed: s.licenciran ? 1 : 0,
+                  license_key: s.kljuc ? String(s.kljuc).trim() : null,
+                  note: s.napomena ? String(s.napomena).trim() : null
+                });
+              }
+            });
+            syncSwTx(swRows);
+          } catch (swErr: any) {
+            warnSection('software tabele', swErr);
+          }
+        }
+
+        // 3. History & service notes (evidencije)
+        if (evRows) {
+          try {
+            const insertHist = db.prepare(`
+              INSERT OR REPLACE INTO equipment_history (id, equipment_id, date, note, phone)
+              VALUES (@id, @equipment_id, @date, @note, @phone)
+            `);
+            const syncHistTx = db.transaction((list: any[]) => {
+              for (const h of list) {
+                if (!existingEqIds.has(h.idopreme)) continue;
+                insertHist.run({
+                  id: h.id2,
+                  equipment_id: h.idopreme,
+                  date: h.datum ? new Date(h.datum).toISOString().split('T')[0] : null,
+                  note: h.text ? String(h.text).trim() : '',
+                  phone: h.telefon ? String(h.telefon).trim() : null
+                });
+              }
+            });
+            syncHistTx(evRows);
+          } catch (evErr: any) {
+            warnSection('evidencije tabele', evErr);
+          }
+        }
+
+        // 4. MTS Packages (Paket_dodatak)
+        if (pkgRows) {
+          try {
+            mtsDb.syncPackages(pkgRows.map((p: any) => ({
+              id: p.Id,
+              tip: p.Tip ? String(p.Tip).trim() : '',
+              sifra: p.Sifra ? String(p.Sifra).trim() : null,
+              opis: p.Opis ? String(p.Opis).trim() : '',
+              jm: p.JM ? String(p.JM).trim() : null
+            })));
+          } catch (pkgErr: any) {
+            warnSection('Paket_dodatak tabele', pkgErr);
+          }
+        }
+
+        // 5. MTS Numbers (Telefoni)
+        if (telRows) {
+          try {
+            const insertTel = db.prepare(`
+              INSERT OR REPLACE INTO mts_numbers (
+                id, telefon, kategorija, status, provajder, paket, doslo, dodatak_internet, dodatak1, dodatak2, dodatak3, updated_at
+              ) VALUES (
+                @id, @telefon, @kategorija, @status, @provajder, @paket, @doslo, @dodatak_internet, @dodatak1, @dodatak2, @dodatak3, CURRENT_TIMESTAMP
+              )
+            `);
+            const telTx = db.transaction((list: any[]) => {
+              for (const t of list) {
+                insertTel.run({
+                  id: t.Id,
+                  telefon: t.telefon ? String(t.telefon).trim() : '',
+                  kategorija: t.kategorija ? String(t.kategorija).trim() : 'Mobilni',
+                  status: t.status ? String(t.status).trim() : 'Aktivan',
+                  provajder: t.provajder ? String(t.provajder).trim() : 'MTS',
+                  paket: t.paket ? String(t.paket).trim() : null,
+                  doslo: t.doslo ? String(t.doslo).trim() : null,
+                  dodatak_internet: t.dodatak_internet ? String(t.dodatak_internet).trim() : null,
+                  dodatak1: t.dodatak1 ? String(t.dodatak1).trim() : null,
+                  dodatak2: t.dodatak2 ? String(t.dodatak2).trim() : null,
+                  dodatak3: t.dodatak3 ? String(t.dodatak3).trim() : null
+                });
+              }
+            });
+            telTx(telRows);
+          } catch (telErr: any) {
+            warnSection('Telefoni tabele', telErr);
+          }
+        }
+
+        // 6. MTS Phone Logs (evidencije_telefona)
+        if (evTelRows) {
+          try {
+            const insertEvTel = db.prepare(`
+              INSERT OR REPLACE INTO mts_phone_logs (id, telefon, datum, text)
+              VALUES (@id, @telefon, @datum, @text)
+            `);
+            const evTelTx = db.transaction((logs: any[]) => {
+              for (const l of logs) {
+                insertEvTel.run({
+                  id: l.id2,
+                  telefon: l.telefon ? String(l.telefon).trim() : '',
+                  datum: l.datum ? new Date(l.datum).toISOString().split('T')[0] : null,
+                  text: l.text ? String(l.text).trim() : ''
+                });
+              }
+            });
+            evTelTx(evTelRows);
+          } catch (evTelErr: any) {
+            warnSection('evidencije_telefona tabele', evTelErr);
+          }
+        }
+
+        // 7. Lines (linija)
+        if (linRows) {
+          try {
+            linesDb.syncLegacyLines(linRows as any);
+          } catch (linErr: any) {
+            warnSection('linija tabele', linErr);
+          }
+        }
+      });
+
+      writeAll();
+
+      if (abortErr) {
+        console.error('[LegacySyncBridge] Greška pri preuzimanju zapisa sa 121.20:', abortErr);
+        return;
+      }
+
+      if (rows && rows.length > 0) {
+        console.log(`[LegacySyncBridge] ✓ Uspešno sinhronizovano ${rows.length} zapisa opreme, linija i MTS brojeva sa 121.20 u SQLite.`);
+      }
     } catch (err: any) {
       console.error('[LegacySyncBridge] Greška pri preuzimanju zapisa sa 121.20:', err);
     }

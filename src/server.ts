@@ -13,7 +13,7 @@ import { getLocalIpAddresses } from './utils/network';
 import { isEnabled, publicHost } from './utils/appConfig';
 import { migrateLegacyJsonToSqlite } from './db/migrateFromJson';
 import { getOrCreateSslCertificate } from './services/sslService';
-import { getCurrentUser, getOrRefreshCurrentUser, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
+import { getCurrentUser, getOrRefreshCurrentUser, isUserSyncStale, verifySessionCookie, renewSessionCookie, sessionCookieOptions, COOKIE_NAME } from './services/authService';
 import { getCameraCredentials } from './services/cameraLiveService';
 import { getRecorderEndpointByIp, analogRtspPath } from './services/analogChannels';
 import { isUserAllowed, getAccess, hasLevel, lookupCameraById, cameraRights } from './services/accessService';
@@ -145,7 +145,8 @@ app.use('/api', (req, res, next) => {
   }
 
   // Seamlessly keep Active Directory groups fresh in background
-  getOrRefreshCurrentUser(req, false).catch(() => {});
+  // (proverava se na već učitanom korisniku; sesija se ne čita ponovo ako osvežavanje nije potrebno)
+  if (isUserSyncStale(user)) getOrRefreshCurrentUser(req, false).catch(() => {});
 
   if (!isUserAllowed(user)) {
     return res.status(403).json({

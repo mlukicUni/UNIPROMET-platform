@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getDb } from '../db/sqlite';
+import { getDb, prepCached } from '../db/sqlite';
 import {
   getAccessVersion,
   initRolesSchema,
@@ -254,10 +254,17 @@ interface CacheEntry {
 const accessCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 60 * 1000;
 
+// Ključ keša se računa (sort + sha1 nad svim grupama) jednom po korisniku objekta; važi dok je isti niz grupa
+const cacheKeyMemo = new WeakMap<object, { groups: UserGroup[] | undefined; count: number; key: string }>();
+
 function cacheKey(user: { id?: string; email?: string; name?: string; groups?: UserGroup[] }): string {
+  const memo = cacheKeyMemo.get(user);
+  if (memo && memo.groups === user.groups && memo.count === (user.groups || []).length) return memo.key;
   const sig = (user.groups || []).map(g => `${g.id}|${g.name}`).sort().join(';');
   const hash = crypto.createHash('sha1').update(sig).digest('hex');
-  return `${user.id || ''}|${norm(user.email)}|${hash}`;
+  const key = `${user.id || ''}|${norm(user.email)}|${hash}`;
+  cacheKeyMemo.set(user, { groups: user.groups, count: (user.groups || []).length, key });
+  return key;
 }
 
 export function getAccess(user: SessionUser | { id?: string; name?: string; email?: string; groups?: UserGroup[] }): EffectiveAccess {
@@ -352,13 +359,13 @@ export function canAccessCamera(access: EffectiveAccess, cam: CameraRef | null, 
 }
 
 export function lookupCameraByIp(ip: string): CameraRef | null {
-  const row = getDb().prepare('SELECT id, recorder_id FROM cameras WHERE ip = ?').get((ip || '').trim()) as
+  const row = prepCached('SELECT id, recorder_id FROM cameras WHERE ip = ?').get((ip || '').trim()) as
     { id: string; recorder_id: string | null } | undefined;
   return row ? { id: row.id, recorderId: row.recorder_id } : null;
 }
 
 export function lookupCameraById(id: string): CameraRef | null {
-  const row = getDb().prepare('SELECT id, recorder_id FROM cameras WHERE id = ?').get(id) as
+  const row = prepCached('SELECT id, recorder_id FROM cameras WHERE id = ?').get(id) as
     { id: string; recorder_id: string | null } | undefined;
   return row ? { id: row.id, recorderId: row.recorder_id } : null;
 }

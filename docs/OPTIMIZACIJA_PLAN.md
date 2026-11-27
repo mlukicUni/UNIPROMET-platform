@@ -69,7 +69,9 @@ Najveći efekat po uloženom trudu. Svaka stavka je mala i izolovana.
 
 ---
 
-## 4. Faza 2 — Srednji rizik, veliki efekat (2–3 odvojene verzije, ~1–2 nedelje)
+## 4. Faza 2 — Srednji rizik, veliki efekat
+
+**STATUS 2A (2026-11-27): urađeno na dev serveru, nije puštano:** 2.1 (korisnik jednom po zahtevu; keš sesije između zahteva namerno NIJE uveden), 2.2, 2.3, 2.4 (bez paralelnog probanja portova, zbog Sophosa), 2.5, 2.6 (samo keširane prepared naredbe; TTL mapa kredencijala namerno preskočena), 2.13, 2.15 (samo `nice` za build). Delimično: 2.12 (samo `selfsigned`; `exceljs` i `mssql` nisu lazy). **Nisu rađeni:** 2.7 (čeka odluku o Graph intervalu), 2.14 (čeka odluku o retenciji), 2.8, 2.9, 2.10 (video — ostavljeno dok se ne razjasni zastoj videa), 2.11 (mesečni snimak preko scan locka). (2–3 odvojene verzije, ~1–2 nedelje)
 
 ### 2A. Backend (jedna verzija)
 

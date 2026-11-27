@@ -1,6 +1,6 @@
 import http from 'http';
 import { Router, Request, Response } from 'express';
-import { scanCameras, pingCamera, checkOfflineCamerasLocked } from '../services/cameraScanner';
+import { scanCameras, scanCamerasStaleOk, pingCamera, getOfflineCamerasCached } from '../services/cameraScanner';
 import { getCameraSchedulerStatus, addCameraScheduledTime } from '../services/cameraSchedulerService';
 import { sendOfflineCamerasAlertEmail } from '../services/mailService';
 import { fetchCameraSnapshot, getCameraCredentials } from '../services/cameraLiveService';
@@ -27,7 +27,8 @@ cameraRouter.get('/', async (req: Request, res: Response) => {
   try {
     const force = req.query.force === 'true' || req.query.refresh === 'true';
     const deep = req.query.deep === 'true';
-    const result = await scanCameras(force, deep);
+    // Bez force: istekao keš se vraća odmah, a osvežavanje ide u pozadini; force/deep ostaju blokirajući
+    const result = force ? await scanCameras(force, deep) : await scanCamerasStaleOk(deep);
     // Korisnici bez prava nad inventarom kamera vide samo kamere kojima imaju pristup po roli
     if (req.access && !hasLevel(req.access, 'mreza.kamere', 'view')) {
       const allowed = filterCamerasByAccess(req.access, result.cameras || []);
@@ -43,7 +44,8 @@ cameraRouter.get('/', async (req: Request, res: Response) => {
 // GET /api/cameras/offline - Cross-reference database inventory and return verified offline cameras
 cameraRouter.get('/offline', async (_req: Request, res: Response) => {
   try {
-    const result = await checkOfflineCamerasLocked();
+    // Rezultat mlađi od 60 s ili stariji (do 15 min) se vraća odmah; provera ide u pozadini
+    const result = await getOfflineCamerasCached();
     res.json({ success: true, ...result });
   } catch (err: any) {
     console.error('Offline cameras check error:', err);

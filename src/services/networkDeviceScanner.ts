@@ -343,9 +343,24 @@ try {
  * Discovers and enriches all non-printer active devices on the LAN
  * Sophos/WAN-Friendly: Rate-limited, reduced probe ports, protected by global scan lock
  */
+// Pozadinsko osvežavanje (stale-while-revalidate): najviše jedno u isto vreme
+let backgroundRefresh: Promise<unknown> | null = null;
+
 export async function scanLanDevices(forceFresh = false): Promise<{ devices: LanDevice[]; scanDurationMs: number; cached: boolean }> {
   const now = Date.now();
   if (!forceFresh && cachedDevices.length > 0 && now - lastScanTimestamp < LAN_CACHE_TTL_MS) {
+    return { devices: cachedDevices, scanDurationMs: 0, cached: true };
+  }
+
+  // Keš je istekao, ali postoji prethodni rezultat: vrati ga odmah, a novo skeniranje pokreni u pozadini
+  // (pod istim lockom i istim tempom kao ranije). Zahtev ne čeka skeniranje. Eksplicitno osvežavanje (force)
+  // i prvi poziv bez ikakvih podataka ostaju blokirajući kao do sada.
+  if (!forceFresh && cachedDevices.length > 0) {
+    if (!backgroundRefresh) {
+      backgroundRefresh = scanLanDevices(true)
+        .catch(err => console.warn('[NetworkDeviceScanner] Pozadinsko osvežavanje nije uspelo:', err?.message || err))
+        .finally(() => { backgroundRefresh = null; });
+    }
     return { devices: cachedDevices, scanDurationMs: 0, cached: true };
   }
 

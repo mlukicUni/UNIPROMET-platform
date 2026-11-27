@@ -8,7 +8,7 @@
  */
 import http from 'http';
 import crypto from 'crypto';
-import { getDb } from '../db/sqlite';
+import { getDb, prepCached } from '../db/sqlite';
 import { initSchema } from '../db/schema';
 import { addCameraInventoryItem, CameraInventoryItem } from '../db/cameraInventoryDb';
 
@@ -74,7 +74,7 @@ function toEndpoint(row: RecorderEndpointRow | undefined): RecorderEndpoint | un
 export function getRecorderEndpointByIp(ip: string): RecorderEndpoint | undefined {
   initSchema();
   return toEndpoint(
-    getDb().prepare('SELECT id, name, ip, http_port, rtsp_port, cred_profile FROM recorders WHERE ip = ? ORDER BY id ASC LIMIT 1')
+    prepCached('SELECT id, name, ip, http_port, rtsp_port, cred_profile FROM recorders WHERE ip = ? ORDER BY id ASC LIMIT 1')
       .get(ip.trim()) as RecorderEndpointRow | undefined
   );
 }

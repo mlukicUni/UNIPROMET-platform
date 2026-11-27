@@ -87,11 +87,11 @@ as_app git clean -qfdx -e node_modules || fail_build "git clean (build)"
 LOCK_HASH=$(sha256sum package-lock.json | cut -d' ' -f1)
 if [ ! -d node_modules ] || [ "$(cat "$STATE/lock-hash" 2>/dev/null)" != "$LOCK_HASH" ]; then
   log "npm ci (package-lock.json se promenio)"
-  as_app npm ci --no-audit --no-fund >>"$LOG" 2>&1 || fail_build "npm ci"
+  as_app nice -n 19 npm ci --no-audit --no-fund >>"$LOG" 2>&1 || fail_build "npm ci"
   echo "$LOCK_HASH" >"$STATE/lock-hash"
 fi
 log "build (tsc)"
-as_app npm run build >>"$LOG" 2>&1 || fail_build "tsc"
+as_app nice -n 19 npm run build >>"$LOG" 2>&1 || fail_build "tsc"
 [ -f dist/server.js ] || fail_build "nema dist/server.js"
 
 # 2) Zamena verzije (kratak prekid rada)

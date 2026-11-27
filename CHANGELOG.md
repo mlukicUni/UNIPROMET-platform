@@ -13,6 +13,15 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.23] - 2026-11-27
+- Manje opterećenje servera (optimizacija, faza 2A; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
+  - Sinhronizacija sa starom bazom (MSSQL .121.20): provera na 15 s umesto na 3 s; pri promeni se podaci čitaju pa upisuju u jednoj transakciji, a oprema i detalji se upisuju samo ako se zaista razlikuju (ranije se svih ~1400 redova prepisivalo pri svakoj promeni uz višesekundno blokiranje servera). Kad stara baza nije dostupna, veza se pravilno zatvara i ponovni pokušaji idu sve ređe (15 s do 5 min), webhook i dvostruki upis se odmah povezuju.
+  - Navision: rezultati pretrage zaposlenih pamte se 45 s, nakon greške veze server 30 s ne pokušava ponovo (umesto čekanja 5 s po zahtevu), a povezivanje telefona sa zaposlenima koristi mapu umesto pretraživanja za svaki broj (MTS lista i izvoz).
+  - Kamere i LAN uređaji: kad je keš skeniranja istekao, `/api/cameras`, `/api/cameras/offline` i `/api/network/devices` odmah vraćaju poslednje podatke, a novo skeniranje ide u pozadini (isti tempo i isti scan lock). Prvi poziv bez podataka, „osveži“/force i zakazane provere rade kao ranije. Lista nedostupnih kamera pamti se 60 s. Switches: keš po IP adresi (ranije jedan zajednički, pa je druga IP adresa mogla dobiti podatke prvog switcha).
+  - Prijava i prava: korisnik iz sesije se čita jednom po zahtevu (ranije 3 puta), potpis cookie-ja i ključ keša prava se ne računaju iznova, a Graph osvežavanje grupa proverava se bez dodatnog čitanja sesije. Odjava i promena role važe od sledećeg zahteva kao i ranije.
+  - Status kamera: upis u bazu samo kad se rezultat zaista promenio, ceo spisak u jednoj transakciji; pripremljene SQL naredbe za sesiju, prava i kamere se ne kompajliraju pri svakom zahtevu.
+  - Baza: dodati indeksi (oprema po prostoriji/lokaciji/objektu/kodu, prostorije, objekti, kamere po snimaču). Server se pokreće brže (biblioteka za sertifikat se učitava tek kad treba). Auto-ažuriranje servera pokreće `npm ci` i build sa niskim prioritetom (`nice`) da ne usporava rad uživo (važi posle ponovnog pokretanja `deploy/install-services.sh`).
+
 ## [1.3.22] - 2026-11-26
 - Brže učitavanje platforme (optimizacija, faza 1; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
   - Server sada kompresuje odgovore (brotli/gzip): početna stranica 470 → 64 KB, `app.js` 520 → ~100 KB, DMS izveštaj 5,5 MB → ~0,9 MB. Tokovi uživo (video, SSE osvežavanje) se ne kompresuju. Novi paket `compression`.
