@@ -181,6 +181,10 @@ app.use('/api/video-gateway', (req, res) => {
   proxyReq.on('error', () => {
     if (!res.headersSent) res.status(502).send('Video Gateway offline');
   });
+  // Korisnik je zatvorio stranicu/tok pre kraja: prekini i vezu ka go2rtc-u (inače potrošač ostaje aktivan do isteka tajmera)
+  res.on('close', () => {
+    if (!res.writableFinished) proxyReq.destroy();
+  });
   req.pipe(proxyReq);
 });
 

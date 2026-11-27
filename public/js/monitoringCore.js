@@ -373,6 +373,13 @@
     const holder = cellEl.querySelector('.mon-cell-video');
     if (!cam || !holder) return;
 
+    // Dok je jedna ćelija uvećana, ostale se ne vide: ne pokreće se njihov tok (nastavlja se pri povratku na grid)
+    if (this.maxIndex >= 0 && this.maxIndex !== index) {
+      cellEl.dataset.paused = '1';
+      return;
+    }
+    delete cellEl.dataset.paused;
+
     holder.querySelectorAll('video-stream').forEach(destroyStream);
     cellEl.classList.remove('is-playing');
     if (cam.isOffline) {
@@ -483,6 +490,34 @@
     grid.classList.add('has-max');
     cellEl.classList.add('is-max');
     this.mountCell(index, 'main');
+    this.pauseOtherCells(index);
+  };
+
+  /**
+   * Uvećana je jedna ćelija: tokovi ostalih (skrivenih) ćelija se gase, jer ih niko ne vidi, a svaki je
+   * ranije nastavljao da dekodira i troši mrežu (do 63 toka uz po ~2 MB bafera). Vraćaju se u restore().
+   */
+  GridPlayer.prototype.pauseOtherCells = function (keepIndex) {
+    this.container.querySelectorAll('.mon-cell').forEach(el => {
+      if (Number(el.dataset.index) === keepIndex) return;
+      const streams = el.querySelectorAll('video-stream');
+      if (!streams.length) return;
+      streams.forEach(destroyStream);
+      el.classList.remove('is-playing');
+      el.dataset.paused = '1';
+    });
+  };
+
+  /** Povratak na grid: ćelije čiji su tokovi bili ugašeni ponovo se pokreću, postepeno (kao pri otvaranju) */
+  GridPlayer.prototype.resumePausedCells = function () {
+    let n = 0;
+    this.container.querySelectorAll('.mon-cell[data-paused="1"]').forEach(el => {
+      const i = Number(el.dataset.index);
+      delete el.dataset.paused;
+      const t = setTimeout(() => this.mountCell(i, 'sub'), n * 100);
+      this.timers.push(t);
+      n++;
+    });
   };
 
   GridPlayer.prototype.restore = function () {
@@ -496,6 +531,7 @@
       cellEl.classList.remove('is-max');
       this.mountCell(index, 'sub');
     }
+    this.resumePausedCells();
   };
 
   /** Kako video popunjava polje: rastegnut (fill), isečen (cover) ili ceo kadar (contain) */

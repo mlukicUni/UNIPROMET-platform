@@ -4,7 +4,7 @@ import { scanCameras, scanCamerasStaleOk, pingCamera, getOfflineCamerasCached } 
 import { getCameraSchedulerStatus, addCameraScheduledTime } from '../services/cameraSchedulerService';
 import { sendOfflineCamerasAlertEmail } from '../services/mailService';
 import { fetchCameraSnapshot, getCameraCredentials } from '../services/cameraLiveService';
-import { checkGatewayHealth, startVideoGateway } from '../services/videoGatewayService';
+import { ensureGatewayRunning } from '../services/videoGatewayService';
 import { getCameraInventoryByIp, getAllCameraInventory } from '../db/cameraInventoryDb';
 import { checkCameraStatuses } from '../services/cameraStatusService';
 import { getSnapshotInfoMap, getSnapshotFile, getSnapshotRunState, captureCameraNow, startSnapshotRun } from '../services/cameraSnapshotService';
@@ -229,11 +229,7 @@ cameraRouter.get('/:ip/live-stream', async (req: Request, res: Response) => {
 
 // GET /api/cameras/gateway/status - Check if 25 FPS video gateway is active
 cameraRouter.get('/gateway/status', async (_req: Request, res: Response) => {
-  let isHealthy = await checkGatewayHealth();
-  if (!isHealthy) {
-    await startVideoGateway();
-    isHealthy = await checkGatewayHealth();
-  }
+  const isHealthy = await ensureGatewayRunning();
   res.json({ success: true, running: isHealthy, port: 1984 });
 });
 
@@ -254,11 +250,7 @@ cameraRouter.get('/:ip/live-info', async (req: Request, res: Response) => {
   const rtspSub = `rtsp://${user}:${encodeURIComponent(pass)}@${hostIp}:554${pathSub}`;
 
   const host = req.hostname || 'localhost';
-  let gatewayHealthy = await checkGatewayHealth();
-  if (!gatewayHealthy) {
-    await startVideoGateway();
-    gatewayHealthy = await checkGatewayHealth();
-  }
+  const gatewayHealthy = await ensureGatewayRunning();
 
   res.json({
     success: true,
@@ -317,10 +309,7 @@ cameraRouter.post('/:ip/playback-stream', async (req: Request, res: Response) =>
       return res.status(400).json({ success: false, error: 'Nedostaje startTime parametar' });
     }
 
-    let gatewayHealthy = await checkGatewayHealth();
-    if (!gatewayHealthy) {
-      await startVideoGateway();
-    }
+    await ensureGatewayRunning();
 
     const streamResult = await startPlaybackStream(ip, startTime, endTime);
 

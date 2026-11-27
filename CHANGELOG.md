@@ -13,6 +13,12 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.26] - 2026-11-27
+- Video uživo: manje nepotrebnog rada i sigurniji gateway (optimizacija, faza 2D), bez promene izgleda:
+  - Monitoring: kad uvećate jednu kameru (dvoklik), tokovi ostalih, skrivenih ćelija se gase (ranije su svi nastavljali da dekodiraju i troše mrežu, do 63 toka), a pri povratku na grid se postepeno ponovo pokreću. Ćelija koja bi se u međuvremenu pokrenula (npr. posle promene statusa kamere) ne pokreće tok dok je neka druga uvećana.
+  - Video plejer: ispravljeno curenje slušalaca `visibilitychange` (svaka pločica ga je dodavala na `document`, a nikad nije skidala, pa je svako ponovno crtanje liste kamera ostavljalo još jedan i držalo uklonjenu pločicu u memoriji); sada se skida kad se pločica ukloni i vraća ako se vrati u stranicu.
+  - Gateway (go2rtc): server više ne restartuje go2rtc (što prekida sve tokove svih gledalaca) čim jedna provera od 1 s ne uspe. Ako je proces zaista ugašen, pokreće se odmah kao i ranije; ako je samo zauzet, čeka se do ~7 s (3 pokušaja sa rokom od 2 s) pre restarta; ishod provere važi 5 s. Kad korisnik zatvori tok, odmah se prekida i veza ka go2rtc-u.
+
 ## [1.3.25] - 2026-11-27
 - Manje pozadinskog rada servera (optimizacija, faza 2C), bez promene funkcionalnosti:
   - Grupe korisnika iz Microsoft Graph-a osvežavaju se na 10 min (bilo 30 s po aktivnom korisniku): manje Graph poziva i nema rizika od ograničenja (429). Promena grupe u Microsoft 365 važi do 10 min kasnije; ručno osvežavanje prava (forceRefresh) i dalje važi odmah. Graph pozivi imaju rok od 15 s (zaglavljen poziv više ne drži osvežavanje korisnika), a istovremeni zahtevi za token dele jedan zahtev.
