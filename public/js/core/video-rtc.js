@@ -214,6 +214,9 @@ export class VideoRTC extends HTMLElement {
         }
 
         // because video autopause on disconnected from DOM
+        // Ponovo vraćena u dokument (premeštena pločica): vrati i slušaoca vidljivosti prozora
+        if (this.visibilityListening) this.bindVisibility();
+
         if (this.video) {
             const seek = this.video.seekable;
             if (seek.length > 0) {
@@ -232,6 +235,10 @@ export class VideoRTC extends HTMLElement {
      * document's DOM.
      */
     disconnectedCallback() {
+        // Pločica je uklonjena iz dokumenta: slušalac vidljivosti prozora na document-u više nije potreban.
+        // (Ranije se nikad nije skidao, pa je svako ponovno crtanje liste kamera ostavljalo još jednog slušaoca
+        // koji je držao uklonjenu pločicu u memoriji i pozivao se pri svakoj promeni taba pregledača.)
+        if (!this.isConnected) this.unbindVisibility();
         if (this.background || this.disconnectTID) return;
         if (this.wsState === WebSocket.CLOSED && this.pcState === WebSocket.CLOSED) return;
 
@@ -245,6 +252,25 @@ export class VideoRTC extends HTMLElement {
 
             this.ondisconnect();
         }, this.DISCONNECT_TIMEOUT);
+    }
+
+    /** Prati vidljivost prozora pregledača (tab, minimizovanje): tok se pauzira dok se ne vidi. */
+    bindVisibility() {
+        if (this.visibilityHandler) return;
+        this.visibilityHandler = () => {
+            if (document.hidden) {
+                this.disconnectedCallback();
+            } else if (this.isConnected) {
+                this.connectedCallback();
+            }
+        };
+        document.addEventListener('visibilitychange', this.visibilityHandler);
+    }
+
+    unbindVisibility() {
+        if (!this.visibilityHandler) return;
+        document.removeEventListener('visibilitychange', this.visibilityHandler);
+        this.visibilityHandler = null;
     }
 
     /**
@@ -300,13 +326,8 @@ export class VideoRTC extends HTMLElement {
         if (this.background) return;
 
         if ('hidden' in document && this.visibilityCheck) {
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) {
-                    this.disconnectedCallback();
-                } else if (this.isConnected) {
-                    this.connectedCallback();
-                }
-            });
+            this.visibilityListening = true;
+            this.bindVisibility();
         }
 
         if ('IntersectionObserver' in window && this.visibilityThreshold) {

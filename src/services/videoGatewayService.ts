@@ -12,24 +12,64 @@ const GATEWAY_PORT = 1984;
  * Checks if go2rtc is responding on port 1984.
  */
 export function checkGatewayHealth(): Promise<boolean> {
+  return probeGateway(1000).then(r => r === 'ok');
+}
+
+/** ok = odgovara; down = veza odbijena/greška (proces ne radi); slow = veza postoji, ali ne odgovara u roku (zauzet) */
+function probeGateway(timeoutMs: number): Promise<'ok' | 'down' | 'slow'> {
   return new Promise((resolve) => {
     const req = http.get(
       {
         host: '127.0.0.1',
         port: GATEWAY_PORT,
         path: '/api',
-        timeout: 1000
+        timeout: timeoutMs
       },
       (res) => {
-        resolve(res.statusCode === 200);
+        res.resume();
+        resolve(res.statusCode === 200 ? 'ok' : 'down');
       }
     );
-    req.on('error', () => resolve(false));
+    req.on('error', () => resolve('down'));
     req.on('timeout', () => {
       req.destroy();
-      resolve(false);
+      resolve('slow');
     });
   });
+}
+
+let lastHealthyAt = 0;
+let restartInFlight: Promise<boolean> | null = null;
+
+/**
+ * Pre otvaranja kamere: gateway mora da radi. Restart go2rtc-a prekida SVE tokove SVIH gledalaca,
+ * pa se radi samo kad je zaista potreban:
+ *  - proces ne radi (veza odbijena) -> odmah pokretanje, kao do sada;
+ *  - proces je samo zauzet (ne odgovara u roku od 1 s dok ima mnogo tokova) -> do 3 pokušaja sa rokom od 2 s,
+ *    restart tek ako ne odgovori ni posle ~7 s (zaglavljen).
+ * Rezultat "radi" važi 5 s, pa nekoliko kamera otvorenih zaredom ne proverava gateway svaki put.
+ */
+export async function ensureGatewayRunning(): Promise<boolean> {
+  if (Date.now() - lastHealthyAt < 5000) return true;
+
+  let state = await probeGateway(1000);
+  for (let attempt = 0; state === 'slow' && attempt < 3; attempt++) {
+    state = await probeGateway(2000);
+    if (state === 'slow') await new Promise((r) => setTimeout(r, 500));
+  }
+  if (state === 'ok') {
+    lastHealthyAt = Date.now();
+    return true;
+  }
+
+  // Ne radi ili je zaglavljen: restart (jedan istovremeno, ostali čekaju njegov ishod)
+  if (!restartInFlight) {
+    restartInFlight = startVideoGateway().finally(() => { restartInFlight = null; });
+  }
+  await restartInFlight;
+  const healthy = await checkGatewayHealth();
+  if (healthy) lastHealthyAt = Date.now();
+  return healthy;
 }
 
 /**
