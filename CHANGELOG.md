@@ -13,6 +13,14 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.24] - 2026-11-27
+- Brža i odzivnija platforma u pregledaču (optimizacija, faza 2B, prvi deo; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
+  - Promena stranice: loader se zadržava najmanje 100 ms (bilo 450 ms), pa stranice deluju trenutno; i dalje se vidi ako podaci stvarno kasne.
+  - Polja za pretragu reaguju posle 300 ms pauze u kucanju (bilo 800 ms).
+  - Moduli Oprema, MTS, Mrežna oprema i Čvorišta dele jednu SSE vezu za žive događaje (`public/js/core/sse.js`) umesto četiri; pregledač sme samo 6 istovremenih veza ka serveru, pa je ranije posle obilaska ove četiri stranice ostajalo 2 za sve ostalo (podatke, slike, skripte).
+  - Stil: moduli koje je `style.css` učitavao preko `@import` sada su običan `<link>` u `index.html` i `monitor.html` (isti redosled), pa se preuzimaju paralelno, a ne tek posle `style.css`.
+  - Pokretanje: odgovor `/auth/me` koji učita `access.js` koristi se i za widget prijave (ranije dva ista zahteva). Provera polja pretrage (✕ dugme) radi na 1 s i ne radi dok je prozor skriven.
+
 ## [1.3.23] - 2026-11-27
 - Manje opterećenje servera (optimizacija, faza 2A; plan: `docs/OPTIMIZACIJA_PLAN.md`), bez promene funkcionalnosti:
   - Sinhronizacija sa starom bazom (MSSQL .121.20): provera na 15 s umesto na 3 s; pri promeni se podaci čitaju pa upisuju u jednoj transakciji, a oprema i detalji se upisuju samo ako se zaista razlikuju (ranije se svih ~1400 redova prepisivalo pri svakoj promeni uz višesekundno blokiranje servera). Kad stara baza nije dostupna, veza se pravilno zatvara i ponovni pokušaji idu sve ređe (15 s do 5 min), webhook i dvostruki upis se odmah povezuju.

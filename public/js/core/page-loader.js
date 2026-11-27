@@ -18,7 +18,7 @@
  */
 (function () {
   const CFG = {
-    tabMinVisibleMs: 450,    // promena stranice: loader se uvek vidi bar ovoliko (i kad su podaci već tu)
+    tabMinVisibleMs: 100,    // promena stranice: loader se uvek vidi bar ovoliko (i kad su podaci već tu); bilo 450 ms
     showDelayMs: 150,        // osvežavanje: loader se vidi tek ako traje duže (nema treperenja)
     minVisibleMs: 350,       // osvežavanje: kad se već pokaže, ostaje najmanje ovoliko (bez bljeska)
     quietMs: 150,            // posle poslednjeg odgovora čeka da se vidi da nema novog zahteva (lanac)

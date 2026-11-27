@@ -1243,9 +1243,8 @@
   }
 
   function setupSseListener() {
-    if (window.EventSource) {
-      const evtSource = new EventSource('/api/equipment/events');
-      evtSource.onmessage = (e) => {
+    if (window.UniSSE) {
+      window.UniSSE.subscribe((e) => {
         try {
           const data = JSON.parse(e.data);
           if (['equipment_created', 'equipment_updated', 'equipment_deleted', 'history_added', 'history_deleted', 'legacy_sync'].includes(data.type)) {
@@ -1258,7 +1257,7 @@
         } catch (err) {
           // Ignore parse errors
         }
-      };
+      });
     }
   }
 

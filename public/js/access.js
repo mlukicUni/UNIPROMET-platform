@@ -106,6 +106,10 @@
   const api = {
     ready: null,
     get loaded() { return access !== null; },
+    /** Odgovor /auth/me ako je stariji od najviše maxAgeMs, inače null (pozivalac tada sam traži) */
+    recentMe(maxAgeMs) {
+      return lastMe && (Date.now() - lastMeAt) <= maxAgeMs ? lastMe : null;
+    },
     get isSuper() { return !access || access.isSuperAdmin; },
     get roles() { return access ? access.roles : []; },
     /** 'all' = sve role (Super admin), 'dms' = samo dodela DMS rola (grupa DMS-Admins) */
@@ -155,10 +159,16 @@
     reload
   };
 
+  // Poslednji odgovor /auth/me: widget prijave u app.js ga koristi umesto da traži isto drugi put pri pokretanju
+  let lastMe = null;
+  let lastMeAt = 0;
+
   async function loadAccess() {
     try {
       const res = await fetch('/auth/me', { cache: 'no-store' });
       const data = await res.json();
+      lastMe = data;
+      lastMeAt = Date.now();
       authenticated = !!data.isAuthenticated;
       access = data.access || (data.isAuthenticated ? EMPTY_ACCESS : null);
     } catch (err) {
