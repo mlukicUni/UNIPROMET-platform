@@ -117,6 +117,59 @@ export function resolveGatewayBinary(): string | null {
 }
 
 /**
+ * Removes leftover dynamic streams (playback_*, export_*) from go2rtc.yaml.
+ * They carry RTSP credentials in plain text and are meaningless after a restart.
+ * Must run while go2rtc is NOT running (it rewrites the file itself).
+ */
+export function purgeDynamicStreams(configPath: string): number {
+  try {
+    const text = fs.readFileSync(configPath, 'utf8');
+    const eol = text.includes('\r\n') ? '\r\n' : '\n';
+    const lines = text.split(/\r?\n/);
+    const out: string[] = [];
+    let inStreams = false;
+    let skipping = false;
+    let removed = 0;
+    let kept = 0;
+    for (const line of lines) {
+      if (/^streams:/.test(line)) {
+        inStreams = true;
+        skipping = false;
+        out.push(line);
+        continue;
+      }
+      if (inStreams && /^\S/.test(line)) {
+        inStreams = false; // next top-level key
+        skipping = false;
+      }
+      if (inStreams) {
+        const key = line.match(/^ {2}([^\s:#][^:]*):\s*$/);
+        if (key) {
+          skipping = /^(playback_|export_)/.test(key[1].trim());
+          if (skipping) { removed++; continue; }
+          kept++;
+        } else if (skipping && (/^\s+/.test(line) || line.trim() === '')) {
+          continue; // body of a removed stream
+        } else {
+          skipping = false;
+        }
+      }
+      out.push(line);
+    }
+    if (removed === 0) return 0;
+    let result = out.join(eol);
+    // streams: with no entries left (next line is a top-level key / end of file) -> valid empty mapping
+    if (kept === 0) result = result.replace(/^streams:[ \t]*$/m, 'streams: {}');
+    fs.writeFileSync(configPath, result, 'utf8');
+    console.log(`[VideoGateway] Removed ${removed} leftover playback/export stream(s) from go2rtc config`);
+    return removed;
+  } catch (err: any) {
+    console.warn('[VideoGateway] Could not purge dynamic streams:', err?.message);
+    return 0;
+  }
+}
+
+/**
  * Starts the go2rtc streaming gateway process if not already running.
  */
 export async function startVideoGateway(): Promise<boolean> {
@@ -162,6 +215,10 @@ export async function startVideoGateway(): Promise<boolean> {
       isStarting = false;
       return false;
     }
+
+    // go2rtc upisuje dinamicke tokove (playback_*, export_*) u config zajedno sa RTSP lozinkom;
+    // ako se tok ne zaustavi uredno, ostaju zauvek. Ocisti ih pre pokretanja.
+    purgeDynamicStreams(configPath);
 
     console.log(`[VideoGateway] Starting go2rtc gateway [${process.platform}/${process.arch}] from ${binPath}...`);
 

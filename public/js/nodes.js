@@ -1602,7 +1602,7 @@
         window.UniSSE.subscribe((e) => {
           try {
             const data = JSON.parse(e.data);
-            if (['node_created', 'node_updated', 'node_deleted', 'history_added', 'history_deleted'].includes(data.event)) {
+            if (['node_created', 'node_updated', 'node_deleted', 'history_added', 'history_deleted'].includes(data.type)) {
               loadStats();
               fetchNodes();
             }

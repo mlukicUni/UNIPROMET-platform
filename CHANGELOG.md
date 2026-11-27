@@ -13,6 +13,12 @@ Verzija se vidi na platformi (bočna traka i Kontrolna tabla → informacije o s
 
 ## [Neobjavljeno]
 
+## [1.3.27] - 2026-11-27
+- Dugmad u prozorima (modalima) prate dizajn platforme: Sačuvaj čvorište i Sačuvaj liniju su žuta kao ostala čuvanja (umesto ljubičastog); dugmad za brisanje su crvena kao u ostalim prozorima; dugme za preuzimanje snimka je žuto. Ti prozori su koristili klase koje nisu imale stil
+- Lista kamera (Video nadzor): živi tok se pokreće samo za pločice koje su u vidnom polju (ili tik uz njega, 200 px), a ostale prikazuju poslednju sliku. Kad pločica izađe iz vidnog polja, tok se gasi i vraća se slika; kad uđe, tok se pokreće ponovo (postepeno, 100 ms između pločica). Ranije su svih do 26 pločica na strani istovremeno vukle tok. Pregledači bez `IntersectionObserver` rade kao ranije.
+- Gateway (go2rtc): pri svakom pokretanju iz `config/go2rtc.yaml` se brišu zaostali `playback_*` i `export_*` tokovi. go2rtc ih upisuje u konfiguraciju zajedno sa RTSP lozinkom snimača, pa su ostajali zauvek ako se playback ne zaustavi uredno.
+- Čvorišta: uživo osvežavanje (SSE) proveravalo je pogrešno polje (`data.event`), pa se lista nije osvežavala kad drugi korisnik doda, izmeni ili obriše čvorište; sada proverava `data.type`.
+
 ## [1.3.26] - 2026-11-27
 - Video uživo: manje nepotrebnog rada i sigurniji gateway (optimizacija, faza 2D), bez promene izgleda:
   - Monitoring: kad uvećate jednu kameru (dvoklik), tokovi ostalih, skrivenih ćelija se gase (ranije su svi nastavljali da dekodiraju i troše mrežu, do 63 toka), a pri povratku na grid se postepeno ponovo pokreću. Ćelija koja bi se u međuvremenu pokrenula (npr. posle promene statusa kamere) ne pokreće tok dok je neka druga uvećana.

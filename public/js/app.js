@@ -6783,8 +6783,48 @@ window.setCctvLocationFilter = setCctvLocationFilter;
 
 let cctvMountTimeouts = [];
 let cctvCheckPlayIntervals = [];
+// Živi tok se drži samo za pločice koje su u vidnom polju (ili tik uz njega)
+let cctvTileObserver = null;
+let cctvTileCams = new Map();
+const cctvVisibleTiles = new Set();
+
+function cctvDisconnectTileObserver() {
+  if (cctvTileObserver) { try { cctvTileObserver.disconnect(); } catch (e) {} }
+  cctvTileObserver = null;
+  cctvTileCams = new Map();
+  cctvVisibleTiles.clear();
+}
+
+/** Prati pločice: tok se pokreće kad uđu u vidno polje, a gasi (uz poslednju sliku) kad izađu */
+function cctvObserveTiles(pageItems) {
+  cctvTileCams = new Map(pageItems.map(c => [String(c.id), c]));
+  cctvTileObserver = new IntersectionObserver((entries) => {
+    let n = 0;
+    entries.forEach(en => {
+      const id = en.target.id.replace('cctv-preview-screen-', '');
+      const cam = cctvTileCams.get(id);
+      if (!cam) return;
+      if (en.isIntersecting) {
+        cctvVisibleTiles.add(id);
+        if (!cam.isOffline && !en.target.querySelector('video-stream')) mountCctvSubStream(cam, (n++) * 100);
+      } else {
+        cctvVisibleTiles.delete(id);
+        if (en.target.querySelector('video-stream')) {
+          unmountCctvSubStream(cam.id);
+          const fb = en.target.querySelector('.cctv-snapshot-fallback');
+          if (fb) fb.style.opacity = '1';
+        }
+      }
+    });
+  }, { rootMargin: '200px 0px' });
+  pageItems.forEach(cam => {
+    const el = document.getElementById(`cctv-preview-screen-${cam.id}`);
+    if (el) cctvTileObserver.observe(el);
+  });
+}
 
 function unmountCctvSubStreams() {
+  cctvDisconnectTileObserver();
   cctvMountTimeouts.forEach(t => clearTimeout(t));
   cctvMountTimeouts = [];
 
@@ -6805,7 +6845,11 @@ function mountCctvSubStreams(pageItems) {
   unmountCctvSubStreams();
   if (!cctvLiveSubStreamEnabled) return;
 
-  // Offline kamera prikazuje poslednju sliku, pa joj se tok ne pokreće
+  if ('IntersectionObserver' in window) {
+    // Tok kreće tek kad pločica uđe u vidno polje; offline kamera prikazuje poslednju sliku, pa joj se tok ne pokreće
+    cctvObserveTiles(pageItems);
+    return;
+  }
   pageItems.filter(cam => !cam.isOffline).forEach((cam, idx) => mountCctvSubStream(cam, idx * 100));
 }
 
@@ -6820,6 +6864,8 @@ function mountCctvSubStream(cam, delayMs) {
     const tid = setTimeout(() => {
       const currentContainer = document.getElementById(`cctv-preview-screen-${cam.id}`);
       if (!currentContainer) return;
+      // Pločica je u međuvremenu izašla iz vidnog polja: tok se ne pokreće
+      if (cctvTileObserver && !cctvVisibleTiles.has(String(cam.id))) return;
       currentContainer.querySelectorAll('video-stream').forEach(v => {
         try { 
           if (typeof v.destroy === 'function') v.destroy(); 
